@@ -7,6 +7,9 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set. Please configure it in your environment (e.g., Render dashboard or .env file).")
+
 # Create Async Engine
 engine = create_async_engine(DATABASE_URL, echo=True)
 
