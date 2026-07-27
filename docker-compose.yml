@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fledgeportal-backend
+    ports:
+      - "8000:8000"
+    # To run the backend in development mode with auto-reload, you can uncomment these:
+    # volumes:
+    #   - ./backend:/app
+    # command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fledgeportal-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Since Next.js bakes this in at build time for the client side,
+      # localhost works for your browser connecting to the backend on your host machine.
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
