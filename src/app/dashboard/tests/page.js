@@ -12,7 +12,7 @@ export default function StudentTests() {
     const fetchTests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/tests/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -37,7 +37,7 @@ export default function StudentTests() {
         setIsSubmitting(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/tests/${activeTest.id}/submit`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/${activeTest.id}/submit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -17,8 +17,8 @@ export default function CEOAttendance() {
             };
 
             const [overviewRes, studentsRes] = await Promise.all([
-                fetch('http://localhost:8000/api/attendance/today', { headers }),
-                fetch('http://localhost:8000/api/attendance/students', { headers })
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/today`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/students`, { headers })
             ]);
 
             if (!overviewRes.ok || !studentsRes.ok) {

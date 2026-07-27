@@ -19,7 +19,7 @@ export default function StaffTests() {
     const fetchTests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/tests/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -41,7 +41,7 @@ export default function StaffTests() {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/tests/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export default function StaffTests() {
     const fetchSubmissions = async (test) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/tests/${test.id}/submissions`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/${test.id}/submissions`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -82,7 +82,7 @@ export default function StaffTests() {
     const handleReviewSubmit = async (subId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/tests/submissions/${subId}/review`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/${subId}/review`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

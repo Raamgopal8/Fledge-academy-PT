@@ -35,7 +35,7 @@ export default function CEOStaffLogs() {
             const token = localStorage.getItem('token');
             if (!token) return;
 
-            const response = await fetch('http://localhost:8000/api/staff-logs', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/staff-logs`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -66,7 +66,7 @@ export default function CEOStaffLogs() {
             const token = localStorage.getItem('token');
             if (!token) return;
 
-            const res = await fetch('http://localhost:8000/api/user/staff', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/staff`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -96,7 +96,7 @@ export default function CEOStaffLogs() {
         setFormError('');
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/user/staff', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/staff`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ export default function CEOStaffLogs() {
         setFormError('');
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/user/staff/${currentStaff.id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/staff/${currentStaff.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ export default function CEOStaffLogs() {
     const handleDelete = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/user/staff/${currentStaff.id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/staff/${currentStaff.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -167,7 +167,7 @@ export default function CEOStaffLogs() {
     const handleClearLogs = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/staff-logs`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/staff-logs`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

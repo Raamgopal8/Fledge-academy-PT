@@ -14,7 +14,7 @@ export default function StudentProgress() {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error("No authentication token found");
 
-                const res = await fetch('http://localhost:8000/api/tests/submissions/all', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 

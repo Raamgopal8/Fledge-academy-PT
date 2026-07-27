@@ -12,7 +12,7 @@ export default function StaffActivities() {
     const fetchSubmissions = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/tests/submissions/all', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -33,7 +33,7 @@ export default function StaffActivities() {
     const handleReviewSubmit = async (subId, status) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/tests/submissions/${subId}/review`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/${subId}/review`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

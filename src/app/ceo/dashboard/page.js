@@ -22,11 +22,11 @@ export default function CEODashboard() {
             };
 
             const [kpiRes, activityRes, chartRes, attendanceRes, submissionsRes] = await Promise.all([
-                fetch('http://localhost:8000/api/dashboard/ceo/kpi', { headers }),
-                fetch('http://localhost:8000/api/dashboard/ceo/recent-activity', { headers }),
-                fetch('http://localhost:8000/api/dashboard/ceo/performance-chart', { headers }),
-                fetch('http://localhost:8000/api/attendance/today', { headers }),
-                fetch('http://localhost:8000/api/tests/submissions/all', { headers })
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/kpi`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/recent-activity`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/performance-chart`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/today`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, { headers })
             ]);
 
             if (!kpiRes.ok || !activityRes.ok || !chartRes.ok || !attendanceRes.ok) {
@@ -158,7 +158,7 @@ export default function CEODashboard() {
                                         onClick={async () => {
                                             try {
                                                 const token = localStorage.getItem('token');
-                                                const res = await fetch('http://localhost:8000/api/dashboard/ceo/recent-activity', {
+                                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/recent-activity`, {
                                                     method: 'DELETE',
                                                     headers: { 'Authorization': `Bearer ${token}` }
                                                 });

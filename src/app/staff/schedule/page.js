@@ -49,7 +49,7 @@ export default function SchedulePage() {
             const headers = {
                 'Authorization': `Bearer ${token}`
             };
-            const res = await fetch('http://localhost:8000/api/schedule', { headers });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule`, { headers });
             if (!res.ok) {
                 throw new Error('Failed to fetch schedule items');
             }
@@ -107,8 +107,8 @@ export default function SchedulePage() {
         };
 
         const url = editingSchedule 
-            ? `http://localhost:8000/api/schedule/${editingSchedule.id}`
-            : 'http://localhost:8000/api/schedule';
+            ? `${process.env.NEXT_PUBLIC_API_URL}/api/schedule/${editingSchedule.id}`
+            : `${process.env.NEXT_PUBLIC_API_URL}/api/schedule`;
         
         const method = editingSchedule ? 'PUT' : 'POST';
 
@@ -144,7 +144,7 @@ export default function SchedulePage() {
         };
 
         try {
-            const res = await fetch(`http://localhost:8000/api/schedule/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule/${id}`, {
                 method: 'DELETE',
                 headers
             });

@@ -19,7 +19,7 @@ export default function CEOStudents() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/user/students', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/students`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch students');
@@ -41,7 +41,7 @@ export default function CEOStudents() {
         setFormError('');
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/user/students', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/students`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export default function CEOStudents() {
         setFormError('');
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/user/students/${currentStudent.id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/students/${currentStudent.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ export default function CEOStudents() {
     const handleDelete = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/user/students/${currentStudent.id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/students/${currentStudent.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

@@ -15,7 +15,7 @@ export default function CEONavbar() {
                 const token = localStorage.getItem('token');
                 if (!token) return;
                 
-                const response = await fetch('http://localhost:8000/api/announcement/unread_count', {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/unread_count`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

@@ -17,7 +17,7 @@ export default function StaffMembers() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/attendance/students', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/students`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -41,7 +41,7 @@ export default function StaffMembers() {
         setMarkingStatus(prev => ({ ...prev, [studentId]: true }));
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/attendance/mark', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/mark`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

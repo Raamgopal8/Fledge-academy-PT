@@ -13,7 +13,7 @@ export default function StudentMaterials() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:8000/api/materials', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -80,7 +80,7 @@ export default function StudentMaterials() {
                                 <div className="flex items-center justify-between mt-sm pt-sm border-t border-outline-variant">
                                     <span className="text-xs text-outline">{new Date(material.created_at).toLocaleDateString()}</span>
                                     <a 
-                                        href={`http://localhost:8000${material.file_url}`} 
+                                        href={`${process.env.NEXT_PUBLIC_API_URL}${material.file_url}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline font-label-sm flex items-center gap-xs"

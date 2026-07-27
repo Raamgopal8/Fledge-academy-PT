@@ -35,31 +35,31 @@ export default function DashboardOverview() {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       // Fetch Schedules
-      fetch('http://localhost:8000/api/schedule', { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch schedules'))
         .then(data => { setSchedules(data); setIsLoading(prev => ({ ...prev, schedules: false })); })
         .catch(err => { setError(prev => ({ ...prev, schedules: err })); setIsLoading(prev => ({ ...prev, schedules: false })); });
 
       // Fetch Attendance
-      fetch('http://localhost:8000/api/attendance/my-status', { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/my-status`, { headers })
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setAttendanceStatus(data.status); })
         .catch(err => console.error("Error fetching attendance:", err));
 
       // Fetch Materials
-      fetch('http://localhost:8000/api/materials', { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch materials'))
         .then(data => { setMaterials(data); setIsLoading(prev => ({ ...prev, materials: false })); })
         .catch(err => { setError(prev => ({ ...prev, materials: err })); setIsLoading(prev => ({ ...prev, materials: false })); });
 
       // Fetch Announcements
-      fetch('http://localhost:8000/api/announcement', { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch announcements'))
         .then(data => { setAnnouncements(data); setIsLoading(prev => ({ ...prev, announcements: false })); })
         .catch(err => { setError(prev => ({ ...prev, announcements: err })); setIsLoading(prev => ({ ...prev, announcements: false })); });
 
       // Fetch Tests (Pending Tasks)
-      fetch('http://localhost:8000/api/tests', { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch tests'))
         .then(data => { setTests(data); setIsLoading(prev => ({ ...prev, tests: false })); })
         .catch(err => { setError(prev => ({ ...prev, tests: err })); setIsLoading(prev => ({ ...prev, tests: false })); });
@@ -182,7 +182,7 @@ export default function DashboardOverview() {
                         {new Date(material.created_at).toLocaleDateString()}
                       </span>
                       <a 
-                        href={material.file_url.startsWith('http') ? material.file_url : `http://localhost:8000${material.file_url}`}
+                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_API_URL}${material.file_url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors"

@@ -12,7 +12,7 @@ export default function CEOTests() {
     const fetchTests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8000/api/tests/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -33,7 +33,7 @@ export default function CEOTests() {
     const fetchSubmissions = async (test) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8000/api/tests/${test.id}/submissions`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/${test.id}/submissions`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
