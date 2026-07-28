@@ -11,8 +11,13 @@ from .auth import get_current_user
 router = APIRouter()
 
 # Ensure uploads directory exists
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except OSError:
+    # Fallback to /tmp if we are on a read-only filesystem but VERCEL env var isn't set
+    UPLOAD_DIR = "/tmp/uploads"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.get("/", response_model=List[dict])
 async def get_materials(db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_user)):
