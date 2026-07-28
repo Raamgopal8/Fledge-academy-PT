@@ -18,6 +18,13 @@ export default function LoginPage() {
     const timer = setTimeout(() => {
       setIsLoaded(true);
     }, 100);
+
+    // Load saved email if exists
+    const savedEmail = localStorage.getItem("loginEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -187,7 +194,10 @@ export default function LoginPage() {
                   required
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    localStorage.setItem("loginEmail", e.target.value);
+                  }}
                 />
               </div>
             </div>
