@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
+from beanie import PydanticObjectId
 
-from database import get_db
 import models
 from routes.auth import get_current_user
 
@@ -26,33 +23,31 @@ class TestReview(BaseModel):
 
 @router.get("/")
 async def get_tests(
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    result = await db.execute(select(models.Test).order_by(models.Test.created_at.desc()))
-    tests = result.scalars().all()
+    tests = await models.Test.find_all().sort("-created_at").to_list()
     
     response_data = []
     for test in tests:
         test_dict = {
-            "id": test.id,
+            "id": str(test.id),
             "title": test.title,
             "description": test.description,
-            "created_by_id": test.created_by_id,
+            "created_by_id": str(test.created_by_id),
             "created_at": test.created_at,
             "due_date": test.due_date,
         }
         
         # If student, attach their submission status
         if current_user.role == "student":
-            sub_result = await db.execute(
-                select(models.TestSubmission)
-                .where((models.TestSubmission.test_id == test.id) & (models.TestSubmission.student_id == current_user.id))
+            submission = await models.TestSubmission.find_one(
+                models.TestSubmission.test_id == test.id,
+                models.TestSubmission.student_id == current_user.id
             )
-            submission = sub_result.scalars().first()
+            
             if submission:
                 test_dict["submission"] = {
-                    "id": submission.id,
+                    "id": str(submission.id),
                     "status": submission.status,
                     "submitted_at": submission.submitted_at,
                     "staff_comments": submission.staff_comments
@@ -67,7 +62,6 @@ async def get_tests(
 @router.post("/")
 async def create_test(
     test_data: TestCreate,
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "staff":
@@ -79,34 +73,38 @@ async def create_test(
         created_by_id=current_user.id,
         due_date=test_data.due_date
     )
-    db.add(new_test)
-    await db.commit()
-    await db.refresh(new_test)
+    await new_test.insert()
     
-    return new_test
+    return {
+        "id": str(new_test.id),
+        "title": new_test.title,
+        "description": new_test.description,
+        "created_by_id": str(new_test.created_by_id),
+        "created_at": new_test.created_at,
+        "due_date": new_test.due_date
+    }
 
 @router.post("/{test_id}/submit")
 async def submit_test(
-    test_id: int,
+    test_id: PydanticObjectId,
     submission_data: TestSubmit,
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "student":
         raise HTTPException(status_code=403, detail="Only students can submit tests")
         
     # Check if test exists
-    result = await db.execute(select(models.Test).where(models.Test.id == test_id))
-    test = result.scalars().first()
+    test = await models.Test.get(test_id)
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
         
     # Check if already submitted
-    sub_result = await db.execute(
-        select(models.TestSubmission)
-        .where((models.TestSubmission.test_id == test_id) & (models.TestSubmission.student_id == current_user.id))
+    existing_submission = await models.TestSubmission.find_one(
+        models.TestSubmission.test_id == test_id,
+        models.TestSubmission.student_id == current_user.id
     )
-    if sub_result.scalars().first():
+    
+    if existing_submission:
         raise HTTPException(status_code=400, detail="Test already submitted")
         
     new_submission = models.TestSubmission(
@@ -114,39 +112,37 @@ async def submit_test(
         student_id=current_user.id,
         submission_content=submission_data.submission_content
     )
-    db.add(new_submission)
-    await db.commit()
-    await db.refresh(new_submission)
+    await new_submission.insert()
     
-    return new_submission
+    return {
+        "id": str(new_submission.id),
+        "test_id": str(new_submission.test_id),
+        "student_id": str(new_submission.student_id),
+        "submission_content": new_submission.submission_content,
+        "submitted_at": new_submission.submitted_at,
+        "status": new_submission.status
+    }
 
 @router.get("/{test_id}/submissions")
 async def get_test_submissions(
-    test_id: int,
-    db: AsyncSession = Depends(get_db),
+    test_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
     # Fetch submissions for this test
-    result = await db.execute(
-        select(models.TestSubmission)
-        .where(models.TestSubmission.test_id == test_id)
-        .order_by(models.TestSubmission.submitted_at.desc())
-    )
-    submissions = result.scalars().all()
+    submissions = await models.TestSubmission.find(models.TestSubmission.test_id == test_id).sort("-submitted_at").to_list()
     
     response = []
     for sub in submissions:
         # Get student name
-        user_result = await db.execute(select(models.User).where(models.User.id == sub.student_id))
-        student = user_result.scalars().first()
+        student = await models.User.get(sub.student_id)
         
         response.append({
-            "id": sub.id,
-            "test_id": sub.test_id,
-            "student_id": sub.student_id,
+            "id": str(sub.id),
+            "test_id": str(sub.test_id),
+            "student_id": str(sub.student_id),
             "student_name": student.name if student else "Unknown",
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,
@@ -158,16 +154,14 @@ async def get_test_submissions(
 
 @router.put("/submissions/{submission_id}/review")
 async def review_submission(
-    submission_id: int,
+    submission_id: PydanticObjectId,
     review_data: TestReview,
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "staff":
         raise HTTPException(status_code=403, detail="Only staff can review tests")
         
-    result = await db.execute(select(models.TestSubmission).where(models.TestSubmission.id == submission_id))
-    submission = result.scalars().first()
+    submission = await models.TestSubmission.get(submission_id)
     
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
@@ -175,40 +169,40 @@ async def review_submission(
     submission.staff_comments = review_data.staff_comments
     submission.status = review_data.status
     
-    await db.commit()
-    await db.refresh(submission)
+    await submission.save()
     
-    return submission
+    return {
+        "id": str(submission.id),
+        "test_id": str(submission.test_id),
+        "student_id": str(submission.student_id),
+        "submission_content": submission.submission_content,
+        "submitted_at": submission.submitted_at,
+        "status": submission.status,
+        "staff_comments": submission.staff_comments
+    }
 
 @router.get("/submissions/all")
 async def get_all_submissions(
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
-    result = await db.execute(
-        select(models.TestSubmission)
-        .order_by(models.TestSubmission.submitted_at.desc())
-    )
-    submissions = result.scalars().all()
+    submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()
     
     response = []
     for sub in submissions:
         # Get student name
-        user_result = await db.execute(select(models.User).where(models.User.id == sub.student_id))
-        student = user_result.scalars().first()
+        student = await models.User.get(sub.student_id)
         
         # Get test title
-        test_result = await db.execute(select(models.Test).where(models.Test.id == sub.test_id))
-        test = test_result.scalars().first()
+        test = await models.Test.get(sub.test_id)
         
         response.append({
-            "id": sub.id,
-            "test_id": sub.test_id,
+            "id": str(sub.id),
+            "test_id": str(sub.test_id),
             "test_title": test.title if test else "Unknown",
-            "student_id": sub.student_id,
+            "student_id": str(sub.student_id),
             "student_name": student.name if student else "Unknown",
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,

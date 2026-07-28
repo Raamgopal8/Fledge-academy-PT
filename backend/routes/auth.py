@@ -7,10 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import jwt
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from database import get_db
 import models
 
 load_dotenv()
@@ -42,7 +39,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -56,16 +53,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     except jwt.PyJWTError:
         raise credentials_exception
     
-    result = await db.execute(select(models.User).filter(models.User.email == email))
-    user = result.scalars().first()
+    user = await models.User.find_one(models.User.email == email)
     if user is None:
         raise credentials_exception
     return user
 
 @router.post("/login", response_model=Token)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.User).filter(models.User.email == request.username))
-    user = result.scalars().first()
+async def login(request: LoginRequest):
+    user = await models.User.find_one(models.User.email == request.username)
     
     if not user or user.password != request.password:
         raise HTTPException(

@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+from beanie import PydanticObjectId
 
-from database import get_db
 import models
 from routes.auth import get_current_user
 
@@ -22,7 +20,7 @@ class ScheduleSchema(BaseModel):
         from_attributes = True
 
 class ScheduleResponse(BaseModel):
-    id: int
+    id: PydanticObjectId = Field(alias="_id")
     name: str
     time: str
     location: str
@@ -31,18 +29,18 @@ class ScheduleResponse(BaseModel):
     day_of_week: str
 
     class Config:
+        populate_by_name = True
         from_attributes = True
 
 @router.get("", response_model=List[ScheduleResponse])
-async def get_schedules(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.ClassSchedule))
-    return result.scalars().all()
+async def get_schedules():
+    schedules = await models.ClassSchedule.find_all().to_list()
+    return schedules
 
 @router.post("", response_model=ScheduleResponse)
 async def create_schedule(
     schema: ScheduleSchema,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(
@@ -58,17 +56,14 @@ async def create_schedule(
         color=schema.color,
         day_of_week=schema.day_of_week
     )
-    db.add(new_schedule)
-    await db.commit()
-    await db.refresh(new_schedule)
+    await new_schedule.insert()
     return new_schedule
 
 @router.put("/{schedule_id}", response_model=ScheduleResponse)
 async def update_schedule(
-    schedule_id: int,
+    schedule_id: PydanticObjectId,
     schema: ScheduleSchema,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(
@@ -76,8 +71,7 @@ async def update_schedule(
             detail="You do not have permission to perform this action"
         )
     
-    result = await db.execute(select(models.ClassSchedule).filter(models.ClassSchedule.id == schedule_id))
-    schedule = result.scalars().first()
+    schedule = await models.ClassSchedule.get(schedule_id)
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
@@ -88,16 +82,13 @@ async def update_schedule(
     schedule.color = schema.color
     schedule.day_of_week = schema.day_of_week
     
-    db.add(schedule)
-    await db.commit()
-    await db.refresh(schedule)
+    await schedule.save()
     return schedule
 
 @router.delete("/{schedule_id}")
 async def delete_schedule(
-    schedule_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    schedule_id: PydanticObjectId,
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(
@@ -105,11 +96,9 @@ async def delete_schedule(
             detail="You do not have permission to perform this action"
         )
     
-    result = await db.execute(select(models.ClassSchedule).filter(models.ClassSchedule.id == schedule_id))
-    schedule = result.scalars().first()
+    schedule = await models.ClassSchedule.get(schedule_id)
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
-    await db.delete(schedule)
-    await db.commit()
+    await schedule.delete()
     return {"message": "Schedule deleted successfully"}

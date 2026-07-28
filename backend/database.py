@@ -1,25 +1,38 @@
 import os
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+MONGODB_URL = os.getenv("MONGODB_URL")
 
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL environment variable is not set. Please configure it in your environment (e.g., Render dashboard or .env file).")
+if not MONGODB_URL:
+    raise ValueError("MONGODB_URL environment variable is not set.")
 
-# Create Async Engine
-engine = create_async_engine(DATABASE_URL, echo=True)
-
-# Create Async Session Factory
-AsyncSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
-
-Base = declarative_base()
-
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
+async def init_db():
+    # Create Motor client
+    client = AsyncIOMotorClient(MONGODB_URL)
+    
+    # Select database
+    database = client.fledgeportal
+    
+    # Import models here to avoid circular imports if needed, or import at top
+    import models
+    
+    # Initialize Beanie with the document models
+    await init_beanie(
+        database=database,
+        document_models=[
+            models.User,
+            models.ClassSchedule,
+            models.Attendance,
+            models.Announcement,
+            models.AnnouncementView,
+            models.Material,
+            models.Test,
+            models.TestSubmission,
+            models.StaffLog,
+            models.Activity
+        ]
+    )

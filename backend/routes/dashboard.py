@@ -1,37 +1,33 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from database import get_db
+from fastapi import APIRouter
 import models
+from datetime import datetime
+import calendar
 
 router = APIRouter()
 
-from sqlalchemy import func
-
 @router.get("/ceo/kpi")
-async def get_ceo_kpi(db: AsyncSession = Depends(get_db)):
+async def get_ceo_kpi():
     # Total Students
-    students_query = await db.execute(select(func.count(models.User.id)).where(models.User.role == 'student'))
-    total_students = students_query.scalar() or 0
+    total_students = await models.User.find({"role": "student"}).count()
 
     # Total Staff
-    staff_query = await db.execute(select(func.count(models.User.id)).where(models.User.role.in_(['staff', 'ceo'])))
-    total_staff = staff_query.scalar() or 0
+    total_staff = await models.User.find({"role": {"$in": ["staff", "ceo"]}}).count()
 
     # For "Revenue", assuming a fixed value per student
     total_revenue = total_students * 500
     
     # Average Rating - from test submissions score (mapped to a 5-point scale)
-    score_query = await db.execute(select(func.avg(models.TestSubmission.score)).where(models.TestSubmission.score.isnot(None)))
-    avg_score = score_query.scalar() or 0
+    submissions_with_scores = await models.TestSubmission.find(models.TestSubmission.score != None).to_list()
+    if submissions_with_scores:
+        avg_score = sum(sub.score for sub in submissions_with_scores) / len(submissions_with_scores)
+    else:
+        avg_score = 0
+    
     average_rating = round((avg_score / 100) * 5, 1) if avg_score else 0.0
 
     # Course Completion Rate - calculated from submissions vs expected submissions
-    tests_query = await db.execute(select(func.count(models.Test.id)))
-    total_tests = tests_query.scalar() or 0
-    
-    submissions_query = await db.execute(select(func.count(models.TestSubmission.id)))
-    total_submissions = submissions_query.scalar() or 0
+    total_tests = await models.Test.find_all().count()
+    total_submissions = await models.TestSubmission.find_all().count()
     
     if total_tests > 0 and total_students > 0:
         completion_rate = (total_submissions / (total_tests * total_students)) * 100
@@ -52,13 +48,9 @@ async def get_ceo_kpi(db: AsyncSession = Depends(get_db)):
         "ratingGrowth": "+0.1"
     }
 
-from datetime import datetime
-import calendar
-
 @router.get("/ceo/performance-chart")
-async def get_ceo_performance_chart(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.TestSubmission).where(models.TestSubmission.score.isnot(None)))
-    submissions = result.scalars().all()
+async def get_ceo_performance_chart():
+    submissions = await models.TestSubmission.find(models.TestSubmission.score != None).to_list()
     
     today = datetime.utcnow()
     months_data = {}
@@ -87,18 +79,14 @@ async def get_ceo_performance_chart(db: AsyncSession = Depends(get_db)):
         
     return chart_data
 
-from sqlalchemy import delete
-
 @router.get("/ceo/recent-activity")
-async def get_ceo_recent_activity(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Activity))
-    activities = result.scalars().all()
-    return [{"id": a.id, "user": a.user, "action": a.action, "time": a.time, "type": a.type} for a in activities]
+async def get_ceo_recent_activity():
+    activities = await models.Activity.find_all().to_list()
+    return [{"id": str(a.id), "user": a.user, "action": a.action, "time": a.time, "type": a.type} for a in activities]
 
 @router.delete("/ceo/recent-activity")
-async def delete_all_recent_activity(db: AsyncSession = Depends(get_db)):
-    await db.execute(delete(models.Activity))
-    await db.commit()
+async def delete_all_recent_activity():
+    await models.Activity.delete_all()
     return {"message": "All activities deleted successfully"}
 
 @router.get("/staff/summary")
@@ -110,9 +98,10 @@ async def get_staff_summary():
     }
 
 @router.get("/staff/classes")
-async def get_staff_classes(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.ClassSchedule))
-    return result.scalars().all()
+async def get_staff_classes():
+    classes = await models.ClassSchedule.find_all().to_list()
+    # Beanie returns documents, we can just return them, fastapi serializes them well.
+    return classes
 
 @router.get("/staff/activities")
 async def get_staff_activities():

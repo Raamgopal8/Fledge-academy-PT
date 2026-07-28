@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
+from beanie import PydanticObjectId
 
-from database import get_db
 import models
 from routes.auth import get_current_user
 
@@ -28,8 +26,7 @@ async def get_profile(current_user: models.User = Depends(get_current_user)):
 @router.put("/profile")
 async def update_profile(
     profile_data: UserProfileUpdate, 
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if profile_data.name is not None:
         current_user.name = profile_data.name
@@ -41,9 +38,7 @@ async def update_profile(
         current_prefs.update(profile_data.preferences)
         current_user.preferences = current_prefs
 
-    db.add(current_user)
-    await db.commit()
-    await db.refresh(current_user)
+    await current_user.save()
     
     return {
         "message": "Profile updated successfully",
@@ -67,19 +62,15 @@ class StudentUpdate(BaseModel):
     password: Optional[str] = None
 
 @router.get("/students")
-async def get_students(
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_students(current_user: models.User = Depends(get_current_user)):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    result = await db.execute(select(models.User).filter(models.User.role == "student"))
-    students = result.scalars().all()
+    students = await models.User.find({"role": "student"}).to_list()
     
     return [
         {
-            "id": s.id,
+            "id": str(s.id),
             "name": s.name,
             "email": s.email
         } for s in students
@@ -88,15 +79,13 @@ async def get_students(
 @router.post("/students")
 async def create_student(
     student_data: StudentCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if email exists
-    result = await db.execute(select(models.User).filter(models.User.email == student_data.email))
-    existing_user = result.scalars().first()
+    existing_user = await models.User.find_one({"email": student_data.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -106,24 +95,20 @@ async def create_student(
         password=student_data.password,
         role="student"
     )
-    db.add(new_student)
-    await db.commit()
-    await db.refresh(new_student)
+    await new_student.insert()
     
-    return {"message": "Student created successfully", "id": new_student.id}
+    return {"message": "Student created successfully", "id": str(new_student.id)}
 
 @router.put("/students/{student_id}")
 async def update_student(
-    student_id: int,
+    student_id: PydanticObjectId,
     student_data: StudentUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    result = await db.execute(select(models.User).filter(models.User.id == student_id, models.User.role == "student"))
-    student = result.scalars().first()
+    student = await models.User.find_one({"_id": student_id, "role": "student"})
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -135,26 +120,23 @@ async def update_student(
     if student_data.password is not None:
         student.password = student_data.password
         
-    await db.commit()
+    await student.save()
     return {"message": "Student updated successfully"}
 
 @router.delete("/students/{student_id}")
 async def delete_student(
-    student_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    student_id: PydanticObjectId,
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    result = await db.execute(select(models.User).filter(models.User.id == student_id, models.User.role == "student"))
-    student = result.scalars().first()
+    student = await models.User.find_one({"_id": student_id, "role": "student"})
     
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
         
-    await db.delete(student)
-    await db.commit()
+    await student.delete()
     return {"message": "Student deleted successfully"}
 
 class StaffCreate(BaseModel):
@@ -168,19 +150,15 @@ class StaffUpdate(BaseModel):
     password: Optional[str] = None
 
 @router.get("/staff")
-async def get_staff(
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_staff(current_user: models.User = Depends(get_current_user)):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    result = await db.execute(select(models.User).filter(models.User.role == "staff"))
-    staff_members = result.scalars().all()
+    staff_members = await models.User.find({"role": "staff"}).to_list()
     
     return [
         {
-            "id": s.id,
+            "id": str(s.id),
             "name": s.name,
             "email": s.email
         } for s in staff_members
@@ -189,15 +167,13 @@ async def get_staff(
 @router.post("/staff")
 async def create_staff(
     staff_data: StaffCreate,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if email exists
-    result = await db.execute(select(models.User).filter(models.User.email == staff_data.email))
-    existing_user = result.scalars().first()
+    existing_user = await models.User.find_one({"email": staff_data.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
@@ -207,24 +183,20 @@ async def create_staff(
         password=staff_data.password,
         role="staff"
     )
-    db.add(new_staff)
-    await db.commit()
-    await db.refresh(new_staff)
+    await new_staff.insert()
     
-    return {"message": "Staff member created successfully", "id": new_staff.id}
+    return {"message": "Staff member created successfully", "id": str(new_staff.id)}
 
 @router.put("/staff/{staff_id}")
 async def update_staff(
-    staff_id: int,
+    staff_id: PydanticObjectId,
     staff_data: StaffUpdate,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    result = await db.execute(select(models.User).filter(models.User.id == staff_id, models.User.role == "staff"))
-    staff = result.scalars().first()
+    staff = await models.User.find_one({"_id": staff_id, "role": "staff"})
     
     if not staff:
         raise HTTPException(status_code=404, detail="Staff member not found")
@@ -236,24 +208,21 @@ async def update_staff(
     if staff_data.password is not None:
         staff.password = staff_data.password
         
-    await db.commit()
+    await staff.save()
     return {"message": "Staff member updated successfully"}
 
 @router.delete("/staff/{staff_id}")
 async def delete_staff(
-    staff_id: int,
-    current_user: models.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    staff_id: PydanticObjectId,
+    current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    result = await db.execute(select(models.User).filter(models.User.id == staff_id, models.User.role == "staff"))
-    staff = result.scalars().first()
+    staff = await models.User.find_one({"_id": staff_id, "role": "staff"})
     
     if not staff:
         raise HTTPException(status_code=404, detail="Staff member not found")
         
-    await db.delete(staff)
-    await db.commit()
+    await staff.delete()
     return {"message": "Staff member deleted successfully"}

@@ -1,105 +1,102 @@
-from sqlalchemy import Column, Integer, String, JSON
-from database import Base
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="student")
-    name = Column(String, nullable=True)
-    profile_image_url = Column(String, nullable=True)
-    preferences = Column(JSON, nullable=True, default={})
-
-class ClassSchedule(Base):
-    __tablename__ = "class_schedules"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    time = Column(String, nullable=False)
-    location = Column(String, nullable=False)
-    students = Column(Integer, nullable=False, default=0)
-    color = Column(String, nullable=False, default="primary")
-    day_of_week = Column(String, nullable=False)
-
-
-class Attendance(Base):
-    __tablename__ = "attendance"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True, nullable=False)
-    date = Column(String, index=True, nullable=False) # Format: YYYY-MM-DD
-    status = Column(String, nullable=False, default="absent") # present, absent
-
 from datetime import datetime
-from sqlalchemy import DateTime, Text, ForeignKey
+from typing import Optional
+from beanie import Document, PydanticObjectId
+from pydantic import Field
 
-class Announcement(Base):
-    __tablename__ = "announcements"
+class User(Document):
+    email: str
+    password: str
+    role: str = "student"
+    name: Optional[str] = None
+    profile_image_url: Optional[str] = None
+    preferences: dict = {}
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    class Settings:
+        name = "users"
 
+class ClassSchedule(Document):
+    name: str
+    time: str
+    location: str
+    students: int = 0
+    color: str = "primary"
+    day_of_week: str
 
-class AnnouncementView(Base):
-    __tablename__ = "announcement_views"
+    class Settings:
+        name = "class_schedules"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
-    announcement_id = Column(Integer, ForeignKey("announcements.id"), index=True, nullable=False)
-    viewed_at = Column(DateTime, default=datetime.utcnow)
+class Attendance(Document):
+    user_id: PydanticObjectId
+    date: str # Format: YYYY-MM-DD
+    status: str = "absent" # present, absent
 
-class Material(Base):
-    __tablename__ = "materials"
+    class Settings:
+        name = "attendance"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=True)
-    file_url = Column(String, nullable=False)
-    uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+class Announcement(Document):
+    title: str
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    author_id: PydanticObjectId
 
-class Test(Base):
-    __tablename__ = "tests"
+    class Settings:
+        name = "announcements"
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=True)
-    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    due_date = Column(DateTime, nullable=True)
+class AnnouncementView(Document):
+    user_id: PydanticObjectId
+    announcement_id: PydanticObjectId
+    viewed_at: datetime = Field(default_factory=datetime.utcnow)
 
-class TestSubmission(Base):
-    __tablename__ = "test_submissions"
+    class Settings:
+        name = "announcement_views"
 
-    id = Column(Integer, primary_key=True, index=True)
-    test_id = Column(Integer, ForeignKey("tests.id"), nullable=False)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    submission_content = Column(Text, nullable=False)  # Can be a URL, link, or text
-    submitted_at = Column(DateTime, default=datetime.utcnow)
-    staff_comments = Column(Text, nullable=True)
-    status = Column(String, default="Pending Review")  # "Pending Review", "Reviewed"
-    score = Column(Integer, nullable=True)
+class Material(Document):
+    title: str
+    description: Optional[str] = None
+    file_url: str
+    uploaded_by_id: PydanticObjectId
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
-class StaffLog(Base):
-    __tablename__ = "staff_logs"
+    class Settings:
+        name = "materials"
 
-    id = Column(Integer, primary_key=True, index=True)
-    staff_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    action = Column(String, nullable=False)
-    details = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+class Test(Document):
+    title: str
+    description: Optional[str] = None
+    created_by_id: PydanticObjectId
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    due_date: Optional[datetime] = None
 
-class Activity(Base):
-    __tablename__ = "activities"
+    class Settings:
+        name = "tests"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user = Column(String, nullable=False)
-    action = Column(String, nullable=False)
-    time = Column(String, nullable=False)
-    type = Column(String, nullable=False)
+class TestSubmission(Document):
+    test_id: PydanticObjectId
+    student_id: PydanticObjectId
+    submission_content: str
+    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    staff_comments: Optional[str] = None
+    status: str = "Pending Review"
+    score: Optional[int] = None
+
+    class Settings:
+        name = "test_submissions"
+
+class StaffLog(Document):
+    staff_id: PydanticObjectId
+    action: str
+    details: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "staff_logs"
+
+class Activity(Document):
+    user: str
+    action: str
+    time: str
+    type: str
+
+    class Settings:
+        name = "activities"

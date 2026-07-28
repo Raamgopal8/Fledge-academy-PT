@@ -1,63 +1,26 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
-from database import engine, Base, AsyncSessionLocal
+from database import init_db
 import models
 from routes import auth, dashboard, user, schedule, attendance, announcement, materials, tests
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Initialize Beanie database connection
+    await init_db()
     
-    # Seed initial users
-    async with AsyncSessionLocal() as session:
-        valid_users = [
-            {"email": "ceo@gmail.com", "password": "password123", "role": "ceo", "name": "CEO", "profile_image_url": "https://i.pravatar.cc/150?u=ceo"},
-            {"email": "staff@gmail.com", "password": "password123", "role": "staff", "name": "Staff Member", "profile_image_url": "https://i.pravatar.cc/150?u=staff"},
-            {"email": "student@gmail.com", "password": "password123", "role": "student", "name": "Student", "profile_image_url": "https://i.pravatar.cc/150?u=student"},
-        ]
-        
-        for user_data in valid_users:
-            result = await session.execute(select(models.User).filter(models.User.email == user_data["email"]))
-            existing_user = result.scalars().first()
-            if not existing_user:
-                new_user = models.User(**user_data)
-                session.add(new_user)
-        
-        # Seed initial class schedules
-        result = await session.execute(select(models.ClassSchedule))
-        existing_schedules = result.scalars().all()
-        if not existing_schedules:
-            valid_schedules = [
-                {"name": "Adv. Mathematics II", "time": "09:00 AM - 10:30 AM", "location": "Room 304", "students": 42, "color": "primary", "day_of_week": "Monday"},
-                {"name": "Digital Literacy 101", "time": "11:30 AM - 01:00 PM", "location": "Virtual Lab", "students": 18, "color": "secondary", "day_of_week": "Wednesday"},
-                {"name": "Ethics & Tech Seminar", "time": "02:00 PM - 03:30 PM", "location": "Main Hall", "students": 120, "color": "tertiary", "day_of_week": "Friday"},
-            ]
-            for schedule_data in valid_schedules:
-                new_schedule = models.ClassSchedule(**schedule_data)
-                session.add(new_schedule)
-
-        # Seed initial staff logs
-        result = await session.execute(select(models.StaffLog))
-        existing_logs = result.scalars().all()
-        if not existing_logs:
-            # We need the staff user id to seed logs
-            result = await session.execute(select(models.User).filter(models.User.email == "staff@gmail.com"))
-            staff_user = result.scalars().first()
-            if staff_user:
-                import datetime
-                valid_logs = [
-                    {"staff_id": staff_user.id, "action": "Graded Test", "details": "Graded Midterm Exam for John Doe.", "timestamp": datetime.datetime.utcnow() - datetime.timedelta(hours=2)},
-                    {"staff_id": staff_user.id, "action": "Posted Announcement", "details": "Posted 'Upcoming Assignment Deadlines'.", "timestamp": datetime.datetime.utcnow() - datetime.timedelta(hours=5)},
-                    {"staff_id": staff_user.id, "action": "Updated Material", "details": "Updated 'Week 3 Slides' PDF.", "timestamp": datetime.datetime.utcnow() - datetime.timedelta(days=1)}
-                ]
-                for log_data in valid_logs:
-                    new_log = models.StaffLog(**log_data)
-                    session.add(new_log)
-        await session.commit()
+    # Seed initial users (ceo and staff only)
+    valid_users = [
+        {"email": "ceo@gmail.com", "password": "password123", "role": "ceo", "name": "CEO", "profile_image_url": "https://i.pravatar.cc/150?u=ceo"},
+    ]
+    
+    for user_data in valid_users:
+        existing_user = await models.User.find_one(models.User.email == user_data["email"])
+        if not existing_user:
+            new_user = models.User(**user_data)
+            await new_user.insert()
+            
     yield
 
 app = FastAPI(

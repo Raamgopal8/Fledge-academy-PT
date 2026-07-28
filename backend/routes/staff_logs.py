@@ -1,7 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
-from database import get_db
 import models
 from routes.auth import get_current_user
 from pydantic import BaseModel
@@ -13,25 +10,23 @@ class StaffLogCreate(BaseModel):
     details: str = None
 
 @router.get("")
-async def get_staff_logs(db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def get_staff_logs(current_user: models.User = Depends(get_current_user)):
     if current_user.role != "ceo":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only CEO can view staff logs"
         )
     
-    result = await db.execute(select(models.StaffLog).order_by(desc(models.StaffLog.timestamp)))
-    logs = result.scalars().all()
+    logs = await models.StaffLog.find_all().sort("-timestamp").to_list()
     
     # Enrich with staff name
     enriched_logs = []
     for log in logs:
-        staff_result = await db.execute(select(models.User).filter(models.User.id == log.staff_id))
-        staff = staff_result.scalars().first()
+        staff = await models.User.get(log.staff_id)
         staff_name = staff.name if staff else "Unknown Staff"
         enriched_logs.append({
-            "id": log.id,
-            "staff_id": log.staff_id,
+            "id": str(log.id),
+            "staff_id": str(log.staff_id),
             "staff_name": staff_name,
             "action": log.action,
             "details": log.details,
@@ -43,7 +38,6 @@ async def get_staff_logs(db: AsyncSession = Depends(get_db), current_user: model
 @router.post("")
 async def create_staff_log(
     log_in: StaffLogCreate,
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "staff":
@@ -57,14 +51,11 @@ async def create_staff_log(
         action=log_in.action,
         details=log_in.details
     )
-    db.add(new_log)
-    await db.commit()
-    await db.refresh(new_log)
+    await new_log.insert()
     return new_log
 
 @router.delete("")
 async def clear_staff_logs(
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
@@ -73,7 +64,6 @@ async def clear_staff_logs(
             detail="Only CEO can clear staff logs"
         )
     
-    await db.execute(models.StaffLog.__table__.delete())
-    await db.commit()
+    await models.StaffLog.delete_all()
     return {"message": "All staff logs cleared successfully"}
 

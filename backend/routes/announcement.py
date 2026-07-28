@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
+from beanie import PydanticObjectId
 
-from database import get_db
 import models
 from routes.auth import get_current_user
 
@@ -20,31 +18,27 @@ class AnnouncementUpdate(BaseModel):
     content: Optional[str] = None
 
 class AnnouncementResponse(BaseModel):
-    id: int
+    id: PydanticObjectId = Field(alias="_id")
     title: str
     content: str
     created_at: datetime
     updated_at: datetime
-    author_id: int
+    author_id: PydanticObjectId
     viewed: bool = False
 
     class Config:
+        populate_by_name = True
         from_attributes = True
 
 @router.get("/", response_model=List[AnnouncementResponse])
 async def get_announcements(
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    result = await db.execute(select(models.Announcement).order_by(models.Announcement.created_at.desc()))
-    announcements = result.scalars().all()
+    announcements = await models.Announcement.find_all().sort("-created_at").to_list()
     
     # Get views for the current user
-    views_result = await db.execute(
-        select(models.AnnouncementView.announcement_id)
-        .where(models.AnnouncementView.user_id == current_user.id)
-    )
-    viewed_ids = set(views_result.scalars().all())
+    views = await models.AnnouncementView.find(models.AnnouncementView.user_id == current_user.id).to_list()
+    viewed_ids = {view.announcement_id for view in views}
     
     response_data = []
     for ann in announcements:
@@ -63,19 +57,13 @@ async def get_announcements(
 
 @router.get("/unread_count")
 async def get_unread_count(
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     # Total announcements
-    result = await db.execute(select(models.Announcement.id))
-    total_announcements = len(result.scalars().all())
+    total_announcements = await models.Announcement.find_all().count()
     
     # Viewed announcements
-    views_result = await db.execute(
-        select(models.AnnouncementView.announcement_id)
-        .where(models.AnnouncementView.user_id == current_user.id)
-    )
-    viewed_count = len(views_result.scalars().all())
+    viewed_count = await models.AnnouncementView.find(models.AnnouncementView.user_id == current_user.id).count()
     
     unread_count = total_announcements - viewed_count
     return {"unread_count": max(0, unread_count)}
@@ -83,7 +71,6 @@ async def get_unread_count(
 @router.post("/", response_model=AnnouncementResponse)
 async def create_announcement(
     announcement: AnnouncementCreate,
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
@@ -94,9 +81,7 @@ async def create_announcement(
         content=announcement.content,
         author_id=current_user.id
     )
-    db.add(new_ann)
-    await db.commit()
-    await db.refresh(new_ann)
+    await new_ann.insert()
     
     return {
         "id": new_ann.id,
@@ -110,16 +95,14 @@ async def create_announcement(
 
 @router.put("/{announcement_id}", response_model=AnnouncementResponse)
 async def update_announcement(
-    announcement_id: int,
+    announcement_id: PydanticObjectId,
     announcement_update: AnnouncementUpdate,
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Only CEO can update announcements")
         
-    result = await db.execute(select(models.Announcement).where(models.Announcement.id == announcement_id))
-    db_ann = result.scalars().first()
+    db_ann = await models.Announcement.get(announcement_id)
     
     if not db_ann:
         raise HTTPException(status_code=404, detail="Announcement not found")
@@ -129,8 +112,8 @@ async def update_announcement(
     if announcement_update.content is not None:
         db_ann.content = announcement_update.content
         
-    await db.commit()
-    await db.refresh(db_ann)
+    db_ann.updated_at = datetime.utcnow()
+    await db_ann.save()
     
     return {
         "id": db_ann.id,
@@ -144,31 +127,26 @@ async def update_announcement(
 
 @router.post("/{announcement_id}/view")
 async def mark_as_viewed(
-    announcement_id: int,
-    db: AsyncSession = Depends(get_db),
+    announcement_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
     # Check if announcement exists
-    result = await db.execute(select(models.Announcement).where(models.Announcement.id == announcement_id))
-    if not result.scalars().first():
+    announcement = await models.Announcement.get(announcement_id)
+    if not announcement:
         raise HTTPException(status_code=404, detail="Announcement not found")
         
     # Check if already viewed
-    view_result = await db.execute(
-        select(models.AnnouncementView)
-        .where(
-            (models.AnnouncementView.user_id == current_user.id) & 
-            (models.AnnouncementView.announcement_id == announcement_id)
-        )
+    existing_view = await models.AnnouncementView.find_one(
+        models.AnnouncementView.user_id == current_user.id,
+        models.AnnouncementView.announcement_id == announcement_id
     )
-    if view_result.scalars().first():
+    if existing_view:
         return {"message": "Already viewed"}
         
     new_view = models.AnnouncementView(
         user_id=current_user.id,
         announcement_id=announcement_id
     )
-    db.add(new_view)
-    await db.commit()
+    await new_view.insert()
     
     return {"message": "Marked as viewed"}

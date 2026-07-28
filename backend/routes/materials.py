@@ -2,9 +2,7 @@ import os
 import shutil
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from database import get_db
+from beanie import PydanticObjectId
 import models
 from .auth import get_current_user
 
@@ -20,18 +18,17 @@ except OSError:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.get("/", response_model=List[dict])
-async def get_materials(db: AsyncSession = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def get_materials(current_user: models.User = Depends(get_current_user)):
     """Fetch all materials (accessible by all authenticated users)"""
-    result = await db.execute(select(models.Material).order_by(models.Material.created_at.desc()))
-    materials = result.scalars().all()
+    materials = await models.Material.find_all().sort("-created_at").to_list()
     
     return [
         {
-            "id": m.id,
+            "id": str(m.id),
             "title": m.title,
             "description": m.description,
             "file_url": m.file_url,
-            "uploaded_by_id": m.uploaded_by_id,
+            "uploaded_by_id": str(m.uploaded_by_id),
             "created_at": m.created_at.isoformat() if m.created_at else None
         }
         for m in materials
@@ -43,7 +40,6 @@ async def upload_material(
     description: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     link: Optional[str] = Form(None),
-    db: AsyncSession = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """Upload a new material (restricted to staff and ceo)"""
@@ -75,23 +71,20 @@ async def upload_material(
         uploaded_by_id=current_user.id
     )
     
-    db.add(new_material)
-    await db.commit()
-    await db.refresh(new_material)
+    await new_material.insert()
     
     return {
-        "id": new_material.id,
+        "id": str(new_material.id),
         "title": new_material.title,
         "description": new_material.description,
         "file_url": new_material.file_url,
-        "uploaded_by_id": new_material.uploaded_by_id,
+        "uploaded_by_id": str(new_material.uploaded_by_id),
         "created_at": new_material.created_at.isoformat() if new_material.created_at else None
     }
 
 @router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_material(
-    material_id: int,
-    db: AsyncSession = Depends(get_db),
+    material_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
     """Delete a material (restricted to staff and ceo)"""
@@ -101,8 +94,7 @@ async def delete_material(
             detail="Not authorized to delete materials"
         )
         
-    result = await db.execute(select(models.Material).filter(models.Material.id == material_id))
-    material = result.scalars().first()
+    material = await models.Material.get(material_id)
     
     if not material:
         raise HTTPException(
@@ -117,6 +109,5 @@ async def delete_material(
         if os.path.exists(file_path):
             os.remove(file_path)
             
-    await db.delete(material)
-    await db.commit()
+    await material.delete()
     return None
