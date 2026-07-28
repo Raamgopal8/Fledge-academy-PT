@@ -20,6 +20,7 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${manrope.variable} ${jakarta.variable} antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <link
@@ -27,7 +28,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body className="font-body-md text-on-surface overflow-x-hidden">
+      <body suppressHydrationWarning className="font-body-md text-on-surface overflow-x-hidden">
         {children}
       </body>
     </html>

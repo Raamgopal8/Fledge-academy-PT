@@ -71,6 +71,7 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://fledge-academy-f0akgh02f-raamgopal8s-projects.vercel.app",
 ]
 
 app.add_middleware(
