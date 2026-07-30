@@ -13,6 +13,7 @@ export default function StaffDashboard() {
     const [summary, setSummary] = useState(null);
     const [classes, setClasses] = useState(null);
     const [activities, setActivities] = useState(null);
+    const [profile, setProfile] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -24,10 +25,11 @@ export default function StaffDashboard() {
                     'Authorization': `Bearer ${token}`
                 };
 
-                const [summaryRes, classesRes, activitiesRes] = await Promise.all([
+                const [summaryRes, classesRes, activitiesRes, profileRes] = await Promise.all([
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/summary`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/classes`, { headers }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, { headers })
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, { headers }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, { headers })
                 ]);
 
                 if (!summaryRes.ok || !classesRes.ok || !activitiesRes.ok) {
@@ -37,6 +39,9 @@ export default function StaffDashboard() {
                 setSummary(await summaryRes.json());
                 setClasses(await classesRes.json());
                 setActivities(await activitiesRes.json());
+                if (profileRes.ok) {
+                    setProfile(await profileRes.json());
+                }
             } catch (err) {
                 console.error("Error fetching dashboard data:", err);
                 setError(err.message);
@@ -78,13 +83,9 @@ export default function StaffDashboard() {
             {/* Welcome Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mt-6">
                 <div>
-                    <h2 className="font-headline-lg text-headline-lg text-on-surface">Welcome back, {summary?.name}</h2>
-                    <p className="font-body-md text-body-md text-on-surface-variant">You have {summary?.classesToday} classes today and {summary?.ungradedAssignments} ungraded assignments.</p>
+                    <h2 className="font-headline-lg text-headline-lg text-on-surface">Welcome back, {profile?.name || summary?.name}</h2>
+                    <p className="font-body-md text-body-md text-on-surface-variant">You have {classes?.length || 0} classes today and {activities?.filter(a => a.status !== 'Reviewed').length || 0} ungraded assignments.</p>
                 </div>
-                <button className="flex items-center justify-center bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md gap-2 hover:opacity-90 active:scale-95 transition-all shadow-sm">
-                    <span className="material-symbols-outlined">add</span>
-                    Create Course
-                </button>
             </section>
 
             {/* Grid Layout */}
@@ -99,13 +100,13 @@ export default function StaffDashboard() {
                                 <h3 className="font-headline-md text-headline-md">Post New Material</h3>
                             </div>
                             <p className="font-body-md text-body-md text-on-surface-variant">Upload new lecture notes, slides, or reading materials to your assigned courses instantly.</p>
-                            <div className="pt-base space-x-sm">
-                                <button className="px-6 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:scale-105 active:scale-95 transition-transform">
+                            <div className="pt-base space-x-sm flex items-center">
+                                <Link href="/staff/materials" className="px-6 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:scale-105 active:scale-95 transition-transform inline-block text-center">
                                     Start Upload
-                                </button>
-                                <button className="px-6 py-3 border border-outline-variant text-primary rounded-lg font-label-md text-label-md hover:bg-surface-container-low active:scale-95 transition-colors">
+                                </Link>
+                                <Link href="/staff/materials" className="px-6 py-3 border border-outline-variant text-primary rounded-lg font-label-md text-label-md hover:bg-surface-container-low active:scale-95 transition-colors inline-block text-center">
                                     Browse Library
-                                </button>
+                                </Link>
                             </div>
                         </div>
                         <div className="hidden md:block w-48 h-48 rounded-xl overflow-hidden shadow-inner self-center">

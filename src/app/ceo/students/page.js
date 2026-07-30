@@ -14,6 +14,7 @@ export default function CEOStudents() {
     const [currentStudent, setCurrentStudent] = useState(null);
     const [formData, setFormData] = useState({ name: '', email: '', password: '' });
     const [formError, setFormError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const fetchStudents = async () => {
         setIsLoading(true);
@@ -214,7 +215,7 @@ export default function CEOStudents() {
             {/* Add Student Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-2xl p-xl w-full max-w-md shadow-2xl">
+                    <div className="bg-surface rounded-2xl p-xl w-[90%] max-w-[500px] shadow-2xl">
                         <h2 className="font-headline-md text-on-surface mb-md">Add New Student</h2>
                         {formError && <p className="text-error mb-4 text-sm bg-error-container p-2 rounded">{formError}</p>}
                         <form onSubmit={handleAddSubmit} className="space-y-4">
@@ -240,13 +241,24 @@ export default function CEOStudents() {
                             </div>
                             <div>
                                 <label className="block text-label-md text-on-surface-variant mb-1">Password</label>
-                                <input 
-                                    type="password" 
-                                    required
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                />
+                                <div className="relative">
+                                    <input 
+                                        type={showPassword ? "text" : "password"}
+                                        required
+                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 pr-12 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {showPassword ? "visibility_off" : "visibility"}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
@@ -271,7 +283,7 @@ export default function CEOStudents() {
             {/* Edit Student Modal */}
             {isEditModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-2xl p-xl w-full max-w-md shadow-2xl">
+                    <div className="bg-surface rounded-2xl p-xl w-[90%] max-w-[500px] shadow-2xl">
                         <h2 className="font-headline-md text-on-surface mb-md">Edit Student</h2>
                         {formError && <p className="text-error mb-4 text-sm bg-error-container p-2 rounded">{formError}</p>}
                         <form onSubmit={handleEditSubmit} className="space-y-4">
@@ -297,12 +309,23 @@ export default function CEOStudents() {
                             </div>
                             <div>
                                 <label className="block text-label-md text-on-surface-variant mb-1">New Password (leave blank to keep current)</label>
-                                <input 
-                                    type="password" 
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                />
+                                <div className="relative">
+                                    <input 
+                                        type={showPassword ? "text" : "password"}
+                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 pr-12 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {showPassword ? "visibility_off" : "visibility"}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
@@ -327,7 +350,7 @@ export default function CEOStudents() {
             {/* Delete Student Modal */}
             {isDeleteModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-surface rounded-2xl p-xl w-full max-w-md shadow-2xl">
+                    <div className="bg-surface rounded-2xl p-xl w-[90%] max-w-[500px] shadow-2xl">
                         <div className="flex flex-col items-center text-center gap-4">
                             <div className="w-16 h-16 rounded-full bg-error-container text-error flex items-center justify-center">
                                 <span className="material-symbols-outlined text-[32px]">warning</span>

@@ -7,34 +7,7 @@ import { useStudentContext } from "@/app/student/StudentContext";
 
 export default function StudentNavbar() {
   const pathname = usePathname();
-  const [unreadCount, setUnreadCount] = useState(0);
   const { isMobileNavOpen, setIsMobileNavOpen } = useStudentContext();
-
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/unread_count`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setUnreadCount(data.unread_count);
-        }
-      } catch (error) {
-        console.error("Failed to fetch unread announcements count", error);
-      }
-    };
-
-    fetchUnreadCount();
-    
-    const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
     const navItems = [
       { name: "Overview", icon: "dashboard", href: "/dashboard" },
@@ -101,11 +74,6 @@ export default function StudentNavbar() {
                   {item.icon}
                 </span>
                 <span className="font-label-md text-label-md">{item.name}</span>
-                {item.name === "Announcements" && unreadCount > 0 && (
-                  <span className="ml-auto bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
               </Link>
             );
           })}

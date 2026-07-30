@@ -124,9 +124,16 @@ export default function CEOTests() {
                         <p className="text-on-surface-variant font-body-sm line-clamp-3 mb-4 flex-1">{test.description}</p>
                         
                         <div className="flex justify-between items-center mt-auto pt-4 border-t border-outline-variant">
-                            <span className="text-xs text-on-surface-variant">
-                                {new Date(test.created_at).toLocaleDateString()}
-                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-xs text-on-surface-variant">
+                                    Posted: {new Date(test.created_at).toLocaleDateString()}
+                                </span>
+                                {test.due_date && (
+                                    <span className="text-xs font-medium text-error mt-1">
+                                        Due: {new Date(test.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                    </span>
+                                )}
+                            </div>
                             <button 
                                 onClick={() => fetchSubmissions(test)}
                                 className="text-primary font-label-md flex items-center gap-1 group-hover:underline"

@@ -28,6 +28,8 @@ export default function CEOStaffLogs() {
     const [currentStaff, setCurrentStaff] = useState(null);
     const [formData, setFormData] = useState({ name: '', email: '', password: '' });
     const [formError, setFormError] = useState('');
+    const [isAddPasswordVisible, setIsAddPasswordVisible] = useState(false);
+    const [isEditPasswordVisible, setIsEditPasswordVisible] = useState(false);
 
     const fetchLogs = async () => {
         setLogsLoading(true);
@@ -450,13 +452,24 @@ export default function CEOStaffLogs() {
                             </div>
                             <div>
                                 <label className="block text-label-md text-on-surface-variant mb-1">Password</label>
-                                <input 
-                                    type="password" 
-                                    required
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                />
+                                <div className="relative">
+                                    <input 
+                                        type={isAddPasswordVisible ? "text" : "password"} 
+                                        required
+                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 pr-12 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddPasswordVisible(!isAddPasswordVisible)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center justify-center rounded-full"
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {isAddPasswordVisible ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
@@ -507,12 +520,23 @@ export default function CEOStaffLogs() {
                             </div>
                             <div>
                                 <label className="block text-label-md text-on-surface-variant mb-1">New Password (leave blank to keep current)</label>
-                                <input 
-                                    type="password" 
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.password}
-                                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                />
+                                <div className="relative">
+                                    <input 
+                                        type={isEditPasswordVisible ? "text" : "password"} 
+                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 pr-12 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditPasswordVisible(!isEditPasswordVisible)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center justify-center rounded-full"
+                                    >
+                                        <span className="material-symbols-outlined">
+                                            {isEditPasswordVisible ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 

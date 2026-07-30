@@ -38,7 +38,7 @@ async def get_announcements(
     
     # Get views for the current user
     views = await models.AnnouncementView.find(models.AnnouncementView.user_id == current_user.id).to_list()
-    viewed_ids = {view.announcement_id for view in views}
+    viewed_ids = {str(view.announcement_id) for view in views}
     
     response_data = []
     for ann in announcements:
@@ -49,7 +49,7 @@ async def get_announcements(
             "created_at": ann.created_at,
             "updated_at": ann.updated_at,
             "author_id": ann.author_id,
-            "viewed": ann.id in viewed_ids
+            "viewed": str(ann.id) in viewed_ids
         }
         response_data.append(ann_dict)
         
@@ -59,14 +59,14 @@ async def get_announcements(
 async def get_unread_count(
     current_user: models.User = Depends(get_current_user)
 ):
-    # Total announcements
-    total_announcements = await models.Announcement.find_all().count()
+    announcements = await models.Announcement.find_all().to_list()
+    ann_ids = {str(ann.id) for ann in announcements}
     
-    # Viewed announcements
-    viewed_count = await models.AnnouncementView.find(models.AnnouncementView.user_id == current_user.id).count()
+    views = await models.AnnouncementView.find(models.AnnouncementView.user_id == current_user.id).to_list()
+    viewed_ann_ids = {str(view.announcement_id) for view in views}
     
-    unread_count = total_announcements - viewed_count
-    return {"unread_count": max(0, unread_count)}
+    unread_count = len(ann_ids - viewed_ann_ids)
+    return {"unread_count": unread_count}
 
 @router.post("/", response_model=AnnouncementResponse)
 async def create_announcement(

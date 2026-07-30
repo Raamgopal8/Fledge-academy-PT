@@ -37,7 +37,7 @@ export default function StaffTopNav() {
                 </button>
             </div>
             <div className="flex items-center gap-sm">
-                <Link href="/settings" className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-full transition-colors active:scale-95 flex items-center justify-center">
+                <Link href="/staff/settings" className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-full transition-colors active:scale-95 flex items-center justify-center">
                     <span className="material-symbols-outlined">settings</span>
                 </Link>
                 <div className="h-8 w-8 rounded-full overflow-hidden ml-sm bg-surface-container-high border border-outline-variant cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all flex items-center justify-center">

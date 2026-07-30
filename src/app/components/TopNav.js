@@ -37,7 +37,7 @@ export default function TopNav() {
         </button>
       </div>
       <div className="flex items-center gap-md">
-        <Link href="/settings" className="text-on-surface-variant hover:text-primary transition-colors active:scale-[0.98] flex items-center justify-center">
+        <Link href="/dashboard/settings" className="text-on-surface-variant hover:text-primary transition-colors active:scale-[0.98] flex items-center justify-center">
           <span className="material-symbols-outlined">settings</span>
         </Link>
         <div className="h-8 w-[1px] bg-outline-variant mx-xs"></div>

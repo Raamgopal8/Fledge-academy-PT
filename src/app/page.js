@@ -112,7 +112,7 @@ export default function LoginPage() {
               Unlock your potential with professional learning.
             </h2>
             <p className="text-body-lg text-primary-fixed opacity-90 leading-relaxed text-justify">
-              Join over 50,000 students mastering new skills daily. From design
+              Join with students mastering new skills daily. From design
               to engineering, start your journey today with neat, smooth, and
               professional resources.
             </p>
@@ -124,12 +124,6 @@ export default function LoginPage() {
             <p className="text-headline-md text-white">4.9/5</p>
             <p className="text-label-sm text-primary-fixed uppercase tracking-widest">
               Student Rating
-            </p>
-          </div>
-          <div>
-            <p className="text-headline-md text-white">120+</p>
-            <p className="text-label-sm text-primary-fixed uppercase tracking-widest">
-              Expert Courses
             </p>
           </div>
         </div>

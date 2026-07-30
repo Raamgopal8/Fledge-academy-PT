@@ -77,9 +77,16 @@ export default function StudentTests() {
                 <div className="bg-surface-container p-xl rounded-3xl border border-outline-variant shadow-sm space-y-md">
                     <div>
                         <h2 className="font-display-sm text-on-surface mb-2">{activeTest.title}</h2>
-                        <span className="text-sm font-medium text-on-surface-variant bg-surface-container-highest px-3 py-1 rounded-full">
-                            Posted {new Date(activeTest.created_at).toLocaleDateString()}
-                        </span>
+                        <div className="flex gap-2">
+                            <span className="text-sm font-medium text-on-surface-variant bg-surface-container-highest px-3 py-1 rounded-full">
+                                Posted {new Date(activeTest.created_at).toLocaleDateString()}
+                            </span>
+                            {activeTest.due_date && (
+                                <span className="text-sm font-medium text-error bg-error/10 px-3 py-1 rounded-full">
+                                    Due {new Date(activeTest.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     
                     <div className="bg-surface p-lg rounded-2xl border border-outline-variant">
@@ -150,7 +157,14 @@ export default function StudentTests() {
                 {tests.map(test => (
                     <div key={test.id} className="bg-surface p-lg rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group flex flex-col">
                         <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-title-lg text-on-surface">{test.title}</h3>
+                            <div className="flex flex-col">
+                                <h3 className="font-title-lg text-on-surface">{test.title}</h3>
+                                {test.due_date && (
+                                    <span className="text-xs font-medium text-error mt-1">
+                                        Due: {new Date(test.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                    </span>
+                                )}
+                            </div>
                             {test.submission && (
                                 <span className="material-symbols-outlined text-primary" title="Submitted">task_alt</span>
                             )}

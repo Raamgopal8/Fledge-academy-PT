@@ -2,39 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import { useStaffContext } from '@/app/staff/StaffContext';
 
 export default function StaffNavbar() {
     const pathname = usePathname();
-    const [unreadCount, setUnreadCount] = useState(0);
     const { isMobileNavOpen, setIsMobileNavOpen } = useStaffContext();
 
-    useEffect(() => {
-        const fetchUnreadCount = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-                
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/unread_count`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setUnreadCount(data.unread_count);
-                }
-            } catch (error) {
-                console.error("Failed to fetch unread announcements count", error);
-            }
-        };
-
-        fetchUnreadCount();
-        
-        const interval = setInterval(fetchUnreadCount, 60000);
-        return () => clearInterval(interval);
-    }, []);
 
     const navLinks = [
         { name: 'Overview', href: '/staff/dashboard', icon: 'dashboard' },
@@ -88,11 +61,6 @@ export default function StaffNavbar() {
                         >
                             <span className="material-symbols-outlined mr-3">{link.icon}</span>
                             {link.name}
-                            {link.name === 'Announcements' && unreadCount > 0 && (
-                                <span className="absolute right-4 bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    {unreadCount}
-                                </span>
-                            )}
                         </Link>
                     );
                 })}

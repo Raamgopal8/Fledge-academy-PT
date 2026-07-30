@@ -1,40 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import { useCEOContext } from '@/app/ceo/CEOContext';
 
 export default function CEONavbar() {
     const pathname = usePathname();
-    const [unreadCount, setUnreadCount] = useState(0);
     const { isMobileNavOpen, setIsMobileNavOpen } = useCEOContext();
 
-    useEffect(() => {
-        const fetchUnreadCount = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-                
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/unread_count`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setUnreadCount(data.unread_count);
-                }
-            } catch (error) {
-                console.error("Failed to fetch unread announcements count", error);
-            }
-        };
-
-        fetchUnreadCount();
-        
-        // Optional: Polling every minute
-        const interval = setInterval(fetchUnreadCount, 60000);
-        return () => clearInterval(interval);
-    }, []);
 
     const navItems = [
         { name: 'Overview', path: '/ceo/dashboard', icon: 'dashboard' },
@@ -87,11 +59,6 @@ export default function CEONavbar() {
                         >
                             <span className="material-symbols-outlined">{item.icon}</span>
                             <span className="font-label-md text-label-md">{item.name}</span>
-                            {item.name === 'Announcements' && unreadCount > 0 && (
-                                <span className="absolute right-4 bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    {unreadCount}
-                                </span>
-                            )}
                         </Link>
                     );
                 })}

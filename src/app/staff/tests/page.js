@@ -9,6 +9,7 @@ export default function StaffTests() {
     // New Test Form
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [dueDate, setDueDate] = useState('');
     
     // Submissions View
     const [activeTest, setActiveTest] = useState(null);
@@ -47,13 +48,14 @@ export default function StaffTests() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ title, description })
+                body: JSON.stringify({ title, description, due_date: dueDate ? new Date(dueDate).toISOString() : null })
             });
 
             if (res.ok) {
                 setIsCreating(false);
                 setTitle('');
                 setDescription('');
+                setDueDate('');
                 fetchTests();
             } else {
                 alert("Failed to create test");
@@ -228,6 +230,15 @@ export default function StaffTests() {
                             placeholder="Detail the requirements, questions, and expectations..."
                         ></textarea>
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-on-surface mb-1">Deadline (Optional)</label>
+                        <input
+                            type="datetime-local"
+                            value={dueDate}
+                            onChange={e => setDueDate(e.target.value)}
+                            className="w-full h-12 bg-surface-container-lowest border border-outline rounded-xl px-4 focus:outline-none focus:border-primary text-on-surface"
+                        />
+                    </div>
                     <div className="flex justify-end pt-4">
                         <button type="submit" className="h-12 px-8 rounded-full bg-primary text-on-primary font-label-lg hover:bg-primary/90 shadow-md active:scale-95 transition-all">
                             Publish Test
@@ -243,9 +254,16 @@ export default function StaffTests() {
                         <p className="text-on-surface-variant font-body-sm line-clamp-3 mb-4 flex-1">{test.description}</p>
                         
                         <div className="flex justify-between items-center mt-auto pt-4 border-t border-outline-variant">
-                            <span className="text-xs text-on-surface-variant">
-                                {new Date(test.created_at).toLocaleDateString()}
-                            </span>
+                            <div className="flex flex-col">
+                                <span className="text-xs text-on-surface-variant">
+                                    Posted: {new Date(test.created_at).toLocaleDateString()}
+                                </span>
+                                {test.due_date && (
+                                    <span className="text-xs font-medium text-error mt-1">
+                                        Due: {new Date(test.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                    </span>
+                                )}
+                            </div>
                             <button 
                                 onClick={() => fetchSubmissions(test)}
                                 className="text-primary font-label-md flex items-center gap-1 group-hover:underline"

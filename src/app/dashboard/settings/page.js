@@ -1,96 +1,166 @@
 'use client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function StudentSettings() {
+export default function SettingsPage() {
+    const router = useRouter();
+    const [profile, setProfile] = useState({ name: '', profile_image_url: '', preferences: { notifications: true, darkMode: false } });
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    router.push('/');
+                    return;
+                }
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setProfile({
+                        name: data.name || '',
+                        profile_image_url: data.profile_image_url || '',
+                        preferences: data.preferences || { notifications: true, darkMode: false }
+                    });
+                } else {
+                    console.error("Failed to fetch profile");
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        setMessage('');
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(profile)
+            });
+            if (res.ok) {
+                setMessage('Profile updated successfully!');
+            } else {
+                setMessage('Failed to update profile.');
+            }
+        } catch (err) {
+            setMessage('An error occurred.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
-                <div>
-                    <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
-                            settings
-                        </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
-                            Account Settings
-                        </h1>
-                    </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
-                        Manage your preferences and security
-                    </p>
+        <main className="min-h-screen bg-surface p-gutter">
+            <div className="max-w-[800px] mx-auto space-y-lg">
+                <div className="flex items-center gap-sm">
+                    <button onClick={() => router.back()} className="material-symbols-outlined p-2 rounded-full hover:bg-surface-container transition-colors">arrow_back</button>
+                    <h1 className="font-display-lg text-headline-lg text-primary">Settings</h1>
+                    {isLoading && <span className="material-symbols-outlined animate-spin text-primary ml-4">progress_activity</span>}
                 </div>
-                
-                <div className="flex gap-sm">
-                    <button className="flex items-center gap-xs px-md py-sm rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 font-label-md">
-                        <span className="material-symbols-outlined text-[18px]">filter_list</span>
-                        Filter
-                    </button>
-                    <button className="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 font-label-md shadow-sm">
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        New Action
-                    </button>
-                </div>
-            </div>
 
-            {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
-                
-                {/* Main Content Area */}
-                <div className="md:col-span-8 flex flex-col gap-md">
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-lg custom-shadow min-h-[400px] flex flex-col">
-                        <div className="flex justify-between items-center mb-md pb-sm border-b border-outline-variant">
-                            <h2 className="font-headline-sm text-on-surface">Overview Data</h2>
-                            <button className="material-symbols-outlined text-outline hover:text-primary transition-colors">
-                                more_horiz
+                <div className="bento-card p-lg space-y-lg">
+                    <div>
+                        <h2 className="font-headline-md text-on-surface mb-sm">Profile Customization</h2>
+                        <p className="font-body-sm text-on-surface-variant">Update your personal information and avatar.</p>
+                    </div>
+
+                    <form onSubmit={handleSave} className="space-y-md">
+                        <div className="flex flex-col md:flex-row gap-lg items-start">
+                            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-primary-container shrink-0 bg-surface-container flex items-center justify-center">
+                                {profile.profile_image_url ? (
+                                    <img src={profile.profile_image_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="material-symbols-outlined text-[48px] text-on-surface-variant">person</span>
+                                )}
+                            </div>
+                            
+                            <div className="flex-1 space-y-md w-full">
+                                <div>
+                                    <label className="block font-label-md text-on-surface mb-xs">Full Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={profile.name}
+                                        onChange={(e) => setProfile({...profile, name: e.target.value})}
+                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-sm font-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                                        placeholder="Enter your full name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block font-label-md text-on-surface mb-xs">Profile Image URL</label>
+                                    <input 
+                                        type="url" 
+                                        value={profile.profile_image_url}
+                                        onChange={(e) => setProfile({...profile, profile_image_url: e.target.value})}
+                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-sm font-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                                        placeholder="https://example.com/avatar.jpg"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-md border-t border-outline-variant/30">
+                            <h3 className="font-headline-sm text-on-surface mb-md">Preferences</h3>
+                            
+                            <div className="space-y-sm">
+                                <label className="flex items-center gap-sm cursor-pointer group">
+                                    <div className={`w-12 h-6 rounded-full p-1 transition-colors ${profile.preferences?.notifications ? 'bg-primary' : 'bg-surface-container-high'}`}>
+                                        <div className={`w-4 h-4 rounded-full bg-on-primary transition-transform ${profile.preferences?.notifications ? 'translate-x-6' : 'translate-x-0 bg-on-surface-variant'}`}></div>
+                                    </div>
+                                    <span className="font-body-md text-on-surface select-none group-hover:text-primary transition-colors">Enable Notifications</span>
+                                    <input 
+                                        type="checkbox" 
+                                        className="hidden"
+                                        checked={profile.preferences?.notifications || false}
+                                        onChange={(e) => setProfile({
+                                            ...profile, 
+                                            preferences: { ...profile.preferences, notifications: e.target.checked }
+                                        })}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        {message && (
+                            <div className={`p-sm rounded-lg text-center font-label-md ${message.includes('success') ? 'bg-primary-container text-on-primary-container' : 'bg-error-container text-on-error-container'}`}>
+                                {message}
+                            </div>
+                        )}
+
+                        <div className="flex justify-end pt-md">
+                            <button 
+                                type="submit" 
+                                disabled={isSaving}
+                                className="bg-primary text-on-primary px-xl py-sm rounded-full font-label-lg hover:shadow-md hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-xs"
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin text-[18px]">sync</span>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Changes'
+                                )}
                             </button>
                         </div>
-                        
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-xl bg-surface-container/30 rounded-xl border border-dashed border-outline-variant">
-                            <span className="material-symbols-outlined text-6xl text-outline/50 mb-md">
-                                pending_actions
-                            </span>
-                            <h3 className="font-headline-sm text-on-surface-variant mb-xs">Data Pending Integration</h3>
-                            <p className="font-body-md text-outline max-w-md">
-                                This section is currently a placeholder. Live data will be populated once the backend integration for Account Settings is complete.
-                            </p>
-                        </div>
-                    </div>
+                    </form>
                 </div>
-
-                {/* Sidebar Area */}
-                <div className="md:col-span-4 flex flex-col gap-md">
-                    
-                    {/* Stats Card */}
-                    <div className="bg-primary-container text-on-primary-container rounded-2xl p-md shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
-                        <h3 className="font-label-md opacity-80 mb-sm">Quick Statistic</h3>
-                        <div className="flex items-end gap-sm">
-                            <span className="font-display-md leading-none">42</span>
-                            <span className="font-label-sm mb-1 opacity-80">Active Items</span>
-                        </div>
-                    </div>
-
-                    {/* Quick Links / Actions */}
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-md custom-shadow flex-1">
-                        <h3 className="font-label-lg text-on-surface mb-md">Related Actions</h3>
-                        <div className="space-y-sm">
-                            {[1, 2, 3].map(i => (
-                                <button key={i} className="w-full flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-colors group">
-                                    <div className="flex items-center gap-sm">
-                                        <div className="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-[16px]">bolt</span>
-                                        </div>
-                                        <span className="font-body-md text-on-surface">Quick Action {i}</span>
-                                    </div>
-                                    <span className="material-symbols-outlined text-outline group-hover:text-primary group-hover:translate-x-1 transition-all">
-                                        chevron_right
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
             </div>
-        </section>
+        </main>
     );
 }

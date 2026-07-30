@@ -43,31 +43,9 @@ export default function AnnouncementChat({ role }) {
         if (chatContainerRef.current && !editingId) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
-
-        // Mark all as viewed if not CEO
-        if (!isCEO && announcements.length > 0) {
-            announcements.forEach(ann => {
-                if (!ann.viewed) {
-                    markAsViewed(ann.id);
-                }
-            });
-        }
     }, [announcements, isCEO, editingId]);
 
-    const markAsViewed = async (id) => {
-        try {
-            const token = localStorage.getItem('token');
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/${id}/view`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            setAnnouncements(prev => 
-                prev.map(ann => ann.id === id ? { ...ann, viewed: true } : ann)
-            );
-        } catch (err) {
-            console.error("Error marking as viewed:", err);
-        }
-    };
+
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -205,25 +183,27 @@ export default function AnnouncementChat({ role }) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2 max-w-[85%]">
+                                    <div className="flex items-start gap-2 max-w-[85%]">
                                         {isOwn && (
                                             <button 
                                                 onClick={() => {
                                                     setEditingId(ann.id);
                                                     setEditContent(ann.content);
                                                 }}
-                                                className="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-surface-container"
+                                                className="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-surface-container mt-1"
                                                 title="Edit"
                                             >
                                                 <span className="material-symbols-outlined text-[18px]">edit</span>
                                             </button>
                                         )}
-                                        <div className={`px-4 py-3 font-body-md shadow-sm ${
-                                            isOwn 
-                                                ? 'bg-primary text-on-primary rounded-2xl rounded-tr-sm' 
-                                                : 'bg-surface-container-high text-on-surface rounded-2xl rounded-tl-sm'
-                                        }`}>
-                                            <div className="whitespace-pre-wrap">{ann.content}</div>
+                                        <div className="flex flex-col gap-1">
+                                            <div className={`px-4 py-3 font-body-md shadow-sm ${
+                                                isOwn 
+                                                    ? 'bg-primary text-on-primary rounded-2xl rounded-tr-sm' 
+                                                    : 'bg-surface-container-high text-on-surface rounded-2xl rounded-tl-sm'
+                                            }`}>
+                                                <div className="whitespace-pre-wrap">{ann.content}</div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
