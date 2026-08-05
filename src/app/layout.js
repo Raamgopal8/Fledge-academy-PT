@@ -1,5 +1,6 @@
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -28,8 +29,10 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning className="font-body-md text-on-surface overflow-x-hidden">
-        {children}
+      <body suppressHydrationWarning className="font-body-md text-on-surface overflow-x-hidden bg-background text-on-surface">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

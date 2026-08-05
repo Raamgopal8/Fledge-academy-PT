@@ -13,7 +13,7 @@ export default function StudentMaterials() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -60,7 +60,7 @@ export default function StudentMaterials() {
                             folder_open
                         </span>
                         <h3 className="font-headline-sm text-on-surface-variant mb-xs">No Materials Found</h3>
-                        <p className="font-body-md text-outline max-w-md">
+                        <p className="font-body-md text-outline">
                             Your instructors haven't uploaded any materials yet. Check back later!
                         </p>
                     </div>
@@ -80,13 +80,15 @@ export default function StudentMaterials() {
                                 <div className="flex items-center justify-between mt-sm pt-sm border-t border-outline-variant">
                                     <span className="text-xs text-outline">{new Date(material.created_at).toLocaleDateString()}</span>
                                     <a 
-                                        href={`${process.env.NEXT_PUBLIC_API_URL}${material.file_url}`} 
+                                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline font-label-sm flex items-center gap-xs"
                                     >
-                                        <span className="material-symbols-outlined text-[16px]">download</span>
-                                        Download
+                                        <span className="material-symbols-outlined text-[16px]">
+                                            {material.file_url.startsWith('http') ? 'open_in_new' : 'download'}
+                                        </span>
+                                        {material.file_url.startsWith('http') ? 'View' : 'Download'}
                                     </a>
                                 </div>
                             </div>

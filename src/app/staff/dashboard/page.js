@@ -28,7 +28,7 @@ export default function StaffDashboard() {
                 const [summaryRes, classesRes, activitiesRes, profileRes] = await Promise.all([
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/summary`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/classes`, { headers }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, { headers }),
+                    fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, { headers })
                 ]);
 

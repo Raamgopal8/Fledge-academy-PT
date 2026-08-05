@@ -2,9 +2,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useStudentContext } from '@/app/student/StudentContext';
+import ProfileSettingsModal from './ProfileSettingsModal';
+import ThemeToggle from './ThemeToggle';
 
 export default function TopNav() {
   const [profile, setProfile] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { setIsMobileNavOpen } = useStudentContext();
 
   useEffect(() => {
@@ -37,10 +40,7 @@ export default function TopNav() {
         </button>
       </div>
       <div className="flex items-center gap-md">
-        <Link href="/dashboard/settings" className="text-on-surface-variant hover:text-primary transition-colors active:scale-[0.98] flex items-center justify-center">
-          <span className="material-symbols-outlined">settings</span>
-        </Link>
-        <div className="h-8 w-[1px] bg-outline-variant mx-xs"></div>
+        <ThemeToggle />
         <div className="flex items-center gap-sm">
           <div className="text-right hidden lg:block">
             <p className="font-label-md text-label-md text-on-surface leading-none">
@@ -48,7 +48,7 @@ export default function TopNav() {
             </p>
             <p className="font-label-sm text-label-sm text-outline leading-tight">Pro Learner</p>
           </div>
-          <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary-container bg-surface-container flex items-center justify-center">
+          <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary-container bg-surface-container flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
             {profile?.profile_image_url ? (
               <img
                 className="w-full h-full object-cover"
@@ -58,9 +58,15 @@ export default function TopNav() {
             ) : (
               <span className="material-symbols-outlined text-on-surface-variant">person</span>
             )}
-          </div>
+          </button>
         </div>
       </div>
+      <ProfileSettingsModal 
+          isOpen={isSettingsOpen} 
+          onClose={() => setIsSettingsOpen(false)} 
+          currentProfile={profile} 
+          onProfileUpdated={setProfile} 
+      />
     </header>
   );
 }

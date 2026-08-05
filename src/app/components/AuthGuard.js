@@ -29,6 +29,16 @@ export default function AuthGuard({ children, requiredRole }) {
             console.error('Invalid token', e);
             router.push('/login');
         }
+
+        // Listen for token changes across tabs
+        const handleStorageChange = (e) => {
+            if (e.key === 'token' && !e.newValue) {
+                router.push('/login');
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, [router, requiredRole]);
 
     // Show nothing (or a loading spinner) while checking authorization

@@ -250,7 +250,7 @@ export default function SchedulePage() {
                             <div className="py-xl flex flex-col items-center justify-center text-center text-outline">
                                 <span className="material-symbols-outlined text-[64px] mb-sm opacity-50">calendar_today</span>
                                 <h4 className="font-headline-md text-on-surface mb-xs">No Classes Scheduled</h4>
-                                <p className="font-body-md max-w-sm">No class activities have been planned for {activeTab} yet. Click "Add Class" to schedule one.</p>
+                                <p className="font-body-md">No class activities have been planned for {activeTab} yet. Click "Add Class" to schedule one.</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-outline-variant/30">

@@ -17,7 +17,7 @@ export default function StudentTasks() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -40,7 +40,7 @@ export default function StudentTasks() {
         setSubmittingId(taskId);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/${taskId}/submit`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${taskId}/submit`, {
                 method: 'POST',
                 headers: { 
                     'Authorization': `Bearer ${token}`,
@@ -128,7 +128,7 @@ export default function StudentTasks() {
                                     <h3 className="font-headline-sm text-on-surface-variant mb-xs">
                                         {activeTab === 'pending' ? "You're all caught up!" : "No submissions yet"}
                                     </h3>
-                                    <p className="font-body-md text-outline max-w-md">
+                                    <p className="font-body-md text-outline">
                                         {activeTab === 'pending' 
                                             ? "Great job! You don't have any pending tasks right now."
                                             : "Tasks you submit will appear here along with staff feedback."}

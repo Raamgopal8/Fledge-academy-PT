@@ -17,6 +17,7 @@ export default function CEONavbar() {
         { name: 'Attendance', path: '/ceo/attendance', icon: 'assignment' },
         { name: 'Staff Logs', path: '/ceo/staff-logs', icon: 'history' },
         { name: 'Materials', path: '/ceo/materials', icon: 'library_books' },
+        { name: 'Videos', path: '/ceo/videos', icon: 'smart_display' },
         { name: 'Schedule', path: '/ceo/schedule', icon: 'schedule' },
     ];
 

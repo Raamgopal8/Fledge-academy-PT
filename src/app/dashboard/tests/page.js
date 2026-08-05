@@ -7,12 +7,13 @@ export default function StudentTests() {
     const [activeTest, setActiveTest] = useState(null);
     
     const [submissionContent, setSubmissionContent] = useState('');
+    const [studentName, setStudentName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchTests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -32,22 +33,23 @@ export default function StudentTests() {
 
     const handleSubmitTest = async (e) => {
         e.preventDefault();
-        if (!submissionContent.trim() || !activeTest) return;
+        if (!submissionContent.trim() || !studentName.trim() || !activeTest) return;
 
         setIsSubmitting(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/${activeTest.id}/submit`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${activeTest.id}/submit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ submission_content: submissionContent })
+                body: JSON.stringify({ student_name: studentName, submission_content: submissionContent })
             });
 
             if (res.ok) {
                 setSubmissionContent('');
+                setStudentName('');
                 setActiveTest(null);
                 fetchTests(); // refresh the list to get new status
             } else {
@@ -67,7 +69,7 @@ export default function StudentTests() {
         return (
             <div className="p-gutter max-w-[1000px] mx-auto space-y-lg min-h-screen">
                 <button 
-                    onClick={() => { setActiveTest(null); setSubmissionContent(''); }}
+                    onClick={() => { setActiveTest(null); setSubmissionContent(''); setStudentName(''); }}
                     className="flex items-center gap-2 text-on-surface hover:text-primary transition-colors mb-4"
                 >
                     <span className="material-symbols-outlined">arrow_back</span>
@@ -97,6 +99,15 @@ export default function StudentTests() {
                     {!activeTest.submission ? (
                         <form onSubmit={handleSubmitTest} className="space-y-md border-t border-outline-variant pt-lg">
                             <div>
+                                <label className="block text-sm font-semibold text-on-surface mb-2">Your Name</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={studentName}
+                                    onChange={e => setStudentName(e.target.value)}
+                                    className="w-full bg-surface border border-outline rounded-xl p-4 focus:outline-none focus:border-primary shadow-inner mb-6"
+                                    placeholder="Enter your full name"
+                                />
                                 <label className="block text-sm font-semibold text-on-surface mb-2">Your Submission</label>
                                 <p className="text-sm text-on-surface-variant mb-4">Provide a link to your work (e.g. Google Doc, GitHub, Figma) or paste your answer directly.</p>
                                 <textarea

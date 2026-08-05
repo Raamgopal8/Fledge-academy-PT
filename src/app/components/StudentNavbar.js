@@ -14,6 +14,8 @@ export default function StudentNavbar() {
       { name: "Announcements", icon: "campaign", href: "/dashboard/announcements" },
       { name: "Community", icon: "forum", href: "/community" },
       { name: "Tasks", icon: "assignment", href: "/dashboard/tasks" },
+      {name: "Materials", icon: "library_books", href: "/dashboard/materials"},
+      { name: "Videos", icon: "smart_display", href: "/dashboard/videos" }
     ];
 
   return (

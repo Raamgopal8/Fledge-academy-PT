@@ -22,11 +22,11 @@ export default function CEODashboard() {
             };
 
             const [kpiRes, activityRes, chartRes, attendanceRes, submissionsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/kpi`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/recent-activity`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/performance-chart`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/today`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, { headers })
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/kpi`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/recent-activity`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/performance-chart`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/attendance/today`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, { headers })
             ]);
 
             if (!kpiRes.ok || !activityRes.ok || !chartRes.ok || !attendanceRes.ok) {

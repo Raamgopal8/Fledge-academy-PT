@@ -245,7 +245,7 @@ export default function CEOAttendance() {
                                         search_off
                                     </span>
                                     <h3 className="font-headline-sm text-on-surface-variant mb-xs">No students found</h3>
-                                    <p className="font-body-md text-outline max-w-md">
+                                    <p className="font-body-md text-outline">
                                         No students match the current filter selection.
                                     </p>
                                 </div>

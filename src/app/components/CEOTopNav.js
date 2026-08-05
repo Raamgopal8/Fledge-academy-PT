@@ -2,9 +2,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCEOContext } from '@/app/ceo/CEOContext';
+import ProfileSettingsModal from './ProfileSettingsModal';
+import ThemeToggle from './ThemeToggle';
 export default function CEOTopNav() {
     const { setIsMobileNavOpen } = useCEOContext();
     const [profile, setProfile] = useState(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -39,8 +42,8 @@ export default function CEOTopNav() {
                 </div>
                 
                 <div className="flex items-center gap-md">
-                    <Link href="/settings" className="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors hover:scale-110 active:scale-95">settings</Link>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-surface-container">
+                    <ThemeToggle />
+                    <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-surface-container">
                         {profile?.profile_image_url ? (
                             <img 
                                 src={profile.profile_image_url} 
@@ -50,9 +53,15 @@ export default function CEOTopNav() {
                         ) : (
                             <span className="material-symbols-outlined text-on-surface-variant">person</span>
                         )}
-                    </div>
+                    </button>
                 </div>
             </div>
+            <ProfileSettingsModal 
+                isOpen={isSettingsOpen} 
+                onClose={() => setIsSettingsOpen(false)} 
+                currentProfile={profile} 
+                onProfileUpdated={setProfile} 
+            />
         </header>
     );
 }

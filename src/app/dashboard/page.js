@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 const COLOR_CLASSES = {
   primary: 'border-primary',
@@ -11,6 +12,7 @@ const COLOR_CLASSES = {
 
 export default function DashboardOverview() {
   const scrollContainerRef = useRef(null);
+  const router = useRouter();
   
   const [schedules, setSchedules] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState(null);
@@ -35,31 +37,31 @@ export default function DashboardOverview() {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       // Fetch Schedules
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule`, { headers })
+      fetch(`/api/schedule`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch schedules'))
         .then(data => { setSchedules(data); setIsLoading(prev => ({ ...prev, schedules: false })); })
         .catch(err => { setError(prev => ({ ...prev, schedules: err })); setIsLoading(prev => ({ ...prev, schedules: false })); });
 
       // Fetch Attendance
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/my-status`, { headers })
+      fetch(`/api/attendance/my-status`, { headers })
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setAttendanceStatus(data.status); })
         .catch(err => console.error("Error fetching attendance:", err));
 
       // Fetch Materials
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch materials'))
         .then(data => { setMaterials(data); setIsLoading(prev => ({ ...prev, materials: false })); })
         .catch(err => { setError(prev => ({ ...prev, materials: err })); setIsLoading(prev => ({ ...prev, materials: false })); });
 
       // Fetch Announcements
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement`, { headers })
+      fetch(`/api/announcement`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch announcements'))
         .then(data => { setAnnouncements(data); setIsLoading(prev => ({ ...prev, announcements: false })); })
         .catch(err => { setError(prev => ({ ...prev, announcements: err })); setIsLoading(prev => ({ ...prev, announcements: false })); });
 
       // Fetch Tests (Pending Tasks)
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests`, { headers })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch tests'))
         .then(data => { setTests(data); setIsLoading(prev => ({ ...prev, tests: false })); })
         .catch(err => { setError(prev => ({ ...prev, tests: err })); setIsLoading(prev => ({ ...prev, tests: false })); });
@@ -113,7 +115,10 @@ export default function DashboardOverview() {
         <div className="lg:col-span-8 flex flex-col gap-gutter">
           
           {/* Recent Announcements */}
-          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md">
+          <div 
+            className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md cursor-pointer hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all"
+            onClick={() => router.push('/dashboard/announcements')}
+          >
             <div className="flex items-center justify-between mb-md">
               <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">campaign</span>
@@ -144,7 +149,10 @@ export default function DashboardOverview() {
           </div>
 
           {/* Learning Materials */}
-          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md">
+          <div 
+            className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md cursor-pointer hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all"
+            onClick={() => router.push('/dashboard/materials')}
+          >
             <div className="flex items-center justify-between mb-md">
               <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">library_books</span>
@@ -182,10 +190,11 @@ export default function DashboardOverview() {
                         {new Date(material.created_at).toLocaleDateString()}
                       </span>
                       <a 
-                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_API_URL}${material.file_url}`}
+                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <span className="material-symbols-outlined">
                           {material.file_url.startsWith('http') ? 'open_in_new' : 'download'}
@@ -214,7 +223,10 @@ export default function DashboardOverview() {
           </div>
 
           {/* Pending Tasks */}
-          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant overflow-hidden hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] transition-all">
+          <div 
+            className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant overflow-hidden hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all cursor-pointer"
+            onClick={() => router.push('/dashboard/tasks')}
+          >
             <div className="p-md border-b border-outline-variant flex items-center justify-between">
               <h3 className="font-headline-md text-headline-md text-on-surface">Pending Tasks</h3>
               {pendingTests.length > 0 && (

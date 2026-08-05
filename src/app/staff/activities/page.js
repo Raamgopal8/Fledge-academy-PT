@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import StaffTopNav from '../../components/StaffTopNav';
 
 export default function StaffActivities() {
     const [submissions, setSubmissions] = useState([]);
@@ -12,7 +11,7 @@ export default function StaffActivities() {
     const fetchSubmissions = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/all`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -33,7 +32,7 @@ export default function StaffActivities() {
     const handleReviewSubmit = async (subId, status) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tests/submissions/${subId}/review`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/${subId}/review`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -57,9 +56,7 @@ export default function StaffActivities() {
     if (isLoading) return <div className="p-gutter min-h-screen text-center"><span className="material-symbols-outlined animate-spin text-4xl">progress_activity</span></div>;
 
     return (
-        <div className="flex-1 flex flex-col h-screen md:ml-64 bg-surface-container-lowest">
-            <StaffTopNav />
-            <main className="flex-1 overflow-y-auto p-gutter max-w-[1200px] mx-auto w-full">
+        <main className="flex-1 p-gutter max-w-[1200px] mx-auto w-full">
                 <div className="mb-lg">
                     <h1 className="font-display-sm text-on-surface">Test Activities</h1>
                     <p className="font-body-lg text-on-surface-variant mt-2">Monitor and grade recent student submissions.</p>
@@ -162,6 +159,5 @@ export default function StaffActivities() {
                     )}
                 </div>
             </main>
-        </div>
     );
 }

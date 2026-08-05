@@ -20,11 +20,6 @@ export default function StaffLayout({ children }) {
                         {/* Content Area */}
                         <div className="flex-grow relative">
                             {children}
-                            
-                            {/* Floating Action Button */}
-                            <button className="fixed bottom-24 right-8 h-14 w-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
-                                <span className="material-symbols-outlined">add_task</span>
-                            </button>
                         </div>
                         
                         {/* Footer Shell */}

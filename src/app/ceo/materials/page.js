@@ -22,7 +22,7 @@ export default function CEOMaterials() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -55,7 +55,7 @@ export default function CEOMaterials() {
         }
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -85,7 +85,7 @@ export default function CEOMaterials() {
         
         const token = localStorage.getItem('token');
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/materials/${id}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -141,7 +141,7 @@ export default function CEOMaterials() {
                             folder_open
                         </span>
                         <h3 className="font-headline-sm text-on-surface-variant mb-xs">No Materials Found</h3>
-                        <p className="font-body-md text-outline max-w-md">
+                        <p className="font-body-md text-outline">
                             Click "Upload Material" to share resources with your students.
                         </p>
                     </div>
@@ -176,7 +176,7 @@ export default function CEOMaterials() {
                                         {new Date(material.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                                     </span>
                                     <a 
-                                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_API_URL}${material.file_url}`} 
+                                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-colors font-label-md shadow-sm"

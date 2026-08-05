@@ -19,7 +19,7 @@ export default function AnnouncementChat({ role }) {
     const fetchAnnouncements = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/`, {
+            const res = await fetch(`/api/announcement`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch announcements');
@@ -55,7 +55,7 @@ export default function AnnouncementChat({ role }) {
         try {
             const token = localStorage.getItem('token');
             const title = `CEO Update - ${new Date().toLocaleDateString()}`;
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/`, {
+            const res = await fetch(`/api/announcement`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export default function AnnouncementChat({ role }) {
         
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/announcement/${id}`, {
+            const res = await fetch(`/api/announcement/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
