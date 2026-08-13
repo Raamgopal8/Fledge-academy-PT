@@ -9,6 +9,8 @@ class User(Document):
     role: str = "student"
     name: Optional[str] = None
     profile_image_url: Optional[str] = None
+    level: Optional[str] = None
+    total_fee: Optional[float] = None
     preferences: dict = {}
 
     class Settings:
@@ -21,6 +23,8 @@ class ClassSchedule(Document):
     students: int = 0
     color: str = "primary"
     day_of_week: str
+    class_link: Optional[str] = None
+    expires_at: Optional[datetime] = None
 
     class Settings:
         name = "class_schedules"
@@ -100,3 +104,14 @@ class Activity(Document):
 
     class Settings:
         name = "activities"
+
+class FinancialTransaction(Document):
+    amount: float
+    type: str # "income" or "expense"
+    category: str
+    description: Optional[str] = None
+    student_id: Optional[PydanticObjectId] = None
+    date: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "financial_transactions"

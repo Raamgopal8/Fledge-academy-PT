@@ -44,6 +44,7 @@ async def get_materials(current_user: models.User = Depends(get_current_user)):
             "id": str(m.id),
             "title": m.title,
             "description": m.description,
+            "level": m.level,
             "file_url": m.file_url,
             "uploaded_by_id": str(m.uploaded_by_id),
             "created_at": m.created_at.isoformat() if m.created_at else None
@@ -55,6 +56,7 @@ async def get_materials(current_user: models.User = Depends(get_current_user)):
 async def upload_material(
     title: str = Form(...),
     description: Optional[str] = Form(None),
+    level: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     link: Optional[str] = Form(None),
     current_user: models.User = Depends(get_current_user)
@@ -100,6 +102,7 @@ async def upload_material(
     new_material = models.Material(
         title=title,
         description=description,
+        level=level,
         file_url=file_url,
         uploaded_by_id=current_user.id
     )
@@ -110,6 +113,7 @@ async def upload_material(
         "id": str(new_material.id),
         "title": new_material.title,
         "description": new_material.description,
+        "level": new_material.level,
         "file_url": new_material.file_url,
         "uploaded_by_id": str(new_material.uploaded_by_id),
         "created_at": new_material.created_at.isoformat() if new_material.created_at else None
@@ -117,7 +121,7 @@ async def upload_material(
 
 @router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_material(
-    material_id: PydanticObjectId,
+    material_id: str,
     current_user: models.User = Depends(get_current_user)
 ):
     """Delete a material (restricted to staff and ceo)"""
@@ -127,7 +131,12 @@ async def delete_material(
             detail="Not authorized to delete materials"
         )
         
-    material = await models.Material.get(material_id)
+    try:
+        obj_id = PydanticObjectId(material_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid material ID")
+
+    material = await models.Material.get(obj_id)
     
     if not material:
         raise HTTPException(

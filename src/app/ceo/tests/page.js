@@ -59,12 +59,13 @@ export default function CEOTests() {
                     Back to Tests
                 </button>
                 
-                <div className="bg-surface-container p-lg rounded-2xl border border-outline-variant shadow-sm">
-                    <h2 className="font-headline-md text-on-surface mb-2">{activeTest.title} - Submissions Overview</h2>
-                    <p className="text-on-surface-variant font-body-md whitespace-pre-wrap">{activeTest.description}</p>
-                </div>
+                <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+                    <div className="mb-lg border-b border-outline-variant pb-md">
+                        <h2 className="font-headline-md text-on-surface mb-2">{activeTest.title} - Submissions Overview</h2>
+                        <p className="text-on-surface-variant font-body-md whitespace-pre-wrap">{activeTest.description}</p>
+                    </div>
 
-                <div className="space-y-md">
+                    <div className="space-y-md">
                     {submissions.length === 0 ? (
                         <div className="text-center py-10 bg-surface-container-low rounded-2xl border border-outline-variant">
                             <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-4 opacity-50">inbox</span>
@@ -103,6 +104,7 @@ export default function CEOTests() {
                             </div>
                         ))
                     )}
+                    </div>
                 </div>
             </div>
         );
@@ -110,14 +112,17 @@ export default function CEOTests() {
 
     return (
         <div className="p-gutter max-w-[1200px] mx-auto space-y-lg min-h-screen">
-            <div className="flex justify-between items-end border-b border-outline-variant pb-md">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
                 <div>
-                    <h1 className="font-display-sm text-on-surface">Test Analytics Overview</h1>
-                    <p className="font-body-lg text-on-surface-variant mt-2">Monitor all tests and student submissions across the organization.</p>
+                    <div className="flex items-center gap-sm mb-xs">
+                        <span className="material-symbols-outlined text-primary text-3xl">assignment</span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Test Analytics Overview</h1>
+                    </div>
+                    <p className="font-body-lg text-on-surface-variant max-w-2xl">Monitor all tests and student submissions across the organization.</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
                 {tests.map(test => (
                     <div key={test.id} className="bg-surface p-lg rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group flex flex-col">
                         <h3 className="font-title-lg text-on-surface mb-2">{test.title}</h3>

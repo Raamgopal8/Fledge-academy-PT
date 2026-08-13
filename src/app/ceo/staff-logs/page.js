@@ -149,8 +149,8 @@ export default function CEOStaffLogs() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">group</span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">Staff Management</h1>
+                        <span className="material-symbols-outlined text-primary text-4xl">group</span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Staff Management</h1>
                     </div>
                     <p className="font-body-lg text-on-surface-variant max-w-2xl">
                         Monitor staff engagement and manage staff accounts
@@ -166,7 +166,7 @@ export default function CEOStaffLogs() {
             </div>
 
             {/* Manage Staff Content */}
-            <div className="bento-card overflow-hidden animate-fade-in">
+            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow animate-fade-in">
                     <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-surface-container-low border-b border-outline-variant">

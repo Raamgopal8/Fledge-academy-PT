@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import StaffNavbar from '../../components/StaffNavbar';
 
 export default function StaffMembers() {
     const [students, setStudents] = useState([]);
@@ -17,7 +16,7 @@ export default function StaffMembers() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/attendance/students`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/students`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -41,7 +40,7 @@ export default function StaffMembers() {
         setMarkingStatus(prev => ({ ...prev, [studentId]: true }));
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/attendance/mark`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/mark`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,46 +69,44 @@ export default function StaffMembers() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-surface">
-                <StaffNavbar />
-                <section className="p-gutter max-w-[1440px] mx-auto min-h-[50vh] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4 text-primary">
-                        <span className="material-symbols-outlined text-[48px] animate-spin">progress_activity</span>
-                        <p className="font-label-lg">Loading Members...</p>
-                    </div>
-                </section>
-            </div>
+            <section className="p-gutter max-w-[1440px] mx-auto min-h-[50vh] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4 text-primary">
+                    <span className="material-symbols-outlined text-[48px] animate-spin">progress_activity</span>
+                    <p className="font-label-lg">Loading Members...</p>
+                </div>
+            </section>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen bg-surface">
-                <StaffNavbar />
-                <section className="p-gutter max-w-[1440px] mx-auto min-h-[50vh] flex items-center justify-center">
-                    <div className="p-lg bg-error-container text-on-error-container rounded-xl flex items-center gap-md">
-                        <span className="material-symbols-outlined text-[32px]">error</span>
-                        <div>
-                            <h3 className="font-headline-md">Error Loading Data</h3>
-                            <p className="font-body-md">{error}</p>
-                        </div>
+            <section className="p-gutter max-w-[1440px] mx-auto min-h-[50vh] flex items-center justify-center">
+                <div className="p-lg bg-error-container text-on-error-container rounded-xl flex items-center gap-md">
+                    <span className="material-symbols-outlined text-[32px]">error</span>
+                    <div>
+                        <h3 className="font-headline-md">Error Loading Data</h3>
+                        <p className="font-body-md">{error}</p>
                     </div>
-                </section>
-            </div>
+                </div>
+            </section>
         );
     }
 
     return (
-        <div className="min-h-screen bg-surface">
-            <StaffNavbar />
-            
-            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="font-headline-lg text-headline-lg text-on-surface">Members & Attendance</h1>
-                        <p className="font-body-md text-body-md text-on-surface-variant">Mark attendance for students for today's classes.</p>
+        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
+                <div>
+                    <div className="flex items-center gap-sm mb-xs">
+                        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
+                            Members & Attendance
+                        </h1>
                     </div>
+                    <p className="font-body-lg text-on-surface-variant max-w-2xl mt-1">
+                        Mark attendance for students for today's classes.
+                    </p>
                 </div>
+            </div>
 
                 <div className="bg-surface-container-lowest rounded-xl custom-shadow overflow-hidden border border-surface-container">
                     <div className="overflow-x-auto">
@@ -186,7 +183,6 @@ export default function StaffMembers() {
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
+        </section>
     );
 }

@@ -160,7 +160,7 @@ export default function StudentTests() {
     return (
         <div className="p-gutter max-w-[1200px] mx-auto space-y-lg min-h-screen">
             <div className="border-b border-outline-variant pb-md">
-                <h1 className="font-display-sm text-on-surface">Tests & Assignments</h1>
+                <h1 className="text-3xl md:text-4xl font-bold mb-lg text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">Tests & Assignments</h1>
                 <p className="font-body-lg text-on-surface-variant mt-2">View and submit your ongoing coursework.</p>
             </div>
 

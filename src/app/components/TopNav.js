@@ -30,25 +30,21 @@ export default function TopNav() {
   }, []);
 
   return (
-    <header className="flex justify-between items-center w-full mb-lg max-w-[1440px] mx-auto h-16 bg-surface shadow-sm rounded-2xl px-gutter sticky top-4 z-40 gap-sm md:gap-md">
-      <div className="flex items-center gap-sm md:gap-md flex-grow md:flex-grow-0">
-        <button 
-            onClick={() => setIsMobileNavOpen(true)}
-            className="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors active:scale-95 shrink-0"
-        >
-          <span className="material-symbols-outlined">menu</span>
-        </button>
-      </div>
-      <div className="flex items-center gap-md">
-        <ThemeToggle />
-        <div className="flex items-center gap-sm">
-          <div className="text-right hidden lg:block">
-            <p className="font-label-md text-label-md text-on-surface leading-none">
-              {profile?.name || "Student"}
-            </p>
-            <p className="font-label-sm text-label-sm text-outline leading-tight">Pro Learner</p>
-          </div>
-          <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary-container bg-surface-container flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
+    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <div className="flex justify-between items-center w-full px-gutter max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
+        <div className="flex items-center gap-sm md:gap-lg flex-grow md:flex-grow-0">
+          <button 
+              onClick={() => setIsMobileNavOpen(true)}
+              className="material-symbols-outlined text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors shrink-0 md:hidden"
+          >
+            menu
+          </button>
+          <img src="/fledgeacad.png" alt="Logo" className="h-10 w-auto object-contain shrink-0 hidden md:block" />
+        </div>
+        
+        <div className="flex items-center gap-md text-slate-700">
+          <ThemeToggle />
+          <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-slate-100">
             {profile?.profile_image_url ? (
               <img
                 className="w-full h-full object-cover"
@@ -56,7 +52,7 @@ export default function TopNav() {
                 src={profile.profile_image_url}
               />
             ) : (
-              <span className="material-symbols-outlined text-on-surface-variant">person</span>
+              <span className="material-symbols-outlined text-slate-500">person</span>
             )}
           </button>
         </div>

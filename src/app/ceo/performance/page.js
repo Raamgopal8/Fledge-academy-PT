@@ -7,10 +7,10 @@ export default function CEOPerformance() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
+                        <span className="material-symbols-outlined text-primary text-4xl">
                             monitoring
                         </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold text-on-surface tracking-tight">
                             Performance Metrics
                         </h1>
                     </div>
@@ -32,7 +32,8 @@ export default function CEOPerformance() {
             </div>
 
             {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
+            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
                 
                 {/* Main Content Area */}
                 <div className="md:col-span-8 flex flex-col gap-md">
@@ -90,6 +91,7 @@ export default function CEOPerformance() {
                     </div>
                 </div>
 
+                </div>
             </div>
         </section>
     );

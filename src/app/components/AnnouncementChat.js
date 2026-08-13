@@ -127,7 +127,7 @@ export default function AnnouncementChat({ role }) {
             {/* Header */}
             <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center z-10 shadow-sm">
                 <div>
-                    <h2 className="font-headline-md text-headline-md text-on-surface">Announcements</h2>
+                    <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Announcements</h2>
                     <p className="font-body-sm text-on-surface-variant">
                         {isCEO ? 'Broadcast messages to the academy.' : 'Important updates from the CEO.'}
                     </p>

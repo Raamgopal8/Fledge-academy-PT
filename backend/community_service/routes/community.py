@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from models import CommunityMessage
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+import os
+import shutil
+import uuid
 
 router = APIRouter()
 
@@ -25,6 +28,35 @@ async def create_message(msg: MessageCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/messages/audio", response_model=CommunityMessage)
+async def create_audio_message(
+    audio_file: UploadFile = File(...),
+    author_id: str = Form(...),
+    author_name: str = Form(...),
+    role: str = Form(...)
+):
+    try:
+        # Save the audio file
+        file_ext = audio_file.filename.split(".")[-1] if "." in audio_file.filename else "webm"
+        unique_filename = f"{uuid.uuid4()}.{file_ext}"
+        file_path = os.path.join("uploads", unique_filename)
+        
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(audio_file.file, buffer)
+            
+        audio_url = f"http://localhost:8009/uploads/{unique_filename}"
+        
+        new_msg = CommunityMessage(
+            audio_url=audio_url,
+            author_id=author_id,
+            author_name=author_name,
+            role=role
+        )
+        await new_msg.insert()
+        return new_msg
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/messages", response_model=List[CommunityMessage])
 async def get_messages():
     try:
@@ -32,3 +64,4 @@ async def get_messages():
         return messages
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

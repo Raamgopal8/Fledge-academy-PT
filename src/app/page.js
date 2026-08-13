@@ -246,14 +246,29 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative flex items-center py-sm">
-            <div className="flex-grow border-t border-outline-variant"></div>
-            <div className="flex-grow border-t border-outline-variant"></div>
+          {/* Social Links */}
+          <div className="pt-4 space-y-6">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-outline-variant"></div>
+              <span className="flex-shrink-0 mx-4 text-on-surface-variant text-label-md">Connect with us</span>
+              <div className="flex-grow border-t border-outline-variant"></div>
+            </div>
+            
+            <div className="flex justify-center gap-6">
+              <a href="https://chat.whatsapp.com/LJCMHmRk4n66iR7smHksxJ" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-[#25D366] hover:bg-[#25D366]/20 hover:shadow-[0_0_25px_rgba(37,211,102,0.6)] shadow-sm group" title="WhatsApp">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-6 h-6 transition-transform duration-300 group-hover:scale-125" />
+              </a>
+              <a href="https://www.instagram.com/fledge_academy" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-[#E1306C] hover:bg-[#E1306C]/20 hover:shadow-[0_0_25px_rgba(225,48,108,0.6)] shadow-sm group" title="Instagram">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" alt="Instagram" className="w-6 h-6 transition-transform duration-300 group-hover:scale-125" />
+              </a>
+              <a href="https://www.youtube.com/@fledgeacademy" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-[#FF0000] hover:bg-[#FF0000]/20 hover:shadow-[0_0_25px_rgba(255,0,0,0.6)] shadow-sm group" title="YouTube">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/0/09/YouTube_full-color_icon_%282017%29.svg" alt="YouTube" className="w-6 h-6 transition-transform duration-300 group-hover:scale-125" />
+              </a>
+              <a href="https://www.linkedin.com/company/fledgeacademy" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-[#0077B5] hover:bg-[#0077B5]/20 hover:shadow-[0_0_25px_rgba(0,119,181,0.6)] shadow-sm group" title="LinkedIn">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg" alt="LinkedIn" className="w-6 h-6 transition-transform duration-300 group-hover:scale-125" />
+              </a>
+            </div>
           </div>
-
-          {/* Registration Link */}
-          <footer className="text-center"></footer>
         </div>
       </section>
     </main>

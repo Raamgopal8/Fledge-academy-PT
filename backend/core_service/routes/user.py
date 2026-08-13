@@ -20,6 +20,7 @@ async def get_profile(current_user: models.User = Depends(get_current_user)):
         "name": current_user.name,
         "role": current_user.role,
         "profile_image_url": current_user.profile_image_url,
+        "level": current_user.level,
         "preferences": current_user.preferences
     }
 
@@ -55,11 +56,13 @@ class StudentCreate(BaseModel):
     name: str
     email: str
     password: str
+    level: Optional[str] = None
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
+    level: Optional[str] = None
 
 @router.get("/students")
 async def get_students(current_user: models.User = Depends(get_current_user)):
@@ -72,7 +75,8 @@ async def get_students(current_user: models.User = Depends(get_current_user)):
         {
             "id": str(s.id),
             "name": s.name,
-            "email": s.email
+            "email": s.email,
+            "level": s.level
         } for s in students
     ]
 
@@ -93,7 +97,8 @@ async def create_student(
         name=student_data.name,
         email=student_data.email,
         password=student_data.password,
-        role="student"
+        role="student",
+        level=student_data.level
     )
     await new_student.insert()
     
@@ -119,6 +124,8 @@ async def update_student(
         student.email = student_data.email
     if student_data.password is not None:
         student.password = student_data.password
+    if student_data.level is not None:
+        student.level = student_data.level
         
     await student.save()
     return {"message": "Student updated successfully"}

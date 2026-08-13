@@ -54,6 +54,7 @@ class AnnouncementView(Document):
 class Material(Document):
     title: str
     description: Optional[str] = None
+    level: Optional[str] = None
     file_url: str
     uploaded_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -64,6 +65,7 @@ class Material(Document):
 class Test(Document):
     title: str
     description: Optional[str] = None
+    level: Optional[str] = None
     created_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=datetime.utcnow)
     due_date: Optional[datetime] = None

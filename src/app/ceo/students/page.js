@@ -12,7 +12,7 @@ export default function CEOStudents() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     
     const [currentStudent, setCurrentStudent] = useState(null);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', level: 'N5' });
     const [formError, setFormError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
@@ -56,7 +56,7 @@ export default function CEOStudents() {
             }
             await fetchStudents();
             setIsAddModalOpen(false);
-            setFormData({ name: '', email: '', password: '' });
+            setFormData({ name: '', email: '', password: '', level: 'N5' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -76,7 +76,8 @@ export default function CEOStudents() {
                 body: JSON.stringify({
                     name: formData.name,
                     email: formData.email,
-                    password: formData.password || undefined // Only send password if changed
+                    password: formData.password || undefined, // Only send password if changed
+                    level: formData.level
                 })
             });
             if (!res.ok) {
@@ -86,7 +87,7 @@ export default function CEOStudents() {
             await fetchStudents();
             setIsEditModalOpen(false);
             setCurrentStudent(null);
-            setFormData({ name: '', email: '', password: '' });
+            setFormData({ name: '', email: '', password: '', level: 'N5' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -112,7 +113,7 @@ export default function CEOStudents() {
 
     const openEditModal = (student) => {
         setCurrentStudent(student);
-        setFormData({ name: student.name || '', email: student.email, password: '' });
+        setFormData({ name: student.name || '', email: student.email, password: '', level: student.level || 'N5' });
         setIsEditModalOpen(true);
     };
 
@@ -153,13 +154,16 @@ export default function CEOStudents() {
 
     return (
         <section className="p-gutter max-w-[1440px] mx-auto space-y-lg">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
                 <div>
-                    <h1 className="font-headline-lg text-primary">Student Management</h1>
-                    <p className="font-body-md text-on-surface-variant">View, add, edit, and remove student accounts.</p>
+                    <div className="flex items-center gap-sm mb-xs">
+                        <span className="material-symbols-outlined text-primary text-4xl">school</span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Student Management</h1>
+                    </div>
+                    <p className="font-body-lg text-on-surface-variant max-w-2xl">View, add, edit, and remove student accounts.</p>
                 </div>
                 <button 
-                    onClick={() => { setFormData({ name: '', email: '', password: '' }); setFormError(''); setIsAddModalOpen(true); }}
+                    onClick={() => { setFormData({ name: '', email: '', password: '', level: 'N5' }); setFormError(''); setIsAddModalOpen(true); }}
                     className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-lg hover:bg-primary/90 transition-colors flex items-center gap-sm"
                 >
                     <span className="material-symbols-outlined">person_add</span>
@@ -167,13 +171,14 @@ export default function CEOStudents() {
                 </button>
             </div>
 
-            <div className="bento-card overflow-hidden">
+            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead className="bg-surface-container-low border-b border-outline-variant">
                             <tr>
                                 <th className="p-md font-label-lg text-on-surface-variant">Name</th>
                                 <th className="p-md font-label-lg text-on-surface-variant">Email</th>
+                                <th className="p-md font-label-lg text-on-surface-variant">Level</th>
                                 <th className="p-md font-label-lg text-on-surface-variant text-right">Actions</th>
                             </tr>
                         </thead>
@@ -182,6 +187,16 @@ export default function CEOStudents() {
                                 <tr key={student.id} className="border-b border-outline-variant hover:bg-surface-container-lowest transition-colors">
                                     <td className="p-md font-body-md text-on-surface">{student.name || 'N/A'}</td>
                                     <td className="p-md font-body-md text-on-surface-variant">{student.email}</td>
+                                    <td className="p-md font-body-md text-on-surface-variant">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            student.level === 'N5' ? 'bg-blue-100 text-blue-800' :
+                                            student.level === 'N4' ? 'bg-purple-100 text-purple-800' :
+                                            student.level === 'N3' ? 'bg-orange-100 text-orange-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }`}>
+                                            {student.level || 'N5'}
+                                        </span>
+                                    </td>
                                     <td className="p-md flex justify-end gap-sm">
                                         <button 
                                             onClick={() => openEditModal(student)}
@@ -260,6 +275,18 @@ export default function CEOStudents() {
                                     </button>
                                 </div>
                             </div>
+                            <div>
+                                <label className="block text-label-md text-on-surface-variant mb-1">Level</label>
+                                <select 
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                    value={formData.level}
+                                    onChange={(e) => setFormData({...formData, level: e.target.value})}
+                                >
+                                    <option value="N5">N5</option>
+                                    <option value="N4">N4</option>
+                                    <option value="N3">N3</option>
+                                </select>
+                            </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
                                     type="button" 
@@ -326,6 +353,18 @@ export default function CEOStudents() {
                                         </span>
                                     </button>
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-label-md text-on-surface-variant mb-1">Level</label>
+                                <select 
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                    value={formData.level}
+                                    onChange={(e) => setFormData({...formData, level: e.target.value})}
+                                >
+                                    <option value="N5">N5</option>
+                                    <option value="N4">N4</option>
+                                    <option value="N3">N3</option>
+                                </select>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 

@@ -30,6 +30,7 @@ async def init_db():
             models.TestSubmission,
             models.Test,
             models.ClassSchedule,
-            models.Activity
+            models.Activity,
+            models.FinancialTransaction
         ]
     )

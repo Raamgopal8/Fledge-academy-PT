@@ -9,6 +9,7 @@ export default function CEOMaterials() {
     // Form state
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [level, setLevel] = useState('N5');
     const [file, setFile] = useState(null);
     const [link, setLink] = useState('');
     const [uploadType, setUploadType] = useState('file');
@@ -48,6 +49,7 @@ export default function CEOMaterials() {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('level', level);
         if (uploadType === 'file') {
             formData.append('file', file);
         } else {
@@ -67,6 +69,7 @@ export default function CEOMaterials() {
                 setIsUploadModalOpen(false);
                 setTitle('');
                 setDescription('');
+                setLevel('N5');
                 setFile(null);
                 setLink('');
                 fetchMaterials();
@@ -103,13 +106,13 @@ export default function CEOMaterials() {
     return (
         <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
                         <span className="material-symbols-outlined text-primary text-3xl">
                             library_books
                         </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Course Materials
                         </h1>
                     </div>
@@ -118,19 +121,17 @@ export default function CEOMaterials() {
                     </p>
                 </div>
                 
-                <div className="flex gap-sm">
-                    <button 
-                        onClick={() => setIsUploadModalOpen(true)}
-                        className="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 font-label-md shadow-sm"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        Upload Material
-                    </button>
-                </div>
+                <button 
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-lg hover:bg-primary/90 transition-colors flex items-center gap-sm"
+                >
+                    <span className="material-symbols-outlined">add</span>
+                    Upload Material
+                </button>
             </div>
 
             {/* Main Content Area */}
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-lg custom-shadow min-h-[400px]">
+            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow min-h-[400px]">
                 {isLoading ? (
                     <div className="flex justify-center items-center h-64">
                         <span className="material-symbols-outlined text-4xl text-primary animate-spin">refresh</span>
@@ -165,7 +166,14 @@ export default function CEOMaterials() {
                                             <span className="material-symbols-outlined text-[20px]">delete</span>
                                         </button>
                                     </div>
-                                    <h3 className="font-headline-sm text-on-surface mb-2 break-words group-hover:text-primary transition-colors" title={material.title}>{material.title}</h3>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <h3 className="font-headline-sm text-on-surface break-words group-hover:text-primary transition-colors flex-1" title={material.title}>{material.title}</h3>
+                                        {material.level && (
+                                            <span className="px-2 py-1 text-xs font-bold rounded-md bg-secondary-container text-on-secondary-container shrink-0">
+                                                {material.level}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="font-body-md text-on-surface-variant mb-4 break-words">
                                         {material.description || 'No description provided.'}
                                     </p>
@@ -220,6 +228,19 @@ export default function CEOMaterials() {
                                 />
                             </div>
                             
+                            <div>
+                                <label className="block font-label-md text-on-surface mb-2">Level</label>
+                                <select 
+                                    value={level}
+                                    onChange={(e) => setLevel(e.target.value)}
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface transition-all"
+                                >
+                                    <option value="N5">N5</option>
+                                    <option value="N4">N4</option>
+                                    <option value="N3">N3</option>
+                                </select>
+                            </div>
+
                             <div>
                                 <label className="block font-label-md text-on-surface mb-2">Description</label>
                                 <textarea 

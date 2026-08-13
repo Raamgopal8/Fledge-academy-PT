@@ -4,7 +4,8 @@ from beanie import Document, PydanticObjectId
 from pydantic import Field
 
 class CommunityMessage(Document):
-    content: str
+    content: Optional[str] = None
+    audio_url: Optional[str] = None
     author_id: str
     author_name: str
     role: str = "student"

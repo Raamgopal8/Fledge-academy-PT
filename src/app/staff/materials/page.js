@@ -9,6 +9,7 @@ export default function StaffMaterials() {
     // Form state
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [level, setLevel] = useState('N5');
     const [file, setFile] = useState(null);
     const [link, setLink] = useState('');
     const [uploadType, setUploadType] = useState('file');
@@ -48,6 +49,7 @@ export default function StaffMaterials() {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('level', level);
         if (uploadType === 'file') {
             formData.append('file', file);
         } else {
@@ -67,6 +69,7 @@ export default function StaffMaterials() {
                 setIsUploadModalOpen(false);
                 setTitle('');
                 setDescription('');
+                setLevel('N5');
                 setFile(null);
                 setLink('');
                 fetchMaterials();
@@ -81,10 +84,14 @@ export default function StaffMaterials() {
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('Are you sure you want to delete this material?')) return;
+        console.log("Delete button clicked for ID:", id);
+        
+        // Remove browser confirm just in case it is blocked
+        // if (!confirm('Are you sure you want to delete this material?')) return;
         
         const token = localStorage.getItem('token');
         try {
+            console.log("Sending DELETE request...");
             const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials/${id}`, {
                 method: 'DELETE',
                 headers: {
@@ -92,24 +99,34 @@ export default function StaffMaterials() {
                 }
             });
 
+            console.log("DELETE response status:", response.status);
+
             if (response.ok) {
+                console.log("Delete successful, refreshing materials.");
                 fetchMaterials();
+            } else {
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch(e) {
+                    errorData = { detail: response.statusText };
+                }
+                console.error('Delete failed:', errorData);
+                alert(`Failed to delete: ${errorData.detail || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error deleting material:', error);
+            alert(`Error deleting material: ${error.message}`);
         }
     };
 
     return (
         <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
-                            library_books
-                        </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             Course Materials
                         </h1>
                     </div>
@@ -151,21 +168,35 @@ export default function StaffMaterials() {
                             <div key={material.id} className="group relative bg-surface-container-low rounded-2xl p-6 flex flex-col justify-between border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300 overflow-hidden">
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
                                 <div>
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-primary-container text-primary flex items-center justify-center shadow-sm">
+                                    <div className="flex justify-between items-start mb-4 relative z-50">
+                                        <div className="w-14 h-14 rounded-2xl bg-primary-container text-primary flex items-center justify-center shadow-sm shrink-0">
                                             <span className="material-symbols-outlined text-3xl">
                                                 {material.file_url.startsWith('http') ? 'link' : 'description'}
                                             </span>
                                         </div>
                                         <button 
-                                            onClick={() => handleDelete(material.id)}
-                                            className="text-outline hover:text-error hover:bg-error-container p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                if(window.confirm('Are you sure you want to delete this material?')) {
+                                                    handleDelete(material.id);
+                                                }
+                                            }}
+                                            className="text-outline hover:text-error hover:bg-error-container p-2 rounded-full transition-colors opacity-0 group-hover:opacity-100 relative z-50 cursor-pointer pointer-events-auto"
                                             title="Delete Material"
                                         >
                                             <span className="material-symbols-outlined text-[20px]">delete</span>
                                         </button>
                                     </div>
-                                    <h3 className="font-headline-sm text-on-surface mb-2 break-words group-hover:text-primary transition-colors" title={material.title}>{material.title}</h3>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <h3 className="font-headline-sm text-on-surface break-words group-hover:text-primary transition-colors flex-1" title={material.title}>{material.title}</h3>
+                                        {material.level && (
+                                            <span className="px-2 py-1 text-xs font-bold rounded-md bg-secondary-container text-on-secondary-container shrink-0">
+                                                {material.level}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="font-body-md text-on-surface-variant mb-4 break-words">
                                         {material.description || 'No description provided.'}
                                     </p>
@@ -220,6 +251,19 @@ export default function StaffMaterials() {
                                 />
                             </div>
                             
+                            <div>
+                                <label className="block font-label-md text-on-surface mb-2">Level</label>
+                                <select 
+                                    value={level}
+                                    onChange={(e) => setLevel(e.target.value)}
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface transition-all"
+                                >
+                                    <option value="N5">N5</option>
+                                    <option value="N4">N4</option>
+                                    <option value="N3">N3</option>
+                                </select>
+                            </div>
+
                             <div>
                                 <label className="block font-label-md text-on-surface mb-2">Description</label>
                                 <textarea 

@@ -14,9 +14,6 @@ const DAYS_OF_WEEK = [
 
 const COLOR_OPTIONS = [
     { value: 'primary', label: 'Primary (Blue)', bg: 'bg-primary-container/15', text: 'text-primary', border: 'border-primary' },
-    { value: 'secondary', label: 'Secondary (Green)', bg: 'bg-secondary-container/30', text: 'text-secondary', border: 'border-secondary' },
-    { value: 'tertiary', label: 'Tertiary (Gold/Brown)', bg: 'bg-tertiary-container/20', text: 'text-tertiary', border: 'border-tertiary' },
-    { value: 'error', label: 'Error (Red)', bg: 'bg-error-container/20', text: 'text-error', border: 'border-error' }
 ];
 
 export default function SchedulePage() {
@@ -36,7 +33,8 @@ export default function SchedulePage() {
         location: '',
         students: 15,
         day_of_week: 'Monday',
-        color: 'primary'
+        color: 'primary',
+        class_link: ''
     });
 
     const [formError, setFormError] = useState('');
@@ -75,7 +73,8 @@ export default function SchedulePage() {
             location: '',
             students: 15,
             day_of_week: activeTab,
-            color: 'primary'
+            color: 'primary',
+            class_link: ''
         });
         setFormError('');
         setIsModalOpen(true);
@@ -89,7 +88,8 @@ export default function SchedulePage() {
             location: schedule.location,
             students: schedule.students,
             day_of_week: schedule.day_of_week,
-            color: schedule.color
+            color: schedule.color,
+            class_link: schedule.class_link || ''
         });
         setFormError('');
         setIsModalOpen(true);
@@ -179,20 +179,29 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg mt-6">
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
+        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <h2 className="font-headline-lg text-headline-lg text-on-surface">Class Schedule Management</h2>
-                    <p className="font-body-md text-body-md text-on-surface-variant">Create, update, and manage weekly class sessions and room allocations.</p>
+                    <div className="flex items-center gap-sm mb-xs">
+                        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
+                            Class Schedule Management
+                        </h1>
+                    </div>
+                    <p className="font-body-lg text-on-surface-variant max-w-2xl mt-1">
+                        Create, update, and manage weekly class sessions and room allocations.
+                    </p>
                 </div>
-                <button 
-                    onClick={openAddModal}
-                    className="flex items-center justify-center bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md gap-2 hover:opacity-90 active:scale-95 transition-all shadow-sm cursor-pointer"
-                >
-                    <span className="material-symbols-outlined">add</span>
-                    Add Class
-                </button>
+                
+                <div className="flex gap-sm">
+                    <button 
+                        onClick={openAddModal}
+                        className="flex items-center justify-center bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md gap-2 hover:opacity-90 active:scale-95 transition-all shadow-sm cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined">add</span>
+                        Add Class
+                    </button>
+                </div>
             </div>
 
             {/* Error Callout */}
@@ -275,6 +284,12 @@ export default function SchedulePage() {
                                                             <span className="material-symbols-outlined text-sm">location_on</span>
                                                             {item.location}
                                                         </span>
+                                                        {item.class_link && (
+                                                            <span className="flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-sm">link</span>
+                                                                <a href={item.class_link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Virtual Link</a>
+                                                            </span>
+                                                        )}
                                                         <span className="flex items-center gap-1">
                                                             <span className="material-symbols-outlined text-sm">group</span>
                                                             {item.students} Students
@@ -422,6 +437,21 @@ export default function SchedulePage() {
                                 </div>
                             </div>
 
+                            {/* Class Link */}
+                            <div className="space-y-xs">
+                                <label className="text-label-md text-on-surface-variant" htmlFor="classLink">
+                                    Class Link
+                                </label>
+                                <input
+                                    id="classLink"
+                                    type="url"
+                                    className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                    placeholder="e.g. https://zoom.us/j/123456789"
+                                    value={formData.class_link}
+                                    onChange={(e) => setFormData({ ...formData, class_link: e.target.value })}
+                                />
+                            </div>
+
                             {/* Color Category */}
                             <div className="space-y-xs">
                                 <label className="text-label-md text-on-surface-variant">
@@ -471,6 +501,6 @@ export default function SchedulePage() {
                     </div>
                 </div>
             )}
-        </div>
+        </section>
     );
 }

@@ -1,15 +1,20 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 from database import init_db
 from routes import community
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    os.makedirs("uploads", exist_ok=True)
     yield
 
 app = FastAPI(title="Community Service", lifespan=lifespan)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 origins = ["*"]
 

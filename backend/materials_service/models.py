@@ -17,6 +17,7 @@ class User(Document):
 class Material(Document):
     title: str
     description: Optional[str] = None
+    level: Optional[str] = None
     file_url: str
     uploaded_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -18,6 +18,7 @@ export default function StaffNavbar() {
         { name: 'Student Progress', href: '/staff/progress', icon: 'monitoring' },
         { name: 'Members', href: '/staff/members', icon: 'groups' },
         { name: 'Schedule', href: '/staff/schedule', icon: 'schedule' },
+        { name: 'Community', href: '/staff/community', icon: 'forum' },
     ];
 
     return (

@@ -1,11 +1,17 @@
 'use client';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const StudentContext = createContext();
 
 export function StudentProvider({ children }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+    useEffect(() => {
+        if (window.innerWidth >= 768) {
+            setIsMobileNavOpen(true);
+        }
+    }, []);
 
     return (
         <StudentContext.Provider value={{ searchQuery, setSearchQuery, isMobileNavOpen, setIsMobileNavOpen }}>

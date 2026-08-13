@@ -19,6 +19,7 @@ export default function CEONavbar() {
         { name: 'Materials', path: '/ceo/materials', icon: 'library_books' },
         { name: 'Videos', path: '/ceo/videos', icon: 'smart_display' },
         { name: 'Schedule', path: '/ceo/schedule', icon: 'schedule' },
+        { name: 'Finances', path: '/ceo/finances', icon: 'account_balance' },
     ];
 
     return (

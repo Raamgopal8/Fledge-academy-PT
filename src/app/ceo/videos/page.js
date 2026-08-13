@@ -101,7 +101,7 @@ export default function CEOVideos() {
                         <span className="material-symbols-outlined text-primary text-3xl">
                             video_library
                         </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Manage Videos
                         </h1>
                     </div>

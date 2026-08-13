@@ -11,10 +11,12 @@ export default function StudentNavbar() {
 
     const navItems = [
       { name: "Overview", icon: "dashboard", href: "/dashboard" },
+      { name: "Pathway", icon: "route", href: "/dashboard/pathway" },
       { name: "Announcements", icon: "campaign", href: "/dashboard/announcements" },
       { name: "Community", icon: "forum", href: "/community" },
       { name: "Tasks", icon: "assignment", href: "/dashboard/tasks" },
-      {name: "Materials", icon: "library_books", href: "/dashboard/materials"},
+      { name: "Schedule", icon: "calendar_today", href: "/dashboard/schedule" },
+      { name: "Materials", icon: "library_books", href: "/dashboard/materials" },
       { name: "Videos", icon: "smart_display", href: "/dashboard/videos" }
     ];
 
@@ -23,13 +25,13 @@ export default function StudentNavbar() {
       {/* Mobile Backdrop */}
       {isMobileNavOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity md:hidden"
           onClick={() => setIsMobileNavOpen(false)}
         />
       )}
 
       {/* SideNavBar (Desktop & Mobile Off-canvas) */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 flex flex-col bg-surface-container-low border-r border-outline-variant py-md z-50 transition-transform duration-300 ease-in-out ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-screen w-64 flex flex-col bg-white border-r border-slate-200 py-md z-50 transition-transform duration-300 ease-in-out ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-gutter mb-lg flex items-center justify-between">
           <div className="flex items-center gap-base">
             <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
@@ -49,7 +51,7 @@ export default function StudentNavbar() {
           </div>
           {/* Close button for mobile */}
           <button 
-            className="text-on-surface-variant p-2 -mr-2 hover:bg-surface-container-high rounded-full transition-colors active:scale-95"
+            className="text-on-surface-variant p-2 -mr-2 hover:bg-surface-container-high rounded-full transition-colors active:scale-95 md:hidden"
             onClick={() => setIsMobileNavOpen(false)}
           >
             <span className="material-symbols-outlined">close</span>

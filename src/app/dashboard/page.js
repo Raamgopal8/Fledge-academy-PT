@@ -16,15 +16,19 @@ export default function DashboardOverview() {
   
   const [schedules, setSchedules] = useState([]);
   const [attendanceStatus, setAttendanceStatus] = useState(null);
+  const [attendanceStats, setAttendanceStats] = useState(null);
   const [materials, setMaterials] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [tests, setTests] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [activeMaterialFilter, setActiveMaterialFilter] = useState("All");
   
   const [isLoading, setIsLoading] = useState({
     schedules: true,
     materials: true,
     announcements: true,
     tests: true,
+    attendanceStats: true,
   });
 
   const [error, setError] = useState({});
@@ -37,31 +41,49 @@ export default function DashboardOverview() {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       // Fetch Schedules
-      fetch(`/api/schedule`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch schedules'))
         .then(data => { setSchedules(data); setIsLoading(prev => ({ ...prev, schedules: false })); })
         .catch(err => { setError(prev => ({ ...prev, schedules: err })); setIsLoading(prev => ({ ...prev, schedules: false })); });
 
+      // Fetch Profile
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers, cache: 'no-store' })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { if (data) setProfile(data); })
+        .catch(err => console.error("Error fetching profile:", err));
+
       // Fetch Attendance
-      fetch(`/api/attendance/my-status`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/my-status`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setAttendanceStatus(data.status); })
         .catch(err => console.error("Error fetching attendance:", err));
 
+      // Fetch Attendance Stats
+      fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/my-stats`, { headers, cache: 'no-store' })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => { 
+          if (data) setAttendanceStats(data);
+          setIsLoading(prev => ({ ...prev, attendanceStats: false }));
+        })
+        .catch(err => {
+          console.error("Error fetching attendance stats:", err);
+          setIsLoading(prev => ({ ...prev, attendanceStats: false }));
+        });
+
       // Fetch Materials
-      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch materials'))
         .then(data => { setMaterials(data); setIsLoading(prev => ({ ...prev, materials: false })); })
         .catch(err => { setError(prev => ({ ...prev, materials: err })); setIsLoading(prev => ({ ...prev, materials: false })); });
 
       // Fetch Announcements
-      fetch(`/api/announcement`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/announcement`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch announcements'))
         .then(data => { setAnnouncements(data); setIsLoading(prev => ({ ...prev, announcements: false })); })
         .catch(err => { setError(prev => ({ ...prev, announcements: err })); setIsLoading(prev => ({ ...prev, announcements: false })); });
 
       // Fetch Tests (Pending Tasks)
-      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests`, { headers })
+      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch tests'))
         .then(data => { setTests(data); setIsLoading(prev => ({ ...prev, tests: false })); })
         .catch(err => { setError(prev => ({ ...prev, tests: err })); setIsLoading(prev => ({ ...prev, tests: false })); });
@@ -92,18 +114,143 @@ export default function DashboardOverview() {
   // Filter pending tests (not submitted)
   const pendingTests = tests.filter(test => !test.has_submitted);
 
+  const getTaskUrgency = (dueDateStr) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(dueDateStr);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    
+    if (diffDays < 0) {
+      return { label: 'Overdue', color: 'error', icon: 'error' };
+    } else if (diffDays === 0) {
+      return { label: 'Due Today', color: 'error', icon: 'assignment_late' };
+    } else if (diffDays === 1) {
+      return { label: 'Due Tomorrow', color: 'tertiary', icon: 'warning' };
+    } else if (diffDays <= 7) {
+      return { label: 'This Week', color: 'primary', icon: 'event' };
+    } else {
+      return { label: 'Upcoming', color: 'outline', icon: 'calendar_today' };
+    }
+  };
+
+  const getClassStatus = (schedule) => {
+    if (!schedule.time || !schedule.day_of_week) return null;
+    
+    const now = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const currentDay = days[now.getDay()];
+    
+    // For demo purposes, we can optionally make a mock status if we want it to show up. 
+    // But strictly following the requirement, we calculate actual diff.
+    if (schedule.day_of_week !== currentDay) return null;
+
+    const [time, period] = schedule.time.split(' ');
+    if (!time) return null;
+    
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    const classTime = new Date();
+    classTime.setHours(hours, minutes || 0, 0, 0);
+    
+    const diffMins = (classTime - now) / (1000 * 60);
+    
+    if (diffMins <= 0 && diffMins > -60) {
+      return { status: 'live', text: 'Live Now' }; // Assuming class is 1 hour long
+    } else if (diffMins > 0 && diffMins <= 15) {
+      return { status: 'starting_soon', text: `Starts in ${Math.round(diffMins)} mins` };
+    }
+    return null;
+  };
+
+  const getFileMeta = (url) => {
+    if (!url) return { type: 'Link', icon: 'link', size: 'External' };
+    const ext = url.split('.').pop().toLowerCase();
+    if (['pdf'].includes(ext)) return { type: 'PDF', icon: 'picture_as_pdf', size: '2.4 MB' };
+    if (['zip', 'rar', 'tar'].includes(ext)) return { type: 'Archive', icon: 'folder_zip', size: '12.0 MB' };
+    if (['doc', 'docx'].includes(ext)) return { type: 'Word', icon: 'description', size: '1.8 MB' };
+    if (['xls', 'xlsx'].includes(ext)) return { type: 'Excel', icon: 'table', size: '3.2 MB' };
+    if (['ppt', 'pptx'].includes(ext)) return { type: 'PowerPoint', icon: 'slideshow', size: '5.5 MB' };
+    if (url.startsWith('http')) return { type: 'Link', icon: 'link', size: 'External' };
+    return { type: 'File', icon: 'draft', size: '1.0 MB' };
+  };
+
+  const getGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) return 'Good morning';
+      if (hour < 18) return 'Good afternoon';
+      return 'Good evening';
+  };
+  const greeting = `${getGreeting()}, ${profile?.name?.split(' ')[0] || profile?.username || 'Student'}`;
+   
   return (
-    <>
+    <div className="max-w-[1440px] mx-auto p-gutter space-y-xs">
       {/* Welcome Section */}
-      <section className="mb-lg animate-fade-in">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-md">
+      <section className="mb-lg animate-fade-in mt-2">
+        <div className="flex flex-col md:flex-row md:items-end justify-start gap-xs mb-6">
           <div>
-            <h1 className="font-display-lg text-headline-lg-mobile md:text-display-lg text-on-surface mb-xs">
-              Welcome Back!
+            <h1 className="text-3xl md:text-4xl font-bold mb-sm text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
+              {greeting}
             </h1>
             <p className="font-body-lg text-body-lg text-on-surface-variant">
               Here is your overview for today. Keep up the good work!
             </p>
+          </div>
+        </div>
+
+        {/* Quick Stats Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-md mt-6">
+          {/* Overall Attendance Card */}
+          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md flex items-center gap-md hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all">
+            <div className="relative flex items-center justify-center w-14 h-14">
+              {isLoading.attendanceStats ? (
+                <span className="material-symbols-outlined animate-spin text-primary">refresh</span>
+              ) : (
+                <>
+                  <svg className="w-14 h-14 transform -rotate-90">
+                    <circle cx="28" cy="28" r="24" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-surface-container-high" />
+                    <circle cx="28" cy="28" r="24" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="150" strokeDashoffset={150 - (150 * (attendanceStats?.percentage || 0)) / 100} className="text-primary transition-all duration-1000 ease-out" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center font-bold text-sm text-on-surface">
+                    {attendanceStats ? `${Math.round(attendanceStats.percentage)}%` : '0%'}
+                  </div>
+                </>
+              )}
+            </div>
+            <div>
+              <p className="font-label-sm text-on-surface-variant uppercase tracking-wider">Attendance</p>
+              <p className="font-headline-sm text-on-surface">Overall</p>
+            </div>
+          </div>
+
+          {/* Upcoming Deadlines Card */}
+          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md flex items-center gap-md hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all">
+            <div className="w-14 h-14 rounded-full bg-error-container text-error flex items-center justify-center">
+              <span className="material-symbols-outlined text-2xl">assignment_late</span>
+            </div>
+            <div>
+              <p className="font-label-sm text-on-surface-variant uppercase tracking-wider">Deadlines</p>
+              <p className="font-headline-sm text-on-surface">
+                {pendingTests.length} <span className="text-sm font-normal text-on-surface-variant">Due</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Scheduled Classes Card */}
+          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md flex items-center gap-md hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all">
+            <div className="w-14 h-14 rounded-full bg-tertiary-container text-tertiary flex items-center justify-center">
+              <span className="material-symbols-outlined text-2xl">calendar_today</span>
+            </div>
+            <div>
+              <p className="font-label-sm text-on-surface-variant uppercase tracking-wider">Scheduled Classes</p>
+              <p className="font-headline-sm text-on-surface">
+                {schedules.length} <span className="text-sm font-normal text-on-surface-variant">Total</span>
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -149,15 +296,31 @@ export default function DashboardOverview() {
           </div>
 
           {/* Learning Materials */}
-          <div 
-            className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md cursor-pointer hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] hover:border-primary/30 transition-all"
-            onClick={() => router.push('/dashboard/materials')}
-          >
-            <div className="flex items-center justify-between mb-md">
+          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-md gap-4">
               <h3 className="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary">library_books</span>
                 Course Materials
               </h3>
+              
+              {/* Filter Tabs */}
+              {!isLoading.materials && materials.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                  {['All', ...new Set(materials.map(m => m.course_name || 'General'))].map(category => (
+                    <button
+                      key={category}
+                      onClick={() => setActiveMaterialFilter(category)}
+                      className={`px-4 py-1.5 rounded-full font-label-sm whitespace-nowrap transition-colors ${
+                        activeMaterialFilter === category 
+                          ? 'bg-primary text-white shadow-sm' 
+                          : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             
             {isLoading.materials ? (
@@ -171,38 +334,54 @@ export default function DashboardOverview() {
                 No materials found. Check back later!
               </p>
             ) : (
-              <div ref={scrollContainerRef} className="flex gap-md overflow-x-auto pb-sm custom-scrollbar -mx-2 px-2">
-                {materials.map((material) => (
-                  <div key={material.id} className="min-w-[280px] bg-surface-container-low rounded-xl p-md border border-outline-variant shadow-sm hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
-                    <div className="w-12 h-12 rounded-lg bg-primary-container text-primary flex items-center justify-center mb-md">
-                      <span className="material-symbols-outlined">
-                        {material.file_url.startsWith('http') ? 'link' : 'description'}
-                      </span>
+              <div className="flex flex-col gap-2">
+                {(activeMaterialFilter === 'All' ? materials : materials.filter(m => (m.course_name || 'General') === activeMaterialFilter)).map((material) => {
+                  const meta = getFileMeta(material.file_url);
+                  return (
+                    <div key={material.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-sm bg-white rounded-xl border border-outline-variant hover:border-primary/40 hover:shadow-sm transition-all group">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-1 sm:mt-0">
+                          <span className="material-symbols-outlined">{meta.icon}</span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-label-md text-on-surface line-clamp-1" title={material.title}>
+                              {material.title}
+                            </h4>
+                            {material.level && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary-container text-on-secondary-container whitespace-nowrap">
+                                {material.level}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="font-body-sm text-xs text-on-surface-variant">
+                              {new Date(material.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-outline-variant"></span>
+                            <span className="font-label-sm text-[10px] uppercase tracking-wider text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                              {meta.type} • {meta.size}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 sm:mt-0 sm:ml-4 flex justify-end">
+                        <a 
+                          href={material.file_url?.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant text-primary font-label-sm hover:bg-primary hover:text-white hover:border-primary transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">
+                            {meta.type === 'Link' ? 'open_in_new' : 'download'}
+                          </span>
+                          {meta.type === 'Link' ? 'Open' : 'Download'}
+                        </a>
+                      </div>
                     </div>
-                    <h4 className="font-label-md text-label-md text-on-surface mb-xs truncate" title={material.title}>
-                      {material.title}
-                    </h4>
-                    <p className="font-body-sm text-body-sm text-outline mb-md line-clamp-2">
-                      {material.description || 'No description provided.'}
-                    </p>
-                    <div className="flex items-center justify-between border-t border-outline-variant/50 pt-2 mt-auto">
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">
-                        {new Date(material.created_at).toLocaleDateString()}
-                      </span>
-                      <a 
-                        href={material.file_url.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <span className="material-symbols-outlined">
-                          {material.file_url.startsWith('http') ? 'open_in_new' : 'download'}
-                        </span>
-                      </a>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -212,13 +391,15 @@ export default function DashboardOverview() {
         <div className="lg:col-span-4 flex flex-col gap-gutter">
           
           {/* Today's Attendance */}
-          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant overflow-hidden hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] transition-all p-md flex items-center justify-between">
-            <div>
-              <h3 className="font-headline-md text-headline-md text-on-surface">Today's Attendance</h3>
-              <p className="font-body-sm text-on-surface-variant">Your status for today's classes.</p>
-            </div>
-            <div className={`px-4 py-2 rounded-lg font-bold text-sm ${attendanceStatus === 'present' ? 'bg-primary-container text-on-primary-container' : attendanceStatus === 'absent' ? 'bg-error-container text-on-error-container' : 'bg-surface-variant text-on-surface-variant'}`}>
-              {attendanceStatus === 'present' ? 'Present' : attendanceStatus === 'absent' ? 'Absent' : 'Not Marked'}
+          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant overflow-hidden hover:shadow-[0px_10px_30px_rgba(0,0,0,0.06)] transition-all p-md flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-headline-md text-headline-md text-on-surface">Today's Attendance</h3>
+                <p className="font-body-sm text-on-surface-variant">Your status for today's classes.</p>
+              </div>
+              <div className={`px-4 py-2 rounded-lg font-bold text-sm ${attendanceStatus === 'present' ? 'bg-primary-container text-on-primary-container' : attendanceStatus === 'absent' ? 'bg-error-container text-on-error-container' : 'bg-surface-variant text-on-surface-variant'}`}>
+                {attendanceStatus === 'present' ? 'Present' : attendanceStatus === 'absent' ? 'Absent' : 'Not Marked'}
+              </div>
             </div>
           </div>
 
@@ -246,21 +427,56 @@ export default function DashboardOverview() {
               ) : pendingTests.length === 0 ? (
                 <p className="text-on-surface-variant font-body-sm text-center p-md">You're all caught up!</p>
               ) : (
-                pendingTests.slice(0, 4).map((test) => (
-                  <div key={test.id} className="flex items-center gap-md p-md hover:bg-surface-container-low transition-colors rounded-xl group cursor-pointer active:scale-[0.98]">
-                    <div className="w-8 h-8 rounded-full bg-error-container/20 text-error flex items-center justify-center">
-                      <span className="material-symbols-outlined text-sm">assignment_late</span>
+                pendingTests.slice(0, 4).map((test) => {
+                  const urgency = getTaskUrgency(test.due_date);
+                  
+                  return (
+                    <div key={test.id} className="flex flex-col gap-sm p-md hover:bg-surface-container-low transition-colors rounded-xl group border border-transparent hover:border-outline-variant">
+                      <div className="flex items-start gap-md cursor-pointer" onClick={() => router.push(`/dashboard/tasks/${test.id}`)}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center mt-1
+                          ${urgency.color === 'error' ? 'bg-error-container text-error' : 
+                            urgency.color === 'tertiary' ? 'bg-tertiary-container text-tertiary' : 
+                            urgency.color === 'primary' ? 'bg-primary-container text-primary' : 
+                            'bg-surface-variant text-on-surface-variant'}`}>
+                          <span className="material-symbols-outlined text-sm">{urgency.icon}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <p className="font-label-md text-label-md text-on-surface line-clamp-2 mb-1">
+                              {test.title}
+                            </p>
+                            {test.level && (
+                              <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-secondary-container text-on-secondary-container whitespace-nowrap">
+                                {test.level}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider
+                              ${urgency.color === 'error' ? 'bg-error/10 text-error' : 
+                                urgency.color === 'tertiary' ? 'bg-tertiary/10 text-tertiary' : 
+                                urgency.color === 'primary' ? 'bg-primary/10 text-primary' : 
+                                'bg-surface-variant text-outline'}`}>
+                              {urgency.label}
+                            </span>
+                            <span className="font-body-sm text-xs text-on-surface-variant">
+                              {new Date(test.due_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end mt-1">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/tasks/${test.id}`); }}
+                          className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary/5 transition-colors"
+                        >
+                          Submit Work
+                          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-label-md text-label-md text-on-surface truncate">
-                        {test.title}
-                      </p>
-                      <p className="font-label-sm text-label-sm text-error">
-                        Due: {new Date(test.due_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
             {pendingTests.length > 4 && (
@@ -297,18 +513,55 @@ export default function DashboardOverview() {
                   const timeParts = c.time ? c.time.split(' ') : ['09:00', 'AM'];
                   const time = timeParts[0] || '09:00';
                   const period = timeParts[1] || 'AM';
+                  const status = getClassStatus(c);
+                  const isLiveOrSoon = status !== null;
+
                   return (
-                    <div key={c.id} className={`flex items-center p-md bg-surface-container-low rounded-xl border-l-4 ${COLOR_CLASSES[c.color] || 'border-primary'} transition-colors hover:bg-surface-container-high`}>
-                      <div className="mr-md text-center min-w-[60px]">
-                        <span className="block font-label-sm text-label-sm text-outline">{time}</span>
-                        <span className="block font-label-md text-label-md font-bold text-on-surface">{period}</span>
+                    <div key={c.id} className={`flex flex-col p-md bg-surface-container-low rounded-xl border-l-4 ${COLOR_CLASSES[c.color] || 'border-primary'} transition-colors hover:bg-surface-container-high`}>
+                      <div className="flex items-center">
+                        <div className="mr-md text-center min-w-[60px]">
+                          <span className="block font-label-sm text-label-sm text-outline">{time}</span>
+                          <span className="block font-label-md text-label-md font-bold text-on-surface">{period}</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-label-md text-label-md text-on-surface font-semibold">{c.name}</h4>
+                            {isLiveOrSoon && (
+                              <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${status.status === 'live' ? 'bg-error-container text-error' : 'bg-tertiary-container text-tertiary'}`}>
+                                <span className="relative flex h-2 w-2">
+                                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status.status === 'live' ? 'bg-error' : 'bg-tertiary'}`}></span>
+                                  <span className={`relative inline-flex rounded-full h-2 w-2 ${status.status === 'live' ? 'bg-error' : 'bg-tertiary'}`}></span>
+                                </span>
+                                {status.text}
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
+                            {c.day_of_week} • {c.location}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h4 className="font-label-md text-label-md text-on-surface font-semibold">{c.name}</h4>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant">
-                          {c.day_of_week} • {c.location}
-                        </p>
-                      </div>
+                      
+                      {isLiveOrSoon && (
+                        <div className="mt-sm pt-sm border-t border-outline-variant">
+                          {c.class_link ? (
+                            <a 
+                              href={c.class_link.startsWith('http') ? c.class_link : `https://${c.class_link}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2 bg-primary text-white rounded-lg font-label-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-sm active:scale-[0.98]"
+                            >
+                              <span className="material-symbols-outlined text-sm">video_camera_front</span>
+                              Join Virtual Room
+                            </a>
+                          ) : (
+                            <button disabled className="w-full py-2 bg-surface-variant text-on-surface-variant rounded-lg font-label-sm flex items-center justify-center gap-2 opacity-70 cursor-not-allowed shadow-sm">
+                              <span className="material-symbols-outlined text-sm">videocam_off</span>
+                              No Virtual Link
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -318,6 +571,6 @@ export default function DashboardOverview() {
 
         </div>
       </div>
-    </>
+    </div>
   );
 }

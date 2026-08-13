@@ -27,23 +27,23 @@ export default function CEOTopNav() {
         };
         fetchProfile();
     }, []);
-
-    return (
-        <header className="sticky top-0 z-40 glass-header border-b border-outline-variant/10">
-            <div className="flex justify-between items-center w-full px-gutter max-w-[1440px] mx-auto h-16 gap-sm md:gap-lg">
+    
+    return(
+        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#465AA3] via-[#5D8BCC] to-[#6FB7E4] border-b border-outline-variant/10 shadow-md">
+            <div className="flex justify-between items-center w-full px-gutter max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
                 <div className="flex items-center gap-sm md:gap-lg flex-grow md:flex-grow-0">
                     <button 
                         onClick={() => setIsMobileNavOpen(true)}
-                        className="material-symbols-outlined text-on-surface hover:bg-surface-container-high p-2 rounded-full transition-colors shrink-0"
+                        className="material-symbols-outlined text-white hover:bg-white/10 p-2 rounded-full transition-colors shrink-0"
                     >
                         menu
                     </button>
-                    <span className="font-display-lg text-headline-md text-primary hidden lg:block shrink-0">Academy's Overview</span>
+                    <img src="/fledgeacad.png" alt="Logo" className="h-18 w-auto object-contain shrink-0 hidden md:block brightness-0 invert" />
                 </div>
                 
-                <div className="flex items-center gap-md">
+                <div className="flex items-center gap-md text-white">
                     <ThemeToggle />
-                    <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-surface-container">
+                    <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-white/10">
                         {profile?.profile_image_url ? (
                             <img 
                                 src={profile.profile_image_url} 

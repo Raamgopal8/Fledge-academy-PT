@@ -10,7 +10,7 @@ export default function StudentProfile() {
                         <span className="material-symbols-outlined text-primary text-3xl">
                             person
                         </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold mb-lg text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             My Profile
                         </h1>
                     </div>

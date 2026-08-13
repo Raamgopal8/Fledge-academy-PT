@@ -72,13 +72,20 @@ export default function StudentProgress() {
     }
 
     return (
-        <div className="flex-1 p-gutter space-y-lg max-w-[1440px] mx-auto pb-32">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in pb-32">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <h1 className="font-display-sm text-on-surface">Student Progress</h1>
-                    <p className="font-body-lg text-on-surface-variant mt-1">Aggregated overview of test activities, scores, and feedback.</p>
+                    <div className="flex items-center gap-sm mb-xs">
+                        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
+                            Student Progress
+                        </h1>
+                    </div>
+                    <p className="font-body-lg text-on-surface-variant max-w-2xl mt-1">
+                        Aggregated overview of test activities, scores, and feedback.
+                    </p>
                 </div>
-            </header>
+            </div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-md">
@@ -168,6 +175,6 @@ export default function StudentProgress() {
                     </table>
                 </div>
             </div>
-        </div>
+        </section>
     );
 }

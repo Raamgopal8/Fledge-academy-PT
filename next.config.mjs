@@ -15,7 +15,7 @@ const nextConfig = {
       },
       {
         source: '/api/tests/submissions/:path*',
-        destination: 'http://localhost:8004/api/tests/submissions/:path*'
+        destination: 'http://localhost:8003/api/tests/submissions/:path*'
       },
       {
         source: '/api/tests/:path*',

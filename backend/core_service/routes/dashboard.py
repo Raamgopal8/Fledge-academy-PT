@@ -55,9 +55,10 @@ async def get_ceo_performance_chart():
     today = datetime.utcnow()
     months_data = {}
     
-    # Initialize the last 6 months with 0
-    for i in range(5, -1, -1):
-        month = (today.month - 1 - i) % 12 + 1
+    # Initialize 6 months starting from August
+    start_month = 8
+    for i in range(6):
+        month = (start_month - 1 + i) % 12 + 1
         month_abbr = calendar.month_abbr[month]
         months_data[month_abbr] = {"total_score": 0, "count": 0}
         
@@ -100,8 +101,17 @@ async def get_staff_summary():
 @router.get("/staff/classes")
 async def get_staff_classes():
     classes = await models.ClassSchedule.find_all().to_list()
-    # Beanie returns documents, we can just return them, fastapi serializes them well.
-    return classes
+    now = datetime.utcnow()
+    valid_classes = []
+    
+    for cls in classes:
+        if "online" in cls.location.lower():
+            if cls.expires_at and cls.expires_at < now:
+                await cls.delete()
+                continue
+        valid_classes.append(cls)
+        
+    return valid_classes
 
 @router.get("/staff/activities")
 async def get_staff_activities():

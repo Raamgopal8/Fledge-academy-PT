@@ -3,15 +3,19 @@ import TopNav from "../components/TopNav";
 import CommunityChat from "../components/CommunityChat";
 import { StudentProvider } from "../student/StudentContext";
 
+import MainContentWrapper from "../dashboard/MainContentWrapper";
+
 export default function StudentCommunityPage() {
     return (
         <StudentProvider>
-            <div className="min-h-screen bg-surface-container flex flex-col md:flex-row">
+            <div className="flex min-h-screen bg-slate-50">
                 <StudentNavbar />
-                <main className="flex-1 md:ml-64 p-md md:p-xl h-screen overflow-y-auto">
+                <MainContentWrapper>
                     <TopNav />
-                    <CommunityChat role="Student" />
-                </main>
+                    <div className="flex-grow relative p-margin-mobile md:p-margin-desktop h-[calc(100vh-48px)] overflow-hidden">
+                        <CommunityChat role="Student" />
+                    </div>
+                </MainContentWrapper>
             </div>
         </StudentProvider>
     );

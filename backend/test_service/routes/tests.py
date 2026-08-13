@@ -12,6 +12,7 @@ router = APIRouter()
 class TestCreate(BaseModel):
     title: str
     description: Optional[str] = None
+    level: Optional[str] = None
     due_date: Optional[datetime] = None
 
 class TestSubmit(BaseModel):
@@ -34,6 +35,7 @@ async def get_tests(
             "id": str(test.id),
             "title": test.title,
             "description": test.description,
+            "level": test.level,
             "created_by_id": str(test.created_by_id),
             "created_at": test.created_at,
             "due_date": test.due_date,
@@ -43,7 +45,7 @@ async def get_tests(
         if current_user.role == "student":
             submission = await models.TestSubmission.find_one(
                 models.TestSubmission.test_id == test.id,
-                models.TestSubmission.student_id == current_user.id
+                models.TestSubmission.student_id == PydanticObjectId(current_user.id)
             )
             
             if submission:
@@ -53,8 +55,10 @@ async def get_tests(
                     "submitted_at": submission.submitted_at,
                     "staff_comments": submission.staff_comments
                 }
+                test_dict["has_submitted"] = True
             else:
                 test_dict["submission"] = None
+                test_dict["has_submitted"] = False
                 
         response_data.append(test_dict)
         
@@ -71,7 +75,8 @@ async def create_test(
     new_test = models.Test(
         title=test_data.title,
         description=test_data.description,
-        created_by_id=current_user.id,
+        level=test_data.level,
+        created_by_id=PydanticObjectId(current_user.id),
         due_date=test_data.due_date
     )
     await new_test.insert()
@@ -80,6 +85,7 @@ async def create_test(
         "id": str(new_test.id),
         "title": new_test.title,
         "description": new_test.description,
+        "level": new_test.level,
         "created_by_id": str(new_test.created_by_id),
         "created_at": new_test.created_at,
         "due_date": new_test.due_date
@@ -102,15 +108,33 @@ async def submit_test(
     # Check if already submitted
     existing_submission = await models.TestSubmission.find_one(
         models.TestSubmission.test_id == test_id,
-        models.TestSubmission.student_id == current_user.id
+        models.TestSubmission.student_id == PydanticObjectId(current_user.id)
     )
     
     if existing_submission:
-        raise HTTPException(status_code=400, detail="Test already submitted")
+        if existing_submission.status == "Needs Work":
+            # Overwrite existing submission for resubmission
+            existing_submission.submission_content = submission_data.submission_content
+            existing_submission.submitted_at = datetime.utcnow()
+            existing_submission.status = "Pending Review"
+            existing_submission.staff_comments = None
+            await existing_submission.save()
+            
+            return {
+                "id": str(existing_submission.id),
+                "test_id": str(existing_submission.test_id),
+                "student_id": str(existing_submission.student_id),
+                "student_name": existing_submission.student_name,
+                "submission_content": existing_submission.submission_content,
+                "submitted_at": existing_submission.submitted_at,
+                "status": existing_submission.status
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Test already submitted")
         
     new_submission = models.TestSubmission(
         test_id=test_id,
-        student_id=current_user.id,
+        student_id=PydanticObjectId(current_user.id),
         student_name=submission_data.student_name,
         submission_content=submission_data.submission_content
     )

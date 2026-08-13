@@ -17,8 +17,8 @@ export default function CEOAttendance() {
             };
 
             const [overviewRes, studentsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/today`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/students`, { headers })
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/today`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/students`, { headers })
             ]);
 
             if (!overviewRes.ok || !studentsRes.ok) {
@@ -104,10 +104,10 @@ export default function CEOAttendance() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
+                        <span className="material-symbols-outlined text-primary text-4xl">
                             assignment
                         </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Attendance Reports
                         </h1>
                     </div>
@@ -135,9 +135,10 @@ export default function CEOAttendance() {
             </div>
 
             {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
-                
-                {/* Sidebar Area - Stats */}
+            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
+                    
+                    {/* Sidebar Area - Stats */}
                 <div className="md:col-span-4 flex flex-col gap-md">
                     
                     {/* Stats Cards */}
@@ -253,8 +254,8 @@ export default function CEOAttendance() {
                         </div>
                     </div>
                 </div>
-
             </div>
-        </section>
-    );
+        </div>
+    </section>
+  );
 }

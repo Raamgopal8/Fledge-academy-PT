@@ -7,10 +7,7 @@ export default function StaffActivity() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
-                            history
-                        </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold mb-lg text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             Staff Activity Log
                         </h1>
                     </div>

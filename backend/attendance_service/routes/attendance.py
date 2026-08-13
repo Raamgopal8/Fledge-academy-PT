@@ -41,14 +41,22 @@ async def mark_attendance(
     data: dict,
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
+    if current_user.role not in ["staff", "student"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    student_id_str = data.get("student_id")
     status = data.get("status") # present or absent
     
-    if not student_id_str or not status:
-        raise HTTPException(status_code=400, detail="student_id and status are required")
+    if current_user.role == "student":
+        if status != "present":
+            raise HTTPException(status_code=400, detail="Students can only mark themselves as present")
+        student_id_str = current_user.id
+    else:
+        student_id_str = data.get("student_id")
+        if not student_id_str:
+            raise HTTPException(status_code=400, detail="student_id is required for staff")
+    
+    if not status:
+        raise HTTPException(status_code=400, detail="status is required")
         
     try:
         student_id = PydanticObjectId(student_id_str)
@@ -103,9 +111,37 @@ async def get_my_attendance_status(
         raise HTTPException(status_code=403, detail="Not authorized")
         
     today = get_today_date_str()
-    record = await Attendance.find_one(Attendance.user_id == current_user.id, Attendance.date == today)
+    try:
+        user_id = PydanticObjectId(current_user.id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    record = await Attendance.find_one(Attendance.user_id == user_id, Attendance.date == today)
     
     if record:
         return {"date": today, "status": record.status}
     else:
         return {"date": today, "status": "not_marked"}
+
+@router.get("/my-stats")
+async def get_my_attendance_stats(
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "student":
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    try:
+        user_id = PydanticObjectId(current_user.id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
+        
+    total_records = await Attendance.find(Attendance.user_id == user_id).count()
+    present_records = await Attendance.find(Attendance.user_id == user_id, Attendance.status == "present").count()
+    
+    percentage = int((present_records / total_records) * 100) if total_records > 0 else 0
+    
+    return {
+        "total": total_records,
+        "present": present_records,
+        "percentage": percentage
+    }

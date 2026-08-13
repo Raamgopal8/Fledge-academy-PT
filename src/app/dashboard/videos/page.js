@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import MainContentWrapper from '@/app/dashboard/MainContentWrapper';
 
 export default function StudentVideos() {
     const [videos, setVideos] = useState([]);
@@ -155,7 +156,7 @@ export default function StudentVideos() {
         : videos.filter(v => v.category === selectedCategory);
 
     return (
-        <>
+        <MainContentWrapper>
             <style jsx>{`
                 @keyframes floatWatermark {
                     0% { transform: translate(0px, 0px) rotate(-30deg); }
@@ -198,10 +199,7 @@ export default function StudentVideos() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
-                            smart_display
-                        </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             Video Library
                         </h1>
                     </div>
@@ -282,6 +280,6 @@ export default function StudentVideos() {
                 )}
             </div>
         </section>
-        </>
+        </MainContentWrapper>
     );
 }
