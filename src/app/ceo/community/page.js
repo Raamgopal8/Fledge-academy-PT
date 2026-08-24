@@ -1,13 +1,12 @@
-import CEONavbar from "../../components/CEONavbar";
+'use client';
 import CommunityChat from "../../components/CommunityChat";
+import { useCEOContext } from "../CEOContext";
 
 export default function CEOCommunityPage() {
+    const { selectedBatch } = useCEOContext();
     return (
-        <div className="min-h-screen bg-surface-container flex flex-col md:flex-row">
-            <CEONavbar />
-            <main className="flex-1 md:ml-64 p-md md:p-xl h-screen overflow-y-auto">
-                <CommunityChat role="CEO" />
-            </main>
-        </div>
+        <section className="p-gutter max-w-[1440px] mx-auto">
+            <CommunityChat role="CEO" overrideBatch={selectedBatch === 'All Batches' ? '' : (selectedBatch || '')} />
+        </section>
     );
 }

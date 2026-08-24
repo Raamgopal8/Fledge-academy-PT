@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCEOContext } from '../CEOContext';
 
 const DAYS_OF_WEEK = [
     'Monday',
@@ -13,10 +14,15 @@ const DAYS_OF_WEEK = [
 ];
 
 const COLOR_OPTIONS = [
-    { value: 'primary', label: 'Primary (Blue)', bg: 'bg-primary-container/15', text: 'text-primary', border: 'border-primary' },
+    { value: 'Level 5', label: 'Level 5', bg: 'bg-green-500/15', text: 'text-green-600', border: 'border-green-600' },
+    { value: 'Level 4', label: 'Level 4', bg: 'bg-blue-500/15', text: 'text-blue-600', border: 'border-blue-600' },
+    { value: 'Level 3', label: 'Level 3', bg: 'bg-yellow-500/15', text: 'text-yellow-600', border: 'border-yellow-600' },
+    { value: 'Level 2', label: 'Level 2', bg: 'bg-orange-500/15', text: 'text-orange-600', border: 'border-orange-600' },
+    { value: 'Level 1', label: 'Level 1', bg: 'bg-red-500/15', text: 'text-red-600', border: 'border-red-600' },
 ];
 
 export default function SchedulePage() {
+    const { selectedBatch } = useCEOContext();
     const [schedules, setSchedules] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -33,8 +39,9 @@ export default function SchedulePage() {
         location: '',
         students: 15,
         day_of_week: 'Monday',
-        color: 'primary',
-        class_link: ''
+        color: 'Level 5',
+        class_link: '',
+        batch: ''
     });
 
     const [formError, setFormError] = useState('');
@@ -47,7 +54,10 @@ export default function SchedulePage() {
             const headers = {
                 'Authorization': `Bearer ${token}`
             };
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule`, { headers });
+            const batchQuery = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+                ? `?batch=${encodeURIComponent(selectedBatch)}` 
+                : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule${batchQuery}`, { headers });
             if (!res.ok) {
                 throw new Error('Failed to fetch schedule items');
             }
@@ -63,7 +73,7 @@ export default function SchedulePage() {
 
     useEffect(() => {
         fetchSchedules();
-    }, []);
+    }, [selectedBatch]);
 
     const openAddModal = () => {
         setEditingSchedule(null);
@@ -73,8 +83,9 @@ export default function SchedulePage() {
             location: '',
             students: 15,
             day_of_week: activeTab,
-            color: 'primary',
-            class_link: ''
+            color: 'Level 5',
+            class_link: '',
+            batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1'
         });
         setFormError('');
         setIsModalOpen(true);
@@ -89,7 +100,8 @@ export default function SchedulePage() {
             students: schedule.students,
             day_of_week: schedule.day_of_week,
             color: schedule.color,
-            class_link: schedule.class_link || ''
+            class_link: schedule.class_link || '',
+            batch: schedule.batch || ''
         });
         setFormError('');
         setIsModalOpen(true);
@@ -112,11 +124,16 @@ export default function SchedulePage() {
         
         const method = editingSchedule ? 'PUT' : 'POST';
 
+        const payload = {
+            ...formData,
+            level: formData.color
+        };
+
         try {
             const res = await fetch(url, {
                 method,
                 headers,
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             if (!res.ok) {
@@ -278,6 +295,12 @@ export default function SchedulePage() {
                                                             <span className="material-symbols-outlined text-sm">location_on</span>
                                                             {item.location}
                                                         </span>
+                                                        {item.batch && (
+                                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[13px]">groups</span>
+                                                                {item.batch}
+                                                            </span>
+                                                        )}
                                                         {item.class_link && (
                                                             <span className="flex items-center gap-1">
                                                                 <span className="material-symbols-outlined text-sm">link</span>
@@ -446,10 +469,45 @@ export default function SchedulePage() {
                                 />
                             </div>
 
-                            {/* Color Category */}
+                            {/* Target Batch */}
+                            <div className="space-y-xs">
+                                <label className="text-label-md text-on-surface-variant" htmlFor="batchInput">
+                                    Target Batch
+                                </label>
+                                <div className="space-y-2">
+                                    <input
+                                        id="batchInput"
+                                        type="text"
+                                        className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                        placeholder="e.g. Batch - 1, Batch - 2, or All Batches"
+                                        value={formData.batch}
+                                        onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                                    />
+                                    {/* Quick Batch Suggestions */}
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                        <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick select:</span>
+                                        {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4'].map((b) => (
+                                            <button
+                                                key={b}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, batch: b })}
+                                                className={`text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                                                    formData.batch === b
+                                                        ? 'bg-primary text-on-primary border-primary font-semibold'
+                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                }`}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Level Category */}
                             <div className="space-y-xs">
                                 <label className="text-label-md text-on-surface-variant">
-                                    Color Category
+                                    Japanese Level
                                 </label>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-sm">
                                     {COLOR_OPTIONS.map((opt) => (
@@ -463,8 +521,8 @@ export default function SchedulePage() {
                                                     : 'border-outline-variant hover:bg-surface-container-low'
                                             }`}
                                         >
-                                            <span className={`w-3 h-3 rounded-full ${opt.border} border-2`} style={{ backgroundColor: `var(--color-${opt.value})` }} />
-                                            <span>{opt.value}</span>
+                                            <span className={`w-3 h-3 rounded-full ${opt.bg} ${opt.border} border-2`} />
+                                            <span>{opt.label}</span>
                                         </button>
                                     ))}
                                 </div>

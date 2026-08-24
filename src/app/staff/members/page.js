@@ -1,22 +1,23 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useStaffContext } from '@/app/staff/StaffContext';
 
 export default function StaffMembers() {
+    const { selectedBatch } = useStaffContext();
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [markingStatus, setMarkingStatus] = useState({});
 
-    useEffect(() => {
-        fetchStudents();
-    }, []);
-
     const fetchStudents = async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/students`, {
+            const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
+                ? `?batch=${encodeURIComponent(selectedBatch)}` 
+                : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/students${batchParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -35,6 +36,10 @@ export default function StaffMembers() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchStudents();
+    }, [selectedBatch]);
 
     const markAttendance = async (studentId, status) => {
         setMarkingStatus(prev => ({ ...prev, [studentId]: true }));

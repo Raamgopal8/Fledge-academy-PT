@@ -9,8 +9,9 @@ from routes import community
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    os.makedirs("uploads", exist_ok=True)
     yield
+
+os.makedirs("uploads", exist_ok=True)
 
 app = FastAPI(title="Community Service", lifespan=lifespan)
 

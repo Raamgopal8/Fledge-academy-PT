@@ -12,7 +12,7 @@ export default function StudentCommunityPage() {
                 <StudentNavbar />
                 <MainContentWrapper>
                     <TopNav />
-                    <div className="flex-grow relative p-margin-mobile md:p-margin-desktop h-[calc(100vh-48px)] overflow-hidden">
+                    <div className="flex-grow relative p-gutter max-w-[1440px] mx-auto w-full animate-fade-in">
                         <CommunityChat role="Student" />
                     </div>
                 </MainContentWrapper>

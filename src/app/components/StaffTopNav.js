@@ -3,12 +3,20 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useStaffContext } from '@/app/staff/StaffContext';
 import ProfileSettingsModal from './ProfileSettingsModal';
+import StaffBatchSelectionModal from './StaffBatchSelectionModal';
 import ThemeToggle from './ThemeToggle';
 
 export default function StaffTopNav() {
     const [profile, setProfile] = useState(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const { setIsMobileNavOpen } = useStaffContext();
+    const { 
+        setIsMobileNavOpen, 
+        selectedBatch, 
+        setSelectedBatch, 
+        staffBatches, 
+        setStaffBatches, 
+        setIsBatchModalOpen 
+    } = useStaffContext();
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -21,6 +29,13 @@ export default function StaffTopNav() {
                 if (res.ok) {
                     const data = await res.json();
                     setProfile(data);
+                    const bList = data.batches && data.batches.length > 0 
+                        ? data.batches 
+                        : (data.batch ? [data.batch] : []);
+                    setStaffBatches(bList);
+                    if (bList.length > 0 && !selectedBatch) {
+                        setSelectedBatch(bList[0]);
+                    }
                 }
             } catch (err) {
                 console.error(err);
@@ -43,7 +58,18 @@ export default function StaffTopNav() {
                 </div>
                 
                 <div className="flex items-center gap-md text-white">
+                    {/* Batch Switcher Button */}
+                    <button 
+                        onClick={() => setIsBatchModalOpen(true)}
+                        className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl font-label-md transition-colors flex items-center gap-1.5 text-sm border border-white/20 hover:border-white/40 shadow-xs cursor-pointer active:scale-95"
+                        title="Switch Batch"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
+                        <span>{selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}</span>
+                    </button>
+
                     <ThemeToggle />
+
                     <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-white/10">
                         {profile?.profile_image_url ? (
                             <img 
@@ -63,6 +89,7 @@ export default function StaffTopNav() {
                 currentProfile={profile} 
                 onProfileUpdated={setProfile} 
             />
+            <StaffBatchSelectionModal />
         </header>
     );
 }

@@ -39,9 +39,11 @@ export default function DashboardOverview() {
       if (!token) return;
 
       const headers = { 'Authorization': `Bearer ${token}` };
-
+      const level = localStorage.getItem('level') || 'Level 5';
+            const batch = localStorage.getItem('batch') || '';
+            
       // Fetch Schedules
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch schedules'))
         .then(data => { setSchedules(data); setIsLoading(prev => ({ ...prev, schedules: false })); })
         .catch(err => { setError(prev => ({ ...prev, schedules: err })); setIsLoading(prev => ({ ...prev, schedules: false })); });
@@ -71,19 +73,19 @@ export default function DashboardOverview() {
         });
 
       // Fetch Materials
-      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch materials'))
         .then(data => { setMaterials(data); setIsLoading(prev => ({ ...prev, materials: false })); })
         .catch(err => { setError(prev => ({ ...prev, materials: err })); setIsLoading(prev => ({ ...prev, materials: false })); });
 
       // Fetch Announcements
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/announcement`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/announcement?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch announcements'))
         .then(data => { setAnnouncements(data); setIsLoading(prev => ({ ...prev, announcements: false })); })
         .catch(err => { setError(prev => ({ ...prev, announcements: err })); setIsLoading(prev => ({ ...prev, announcements: false })); });
 
       // Fetch Tests (Pending Tasks)
-      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch tests'))
         .then(data => { setTests(data); setIsLoading(prev => ({ ...prev, tests: false })); })
         .catch(err => { setError(prev => ({ ...prev, tests: err })); setIsLoading(prev => ({ ...prev, tests: false })); });
@@ -280,7 +282,7 @@ export default function DashboardOverview() {
               ) : error.announcements ? (
                 <p className="text-error font-body-sm text-center">Failed to load announcements.</p>
               ) : announcements.length === 0 ? (
-                <p className="text-on-surface-variant font-body-sm text-center">No announcements to display.</p>
+                <p className="text-on-surface-variant font-body-sm text-center">Check announcement to display.</p>
               ) : (
                 announcements.slice(0, 3).map((ann) => (
                   <div key={ann.id} className="p-sm rounded-xl bg-surface-container-lowest border border-outline-variant hover:border-primary/30 transition-colors">
@@ -432,7 +434,7 @@ export default function DashboardOverview() {
                   
                   return (
                     <div key={test.id} className="flex flex-col gap-sm p-md hover:bg-surface-container-low transition-colors rounded-xl group border border-transparent hover:border-outline-variant">
-                      <div className="flex items-start gap-md cursor-pointer" onClick={() => router.push(`/dashboard/tasks/${test.id}`)}>
+                      <div className="flex items-start gap-md cursor-pointer" onClick={() => router.push('/dashboard/tasks')}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center mt-1
                           ${urgency.color === 'error' ? 'bg-error-container text-error' : 
                             urgency.color === 'tertiary' ? 'bg-tertiary-container text-tertiary' : 
@@ -467,8 +469,8 @@ export default function DashboardOverview() {
                       </div>
                       <div className="flex justify-end mt-1">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/tasks/${test.id}`); }}
-                          className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary/5 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); router.push('/dashboard/tasks'); }}
+                          className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1 px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary/5 transition-colors cursor-pointer"
                         >
                           Submit Work
                           <span className="material-symbols-outlined text-[14px]">arrow_forward</span>

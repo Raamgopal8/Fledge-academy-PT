@@ -5,7 +5,7 @@ import { useCEOContext } from '@/app/ceo/CEOContext';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import ThemeToggle from './ThemeToggle';
 export default function CEOTopNav() {
-    const { setIsMobileNavOpen } = useCEOContext();
+    const { setIsMobileNavOpen, selectedBatch, setSelectedBatch } = useCEOContext();
     const [profile, setProfile] = useState(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -42,6 +42,14 @@ export default function CEOTopNav() {
                 </div>
                 
                 <div className="flex items-center gap-md text-white">
+                    <button 
+                        onClick={() => setSelectedBatch(null)}
+                        className="bg-white/20 hover:bg-white/30 px-sm py-xs rounded-lg font-label-md transition-colors flex items-center gap-xs text-sm"
+                        title="Change Batch"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">domain</span>
+                        {selectedBatch === 'All Batches' ? 'Global Access' : (selectedBatch || 'Select Batch')}
+                    </button>
                     <ThemeToggle />
                     <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-white/10">
                         {profile?.profile_image_url ? (

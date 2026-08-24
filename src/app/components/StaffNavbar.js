@@ -6,7 +6,13 @@ import { useStaffContext } from '@/app/staff/StaffContext';
 
 export default function StaffNavbar() {
     const pathname = usePathname();
-    const { isMobileNavOpen, setIsMobileNavOpen } = useStaffContext();
+    const { 
+        isMobileNavOpen, 
+        setIsMobileNavOpen, 
+        selectedBatch, 
+        staffBatches, 
+        setIsBatchModalOpen 
+    } = useStaffContext();
 
 
     const navLinks = [
@@ -33,16 +39,45 @@ export default function StaffNavbar() {
             
             <aside className={`h-screen w-64 fixed left-0 top-0 flex flex-col bg-surface-container-low border-r border-outline-variant py-md z-50 transition-transform duration-300 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Brand Header */}
-                <div className="px-gutter mb-lg flex justify-between items-center">
-                    <div>
-                        <h1 className="font-headline-md text-headline-md text-primary">Fledge Academy</h1>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant">Staff Portal</p>
-                    </div>
-                    <button 
+                <div className="px-gutter mb-md flex justify-between items-center">
+                   <div className="flex items-center gap-base">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                            <img src="/icon.png" alt="Logo" />
+                        </div>
+                        <div>
+                            <h2 className="font-headline-md text-headline-md text-primary leading-tight">
+                                Fledge Academy
+                            </h2>
+                            <p className="font-body-sm text-body-sm text-outline">Staff Portal</p>
+                        </div>
+                    </div>    
+                     <button 
                         onClick={() => setIsMobileNavOpen(false)}
-                        className="material-symbols-outlined text-on-surface-variant p-1 hover:bg-surface-container-high rounded-full transition-colors active:scale-95"
+                        className="material-symbols-outlined text-on-surface-variant p-1 hover:bg-surface-container-high rounded-full transition-colors active:scale-95 md:hidden"
                     >
                         close
+                    </button>
+                </div>
+
+                {/* Active Batch Switcher in Sidebar */}
+                <div className="px-3 mb-3">
+                    <button
+                        onClick={() => setIsBatchModalOpen(true)}
+                        className="w-full bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 rounded-xl px-3 py-2 text-left flex items-center justify-between transition-all group shadow-2xs"
+                        title="Switch Batch"
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="material-symbols-outlined text-primary text-[18px] shrink-0">domain</span>
+                            <div className="truncate">
+                                <p className="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider leading-none mb-0.5">Active Batch</p>
+                                <p className="font-label-md text-on-surface font-semibold truncate text-xs">
+                                    {selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}
+                                </p>
+                            </div>
+                        </div>
+                        <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary text-[18px] shrink-0 transition-colors">
+                            swap_horiz
+                        </span>
                     </button>
                 </div>
 

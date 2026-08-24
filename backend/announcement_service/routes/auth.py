@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, List
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
@@ -17,6 +17,8 @@ class DummyUser(BaseModel):
     id: str
     email: str
     role: str
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -29,8 +31,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         email: str = payload.get("sub")
         role: str = payload.get("role")
         uid: str = payload.get("uid")
+        batch: str = payload.get("batch")
         if email is None or uid is None:
             raise credentials_exception
-        return DummyUser(id=uid, email=email, role=role)
+        batches = payload.get('batches') or ([batch] if batch else [])
+        return DummyUser(id=uid, email=email, role=role, batch=batch, batches=batches)
     except jwt.PyJWTError:
         raise credentials_exception

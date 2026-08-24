@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useCEOContext } from '@/app/ceo/CEOContext';
 
 export default function CEOStudents() {
-    const { searchQuery } = useCEOContext();
+    const { searchQuery, selectedBatch } = useCEOContext();
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ export default function CEOStudents() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     
     const [currentStudent, setCurrentStudent] = useState(null);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', level: 'N5' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
     const [formError, setFormError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
@@ -56,7 +56,7 @@ export default function CEOStudents() {
             }
             await fetchStudents();
             setIsAddModalOpen(false);
-            setFormData({ name: '', email: '', password: '', level: 'N5' });
+            setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -77,7 +77,8 @@ export default function CEOStudents() {
                     name: formData.name,
                     email: formData.email,
                     password: formData.password || undefined, // Only send password if changed
-                    level: formData.level
+                    level: formData.level,
+                    batch: formData.batch
                 })
             });
             if (!res.ok) {
@@ -87,7 +88,7 @@ export default function CEOStudents() {
             await fetchStudents();
             setIsEditModalOpen(false);
             setCurrentStudent(null);
-            setFormData({ name: '', email: '', password: '', level: 'N5' });
+            setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -113,7 +114,7 @@ export default function CEOStudents() {
 
     const openEditModal = (student) => {
         setCurrentStudent(student);
-        setFormData({ name: student.name || '', email: student.email, password: '', level: student.level || 'N5' });
+        setFormData({ name: student.name || '', email: student.email, password: '', level: student.level || 'Level 5', batch: student.batch || '' });
         setIsEditModalOpen(true);
     };
 
@@ -147,10 +148,13 @@ export default function CEOStudents() {
         );
     }
 
-    const filteredStudents = students.filter(student => 
-        (student.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-        student.email.toLowerCase().includes((searchQuery || '').toLowerCase())
-    );
+    const filteredStudents = students.filter(student => {
+        const matchesSearch = (student.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+                              student.email.toLowerCase().includes((searchQuery || '').toLowerCase());
+        const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+        const matchesBatch = overrideBatch ? (student.batch || '').trim() === overrideBatch.trim() : true;
+        return matchesSearch && matchesBatch;
+    });
 
     return (
         <section className="p-gutter max-w-[1440px] mx-auto space-y-lg">
@@ -163,7 +167,7 @@ export default function CEOStudents() {
                     <p className="font-body-lg text-on-surface-variant max-w-2xl">View, add, edit, and remove student accounts.</p>
                 </div>
                 <button 
-                    onClick={() => { setFormData({ name: '', email: '', password: '', level: 'N5' }); setFormError(''); setIsAddModalOpen(true); }}
+                    onClick={() => { setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' }); setFormError(''); setIsAddModalOpen(true); }}
                     className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-lg hover:bg-primary/90 transition-colors flex items-center gap-sm"
                 >
                     <span className="material-symbols-outlined">person_add</span>
@@ -179,6 +183,7 @@ export default function CEOStudents() {
                                 <th className="p-md font-label-lg text-on-surface-variant">Name</th>
                                 <th className="p-md font-label-lg text-on-surface-variant">Email</th>
                                 <th className="p-md font-label-lg text-on-surface-variant">Level</th>
+                                <th className="p-md font-label-lg text-on-surface-variant">Batch</th>
                                 <th className="p-md font-label-lg text-on-surface-variant text-right">Actions</th>
                             </tr>
                         </thead>
@@ -189,12 +194,19 @@ export default function CEOStudents() {
                                     <td className="p-md font-body-md text-on-surface-variant">{student.email}</td>
                                     <td className="p-md font-body-md text-on-surface-variant">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            student.level === 'N5' ? 'bg-blue-100 text-blue-800' :
-                                            student.level === 'N4' ? 'bg-purple-100 text-purple-800' :
-                                            student.level === 'N3' ? 'bg-orange-100 text-orange-800' :
+                                            student.level === 'Level 5' ? 'bg-blue-100 text-blue-800' :
+                                            student.level === 'Level 4' ? 'bg-purple-100 text-purple-800' :
+                                            student.level === 'Level 3' ? 'bg-orange-100 text-orange-800' :
+                                            student.level === 'Level 2' ? 'bg-green-100 text-green-800' :
+                                            student.level === 'Level 1' ? 'bg-red-100 text-red-800' :
                                             'bg-gray-100 text-gray-800'
                                         }`}>
-                                            {student.level || 'N5'}
+                                            {student.level || 'Level 5'}
+                                        </span>
+                                    </td>
+                                    <td className="p-md font-body-md text-on-surface-variant">
+                                        <span className="bg-surface-container-high px-2 py-1 rounded-md text-xs font-medium text-on-surface">
+                                            {student.batch || 'Unassigned'}
                                         </span>
                                     </td>
                                     <td className="p-md flex justify-end gap-sm">
@@ -282,10 +294,23 @@ export default function CEOStudents() {
                                     value={formData.level}
                                     onChange={(e) => setFormData({...formData, level: e.target.value})}
                                 >
-                                    <option value="N5">N5</option>
-                                    <option value="N4">N4</option>
-                                    <option value="N3">N3</option>
+                                    <option value="Level 5">Level 5</option>
+                                    <option value="Level 4">Level 4</option>
+                                    <option value="Level 3">Level 3</option>
+                                    <option value="Level 2">Level 2</option>
+                                    <option value="Level 1">Level 1</option>
                                 </select>
+
+                            </div>
+                            <div>
+                                <label className="block text-label-md text-on-surface-variant mb-1">Batch</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. batch-1"
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                    value={formData.batch}
+                                    onChange={(e) => setFormData({...formData, batch: e.target.value})}
+                                />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
@@ -361,10 +386,22 @@ export default function CEOStudents() {
                                     value={formData.level}
                                     onChange={(e) => setFormData({...formData, level: e.target.value})}
                                 >
-                                    <option value="N5">N5</option>
-                                    <option value="N4">N4</option>
-                                    <option value="N3">N3</option>
+                                    <option value="Level 5">Level 5</option>
+                                    <option value="Level 4">Level 4</option>
+                                    <option value="Level 3">Level 3</option>
+                                    <option value="Level 2">Level 2</option>
+                                    <option value="Level 1">Level 1</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label className="block text-label-md text-on-surface-variant mb-1">Batch</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. batch-1"
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                    value={formData.batch}
+                                    onChange={(e) => setFormData({...formData, batch: e.target.value})}
+                                />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 

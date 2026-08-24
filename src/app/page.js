@@ -59,6 +59,11 @@ export default function LoginPage() {
       // Store token and role
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
+      localStorage.setItem("level", data.level || "Level 5");
+      localStorage.setItem("batch", data.batch || "");
+      localStorage.setItem("userName", data.name || "");
+      localStorage.setItem("userEmail", data.email || "");
+      localStorage.setItem("userProfileImage", data.profile_image_url || "");
 
       // Redirect based on role
       if (data.role === "ceo") {

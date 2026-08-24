@@ -1,6 +1,7 @@
 import CEONavbar from '@/app/components/CEONavbar';
 import CEOTopNav from '@/app/components/CEOTopNav';
 import AuthGuard from '@/app/components/AuthGuard';
+import BatchSelectionModal from '@/app/components/BatchSelectionModal';
 import { CEOProvider } from './CEOContext';
 
 export const metadata = {
@@ -11,6 +12,7 @@ export default function CEOLayout({ children }) {
     return (
         <AuthGuard requiredRole="ceo">
             <CEOProvider>
+                <BatchSelectionModal />
                 <div className="flex min-h-screen bg-background text-on-surface font-body-md">
                     <CEONavbar />
 

@@ -34,6 +34,8 @@ class ScheduleSchema(BaseModel):
     color: str
     day_of_week: str
     class_link: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -47,14 +49,21 @@ class ScheduleResponse(BaseModel):
     color: str
     day_of_week: str
     class_link: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
     class Config:
         populate_by_name = True
         from_attributes = True
 
 @router.get("", response_model=List[ScheduleResponse])
-async def get_schedules():
-    schedules = await models.ClassSchedule.find_all().to_list()
+async def get_schedules(level: Optional[str] = None, batch: Optional[str] = None):
+    query = {}
+    if level and level.strip().lower() not in ["all", "all levels"]:
+        query["level"] = {"$regex": f"^{level.strip()}$", "$options": "i"}
+    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        query["batch"] = {"$regex": f"^{batch.strip()}$", "$options": "i"}
+    schedules = await models.ClassSchedule.find(query).to_list()
     now = datetime.utcnow()
     valid_schedules = []
     
@@ -88,6 +97,8 @@ async def create_schedule(
         color=schema.color,
         day_of_week=schema.day_of_week,
         class_link=schema.class_link,
+        level=schema.level,
+        batch=schema.batch,
         expires_at=expires_at
     )
     await new_schedule.insert()
@@ -116,6 +127,8 @@ async def update_schedule(
     schedule.color = schema.color
     schedule.day_of_week = schema.day_of_week
     schedule.class_link = schema.class_link
+    schedule.level = schema.level
+    schedule.batch = schema.batch
     schedule.expires_at = calculate_expiration(schema.day_of_week)
     
     await schedule.save()

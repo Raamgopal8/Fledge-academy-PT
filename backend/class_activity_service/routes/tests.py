@@ -13,6 +13,8 @@ class TestCreate(BaseModel):
     title: str
     description: Optional[str] = None
     due_date: Optional[datetime] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
 class TestSubmit(BaseModel):
     submission_content: str
@@ -23,9 +25,16 @@ class TestReview(BaseModel):
 
 @router.get("")
 async def get_tests(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    tests = await models.Test.find_all().sort("-created_at").to_list()
+    query = {}
+    if level:
+        query["level"] = level
+    if batch:
+        query["batch"] = batch
+    tests = await models.Test.find(query).sort("-created_at").to_list()
     
     response_data = []
     for test in tests:
@@ -36,6 +45,8 @@ async def get_tests(
             "created_by_id": str(test.created_by_id),
             "created_at": test.created_at,
             "due_date": test.due_date,
+            "level": test.level,
+            "batch": test.batch,
         }
         
         # If student, attach their submission status
@@ -71,7 +82,9 @@ async def create_test(
         title=test_data.title,
         description=test_data.description,
         created_by_id=current_user.id,
-        due_date=test_data.due_date
+        due_date=test_data.due_date,
+        level=test_data.level,
+        batch=test_data.batch
     )
     await new_test.insert()
     
@@ -81,7 +94,9 @@ async def create_test(
         "description": new_test.description,
         "created_by_id": str(new_test.created_by_id),
         "created_at": new_test.created_at,
-        "due_date": new_test.due_date
+        "due_date": new_test.due_date,
+        "level": new_test.level,
+        "batch": new_test.batch
     }
 
 @router.post("/{test_id}/submit")

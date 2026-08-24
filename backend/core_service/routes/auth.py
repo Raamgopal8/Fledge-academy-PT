@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -28,6 +28,12 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     role: str
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -69,8 +75,28 @@ async def login(request: LoginRequest):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    user_batches = getattr(user, "batches", None) or ([user.batch] if getattr(user, "batch", None) else [])
+    primary_batch = getattr(user, "batch", None) or (user_batches[0] if user_batches else None)
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": request.username, "role": user.role, "uid": str(user.id)}, expires_delta=access_token_expires
+        data={
+            "sub": request.username, 
+            "role": user.role, 
+            "uid": str(user.id), 
+            "batch": primary_batch,
+            "batches": user_batches
+        }, 
+        expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer", 
+        "role": user.role, 
+        "level": user.level, 
+        "batch": primary_batch,
+        "batches": user_batches,
+        "name": user.name,
+        "email": user.email,
+        "profile_image_url": user.profile_image_url
+    }

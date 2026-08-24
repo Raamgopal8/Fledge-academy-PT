@@ -30,32 +30,32 @@ export default function TopNav() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
-      <div className="flex justify-between items-center w-full px-gutter max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
-        <div className="flex items-center gap-sm md:gap-lg flex-grow md:flex-grow-0">
-          <button 
-              onClick={() => setIsMobileNavOpen(true)}
-              className="material-symbols-outlined text-slate-600 hover:bg-slate-100 p-2 rounded-full transition-colors shrink-0 md:hidden"
-          >
-            menu
-          </button>
-          <img src="/fledgeacad.png" alt="Logo" className="h-10 w-auto object-contain shrink-0 hidden md:block" />
-        </div>
+        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#465AA3] via-[#5D8BCC] to-[#6FB7E4] border-b border-outline-variant/10 shadow-md">
+            <div className="flex justify-between items-center w-full px-gutter max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
+                <div className="flex items-center gap-sm md:gap-lg flex-grow md:flex-grow-0">
+                    <button 
+                        onClick={() => setIsMobileNavOpen(true)}
+                        className="material-symbols-outlined text-white hover:bg-white/10 p-2 rounded-full transition-colors shrink-0"
+                    >
+                        menu
+                    </button>
+                    <img src="/fledgeacad.png" alt="Logo" className="h-18 w-auto object-contain shrink-0 hidden md:block brightness-0 invert" />
+                </div>
         
-        <div className="flex items-center gap-md text-slate-700">
-          <ThemeToggle />
-          <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-200 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-slate-100">
-            {profile?.profile_image_url ? (
-              <img
-                className="w-full h-full object-cover"
-                alt={`Portrait of ${profile?.name || "Student"}`}
-                src={profile.profile_image_url}
-              />
-            ) : (
-              <span className="material-symbols-outlined text-slate-500">person</span>
-            )}
-          </button>
-        </div>
+                <div className="flex items-center gap-md text-white">
+                    <ThemeToggle />
+                    <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-white/10">
+                        {profile?.profile_image_url ? (
+                            <img 
+                                className="w-full h-full object-cover" 
+                                alt={profile.name || "Student"} 
+                                src={profile.profile_image_url} 
+                            />
+                        ) : (
+                            <span className="material-symbols-outlined text-white">person</span>
+                        )}
+                    </button>
+                </div>
       </div>
       <ProfileSettingsModal 
           isOpen={isSettingsOpen} 

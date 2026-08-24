@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models import User, Attendance
 from routes.auth import get_current_user
-from typing import List, Dict
+from typing import List, Dict, Optional
 import datetime
 from beanie import PydanticObjectId
 from beanie.operators import In
@@ -13,16 +13,32 @@ def get_today_date_str():
 
 @router.get("/students")
 async def get_students_attendance(
+    batch: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    students = await User.find({"role": "student"}).to_list()
+    query = {"role": "student"}
+    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
+        query["batch"] = batch
+    elif current_user.role == "staff":
+        staff_batches = getattr(current_user, "batches", None) or []
+        staff_batch = getattr(current_user, "batch", None)
+        if not staff_batches and not staff_batch:
+            return []
+        if staff_batches and len(staff_batches) > 1:
+            query["batch"] = {"$in": staff_batches}
+        elif staff_batches and len(staff_batches) == 1:
+            query["batch"] = staff_batches[0]
+        elif staff_batch:
+            query["batch"] = staff_batch
+        
+    students = await User.find(query).to_list()
     today = get_today_date_str()
     
     # Fetch today's attendance records for all students
-    attendance_records = await Attendance.find(Attendance.date == today).to_list()
+    attendance_records = await Attendance.find({"date": today}).to_list()
     attendance_map = {record.user_id: record.status for record in attendance_records}
     
     result_list = []
@@ -32,7 +48,8 @@ async def get_students_attendance(
             "name": student.name or student.email.split('@')[0],
             "email": student.email,
             "profile_image_url": student.profile_image_url,
-            "status": attendance_map.get(student.id, "not_marked")
+            "status": attendance_map.get(student.id, "not_marked"),
+            "batch": getattr(student, "batch", None)
         })
     return result_list
 
@@ -68,7 +85,7 @@ async def mark_attendance(
         raise HTTPException(status_code=404, detail="Student not found")
         
     today = get_today_date_str()
-    record = await Attendance.find_one(Attendance.user_id == student_id, Attendance.date == today)
+    record = await Attendance.find_one({"user_id": student_id, "date": today})
     
     if record:
         record.status = status
@@ -87,7 +104,7 @@ async def get_today_attendance(
         raise HTTPException(status_code=403, detail="Not authorized")
         
     today = get_today_date_str()
-    present_records = await Attendance.find(Attendance.date == today, Attendance.status == "present").to_list()
+    present_records = await Attendance.find({"date": today, "status": "present"}).to_list()
     
     present_user_ids = [record.user_id for record in present_records]
     if present_user_ids:
@@ -116,7 +133,7 @@ async def get_my_attendance_status(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
-    record = await Attendance.find_one(Attendance.user_id == user_id, Attendance.date == today)
+    record = await Attendance.find_one({"user_id": user_id, "date": today})
     
     if record:
         return {"date": today, "status": record.status}
@@ -135,8 +152,8 @@ async def get_my_attendance_stats(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid user ID")
         
-    total_records = await Attendance.find(Attendance.user_id == user_id).count()
-    present_records = await Attendance.find(Attendance.user_id == user_id, Attendance.status == "present").count()
+    total_records = await Attendance.find({"user_id": user_id}).count()
+    present_records = await Attendance.find({"user_id": user_id, "status": "present"}).count()
     
     percentage = int((present_records / total_records) * 100) if total_records > 0 else 0
     

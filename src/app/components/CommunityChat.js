@@ -2,27 +2,84 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-export default function CommunityChat({ role }) {
+export default function CommunityChat({ role, overrideBatch }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [userName, setUserName] = useState('Anonymous');
     const [userEmail, setUserEmail] = useState('Anonymous');
     const [isRecording, setIsRecording] = useState(false);
     const messagesEndRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
 
+    const [userLevel, setUserLevel] = useState('Level 5');
+    const [userBatch, setUserBatch] = useState('');
+
+    const [userProfileImage, setUserProfileImage] = useState('');
+    const [avatarMap, setAvatarMap] = useState({});
+
     useEffect(() => {
         // Run only on client side
         if (typeof window !== 'undefined') {
             const email = localStorage.getItem('userEmail') || localStorage.getItem('email') || 'Anonymous';
             setUserEmail(email);
+            const name = localStorage.getItem('userName') || email?.split('@')[0] || 'Anonymous';
+            setUserName(name);
+            const profileImg = localStorage.getItem('userProfileImage') || '';
+            setUserProfileImage(profileImg);
+            const level = localStorage.getItem('level') || 'Level 5';
+            const batch = overrideBatch !== undefined ? overrideBatch : (localStorage.getItem('batch') || '');
+            setUserBatch(batch);
+            setUserLevel(level);
+
+            // Fetch profile directly to get latest icon
+            const token = localStorage.getItem('token');
+            if (token) {
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data) {
+                        if (data.profile_image_url) {
+                            setUserProfileImage(data.profile_image_url);
+                            localStorage.setItem('userProfileImage', data.profile_image_url);
+                        }
+                        if (data.name) {
+                            setUserName(data.name);
+                            localStorage.setItem('userName', data.name);
+                        }
+                    }
+                })
+                .catch(err => console.error("Error fetching user profile:", err));
+
+                // Fetch classroom members for avatar lookup
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/classroom/members`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => res.ok ? res.json() : null)
+                .then(members => {
+                    if (Array.isArray(members)) {
+                        const map = {};
+                        members.forEach(m => {
+                            if (m.profile_image_url) {
+                                if (m.email) map[m.email] = m.profile_image_url;
+                                if (m.name) map[m.name] = m.profile_image_url;
+                                if (m.id) map[m.id] = m.profile_image_url;
+                            }
+                        });
+                        setAvatarMap(map);
+                    }
+                })
+                .catch(err => console.error("Error fetching members:", err));
+            }
         }
-    }, []);
+    }, [overrideBatch]);
 
     const fetchMessages = async () => {
         try {
-            const res = await fetch('http://localhost:8009/api/community/messages');
+            const res = await fetch(`http://localhost:8009/api/community/messages?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -35,10 +92,12 @@ export default function CommunityChat({ role }) {
     };
 
     useEffect(() => {
-        fetchMessages();
-        const interval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
-        return () => clearInterval(interval);
-    }, []);
+        if (userLevel && userBatch !== undefined) {
+            fetchMessages();
+            const interval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
+            return () => clearInterval(interval);
+        }
+    }, [userLevel, userBatch]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -56,8 +115,11 @@ export default function CommunityChat({ role }) {
             const msgData = {
                 content: newMessage,
                 author_id: userEmail,
-                author_name: userEmail !== 'Anonymous' ? userEmail.split('@')[0] : 'Anonymous',
-                role: role || 'user'
+                author_name: userName,
+                author_image: userProfileImage || localStorage.getItem('userProfileImage') || '',
+                role: role || 'user',
+                level: userLevel,
+                ...(userBatch ? { batch: userBatch } : {})
             };
             
             setNewMessage('');
@@ -113,8 +175,11 @@ export default function CommunityChat({ role }) {
             const formData = new FormData();
             formData.append('audio_file', audioBlob, 'audio.webm');
             formData.append('author_id', userEmail);
-            formData.append('author_name', userEmail !== 'Anonymous' ? userEmail.split('@')[0] : 'Anonymous');
+            formData.append('author_name', userName);
+            formData.append('author_image', userProfileImage || localStorage.getItem('userProfileImage') || '');
             formData.append('role', role || 'user');
+            formData.append('level', userLevel);
+            if (userBatch) formData.append('batch', userBatch);
 
             const res = await fetch('http://localhost:8009/api/community/messages/audio', {
                 method: 'POST',
@@ -130,12 +195,15 @@ export default function CommunityChat({ role }) {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-120px)] bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden shadow-sm">
+        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm w-full">
             {/* Header */}
-            <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center">
+            <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center z-10 shadow-xs">
                 <div>
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Community Chat</h2>
-                    <p className="font-body-sm text-on-surface-variant">Live discussion and collaboration</p>
+                    <p className="font-body-sm text-on-surface-variant">Live discussion and collaboration with peers</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-3xl">forum</span>
                 </div>
             </div>
 
@@ -149,22 +217,50 @@ export default function CommunityChat({ role }) {
                     {messages.map((msg) => {
                         const isYou = msg.author_id === userEmail;
                         const time = new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        const avatarUrl = msg.author_image || (isYou ? userProfileImage : (avatarMap[msg.author_id] || avatarMap[msg.author_name] || null));
+                        const initial = (msg.author_name && msg.author_name !== 'Anonymous') 
+                            ? msg.author_name.charAt(0).toUpperCase() 
+                            : (msg.author_id && msg.author_id !== 'Anonymous' ? msg.author_id.charAt(0).toUpperCase() : 'U');
+
                         return (
-                            <div key={msg._id} className={`flex flex-col ${isYou ? 'items-end' : 'items-start'}`}>
-                                <div className="flex items-baseline gap-2 mb-1">
-                                    <span className="font-label-sm text-on-surface">{isYou ? 'You' : msg.author_name} ({msg.role})</span>
-                                    <span className="text-[10px] text-outline">{time}</span>
-                                </div>
-                                <div className={`px-4 py-2 rounded-2xl max-w-[85%] font-body-md ${
+                            <div key={msg._id} className={`flex gap-3 max-w-[85%] ${isYou ? 'ml-auto flex-row-reverse' : 'mr-auto flex-row'}`}>
+                                {/* Avatar Icon */}
+                                <div className={`w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold shadow-sm mt-0.5 ${
                                     isYou 
-                                        ? 'bg-primary text-on-primary rounded-tr-sm' 
-                                        : 'bg-surface-container-high text-on-surface rounded-tl-sm'
+                                        ? 'bg-primary/20 text-primary border border-primary/30' 
+                                        : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/60'
                                 }`}>
-                                    {msg.audio_url ? (
-                                        <audio controls src={msg.audio_url} className="max-w-[250px] h-10" />
+                                    {avatarUrl ? (
+                                        <img 
+                                            src={avatarUrl} 
+                                            alt={isYou ? 'You' : (msg.author_name || 'User')} 
+                                            className="w-full h-full object-cover" 
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                        />
                                     ) : (
-                                        msg.content
+                                        <span>{initial}</span>
                                     )}
+                                </div>
+
+                                {/* Message Content */}
+                                <div className={`flex flex-col ${isYou ? 'items-end' : 'items-start'} flex-1 min-w-0`}>
+                                    <div className="flex items-baseline gap-2 mb-1">
+                                        <span className="font-label-sm font-semibold text-on-surface truncate">
+                                            {isYou ? 'You' : msg.author_name} <span className="font-normal text-xs text-on-surface-variant/80">({msg.role})</span>
+                                        </span>
+                                        <span className="text-[10px] text-outline shrink-0">{time}</span>
+                                    </div>
+                                    <div className={`px-4 py-2.5 rounded-2xl font-body-md shadow-sm break-words ${
+                                        isYou 
+                                            ? 'bg-primary text-on-primary rounded-tr-xs' 
+                                            : 'bg-surface-container-high text-on-surface rounded-tl-xs'
+                                    }`}>
+                                        {msg.audio_url ? (
+                                            <audio controls src={msg.audio_url} className="max-w-[250px] h-10" />
+                                        ) : (
+                                            msg.content
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );

@@ -11,11 +11,11 @@ export default function CEONavbar() {
     const navItems = [
         { name: 'Overview', path: '/ceo/dashboard', icon: 'dashboard' },
         { name: 'Students', path: '/ceo/students', icon: 'groups' },
+        { name: 'Staff', path: '/ceo/staff', icon: 'manage_accounts' },
         { name: 'Announcements', path: '/ceo/announcements', icon: 'campaign' },
         { name: 'Community', path: '/ceo/community', icon: 'forum' },
         { name: 'Tests', path: '/ceo/tests', icon: 'quiz' },
         { name: 'Attendance', path: '/ceo/attendance', icon: 'assignment' },
-        { name: 'Staff Logs', path: '/ceo/staff-logs', icon: 'history' },
         { name: 'Materials', path: '/ceo/materials', icon: 'library_books' },
         { name: 'Videos', path: '/ceo/videos', icon: 'smart_display' },
         { name: 'Schedule', path: '/ceo/schedule', icon: 'schedule' },
@@ -33,11 +33,18 @@ export default function CEONavbar() {
             )}
             
             <aside className={`h-screen w-64 fixed left-0 top-0 flex flex-col bg-surface-container-low border-r border-outline-variant z-50 py-md transition-transform duration-300 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="px-gutter mb-lg flex justify-between items-center">
-                    <div>
-                        <h1 className="font-headline-md text-headline-md text-primary">Fledge Academy</h1>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant opacity-70">CEO Portal</p>
-                    </div>
+                <div className="px-gutter mb-lg flex items-center justify-between">
+                    <div className="flex items-center gap-base">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                            <img src="/icon.png" alt="Logo" />
+                        </div>
+                        <div>
+                            <h2 className="font-headline-md text-headline-md text-primary leading-tight">
+                                Fledge Academy
+                            </h2>
+                            <p className="font-body-sm text-body-sm text-outline">CEO Portal</p>
+                        </div>
+                    </div>    
                     <button 
                         onClick={() => setIsMobileNavOpen(false)}
                         className="material-symbols-outlined text-on-surface-variant p-1 hover:bg-surface-container-high rounded-full transition-colors active:scale-95"

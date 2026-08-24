@@ -1,6 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import MainContentWrapper from '@/app/dashboard/MainContentWrapper';
+
+const LEVEL_COLORS = {
+    'Level 5': 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
+    'Level 4': 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30',
+    'Level 3': 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30',
+    'Level 2': 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30',
+    'Level 1': 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30',
+};
 
 export default function StudentVideos() {
     const [videos, setVideos] = useState([]);
@@ -8,13 +15,15 @@ export default function StudentVideos() {
     const [error, setError] = useState(null);
     const [isObscured, setIsObscured] = useState(false);
     const [watermarkText, setWatermarkText] = useState('Protected Content');
+    const [studentInfo, setStudentInfo] = useState({ level: 'Level 5', batch: '' });
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [categories, setCategories] = useState(['All']);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        fetchVideos();
+        fetchStudentInfoAndVideos();
 
         // 1. Disable right-click
         const handleContextMenu = (e) => e.preventDefault();
@@ -51,12 +60,10 @@ export default function StudentVideos() {
             ) {
                 e.preventDefault();
                 setIsObscured(true);
-                // Attempt to clear clipboard if it's a screenshot attempt
                 try {
                     navigator.clipboard.writeText('Screenshots are disabled for protected content.');
                 } catch (err) {}
-                
-                setTimeout(() => setIsObscured(false), 3000); // Obscure for 3 seconds
+                setTimeout(() => setIsObscured(false), 3000);
             }
         };
         const handleKeyUp = (e) => {
@@ -80,19 +87,16 @@ export default function StudentVideos() {
         document.addEventListener('cut', preventCopy);
         document.addEventListener('dragstart', preventCopy);
 
-        // Get user data for watermark if available
+        // Get user data for watermark
         try {
             const token = localStorage.getItem('token');
             if (token) {
-                // simple jwt decode for email, if structure allows
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 if (payload.sub) {
                     setWatermarkText(payload.sub);
                 }
             }
-        } catch (e) {
-            // ignore
-        }
+        } catch (e) {}
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
@@ -107,10 +111,41 @@ export default function StudentVideos() {
         };
     }, []);
 
-    const fetchVideos = async () => {
+    const fetchStudentInfoAndVideos = async () => {
+        setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:8006/api/videos/', {
+            let level = localStorage.getItem('level');
+            let batch = localStorage.getItem('batch');
+
+            // If level or batch not set in localStorage, fetch from profile
+            if (!level || !batch) {
+                try {
+                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/user/profile`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (profRes.ok) {
+                        const prof = await profRes.json();
+                        level = prof.level || level || 'Level 5';
+                        batch = prof.batch || batch || '';
+                        localStorage.setItem('level', level);
+                        if (batch) localStorage.setItem('batch', batch);
+                    }
+                } catch (e) {
+                    console.error("Profile fetch fallback error:", e);
+                }
+            }
+
+            level = level || 'Level 5';
+            batch = batch || '';
+            setStudentInfo({ level, batch });
+
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || 'http://localhost:8006';
+            const queryParams = new URLSearchParams();
+            if (level) queryParams.append('level', level);
+            if (batch) queryParams.append('batch', batch);
+
+            const res = await fetch(`${videoApiBase}/api/videos/?${queryParams.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -120,9 +155,8 @@ export default function StudentVideos() {
             setVideos(data);
             
             // Extract unique categories
-            const uniqueCategories = ['All', ...new Set(data.map(v => v.category))];
+            const uniqueCategories = ['All', ...new Set(data.map(v => v.category).filter(Boolean))];
             setCategories(uniqueCategories);
-            
         } catch (err) {
             setError(err.message);
         } finally {
@@ -132,7 +166,6 @@ export default function StudentVideos() {
 
     const getEmbedUrl = (url) => {
         if (!url) return '';
-        // Handle standard youtube links and youtu.be links
         try {
             const urlObj = new URL(url);
             let videoId = '';
@@ -142,21 +175,30 @@ export default function StudentVideos() {
                 videoId = urlObj.pathname.slice(1);
             }
             if (videoId) {
-                // Stricter YouTube params to hide controls, title, and disable keyboard
-                return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=0&disablekb=1&fs=0&iv_load_policy=3`;
+                return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1&iv_load_policy=3`;
             }
-        } catch (e) {
-            // Invalid URL
-        }
+        } catch (e) {}
         return url;
     };
 
-    const filteredVideos = selectedCategory === 'All' 
-        ? videos 
-        : videos.filter(v => v.category === selectedCategory);
+    const getLevelBadgeClass = (lvl) => {
+        return LEVEL_COLORS[lvl] || 'bg-primary/10 text-primary border-primary/20';
+    };
+
+    // Filtered Video List
+    const filteredVideos = videos.filter(video => {
+        if (selectedCategory !== 'All' && video.category !== selectedCategory) return false;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            const titleMatch = (video.title || '').toLowerCase().includes(q);
+            const catMatch = (video.category || '').toLowerCase().includes(q);
+            return titleMatch || catMatch;
+        }
+        return true;
+    });
 
     return (
-        <MainContentWrapper>
+        <>
             <style jsx>{`
                 @keyframes floatWatermark {
                     0% { transform: translate(0px, 0px) rotate(-30deg); }
@@ -168,12 +210,12 @@ export default function StudentVideos() {
                     animation: floatWatermark 8s infinite alternate ease-in-out;
                 }
                 .no-select-mobile {
-                    -webkit-touch-callout: none; /* iOS Safari */
-                    -webkit-user-select: none; /* Safari */
-                     -khtml-user-select: none; /* Konqueror HTML */
-                       -moz-user-select: none; /* Old versions of Firefox */
-                        -ms-user-select: none; /* Internet Explorer/Edge */
-                            user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+                    -webkit-touch-callout: none;
+                    -webkit-user-select: none;
+                    -khtml-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
                 }
             `}</style>
             <section className={`max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in no-select-mobile ${isObscured ? 'blur-xl select-none pointer-events-none opacity-50' : ''}`}>
@@ -187,7 +229,7 @@ export default function StudentVideos() {
                     </div>
                 )}
                 
-                {/* Watermark overlay across the whole page to deter recording */}
+                {/* Watermark overlay */}
                 <div className="fixed inset-0 z-40 pointer-events-none overflow-hidden opacity-[0.04] flex flex-wrap gap-12 justify-center items-center mix-blend-difference no-select-mobile">
                     {Array.from({ length: 40 }).map((_, i) => (
                         <div key={i} className="watermark-text text-3xl font-bold whitespace-nowrap">
@@ -195,91 +237,136 @@ export default function StudentVideos() {
                         </div>
                     ))}
                 </div>
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
-                <div>
-                    <div className="flex items-center gap-sm mb-xs">
-                        <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
-                            Video Library
-                        </h1>
-                    </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
-                        Watch recorded lectures and tutorials
-                    </p>
-                </div>
-            </div>
 
-            {error && (
-                <div className="bg-error/10 text-error p-md rounded-lg flex items-center gap-sm">
-                    <span className="material-symbols-outlined">error</span>
-                    {error}
-                </div>
-            )}
-
-            {/* Category Filter */}
-            {!isLoading && videos.length > 0 && (
-                <div className="flex gap-sm overflow-x-auto pb-sm custom-scrollbar">
-                    {categories.map(category => (
-                        <button
-                            key={category}
-                            onClick={() => setSelectedCategory(category)}
-                            className={`px-lg py-sm rounded-full font-label-md whitespace-nowrap transition-colors ${
-                                selectedCategory === category 
-                                    ? 'bg-primary text-on-primary' 
-                                    : 'bg-surface-container border border-outline-variant text-on-surface hover:bg-surface-container-high'
-                            }`}
-                        >
-                            {category}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* Video Grid */}
-            <div className="mt-md">
-                {isLoading ? (
-                    <div className="flex justify-center p-xl">
-                        <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+                {/* Header with Student Level and Batch Badges */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+                    <div>
+                        <div className="flex items-center gap-sm mb-xs">
+                            <span className="material-symbols-outlined text-primary text-3xl">smart_display</span>
+                            <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
+                                Video Library
+                            </h1>
+                        </div>
+                        <p className="font-body-lg text-on-surface-variant max-w-2xl">
+                            Watch recorded lectures, tutorials, and specialized lessons for your batch and level.
+                        </p>
                     </div>
-                ) : videos.length === 0 ? (
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-xl text-center custom-shadow">
-                        <span className="material-symbols-outlined text-6xl text-outline/50 mb-md">videocam_off</span>
-                        <h3 className="font-headline-sm text-on-surface-variant">No videos available</h3>
-                        <p className="font-body-md text-outline mt-sm">Check back later for new content.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
-                        {filteredVideos.map(video => (
-                            <div key={video.id} className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden custom-shadow flex flex-col hover:shadow-md transition-shadow">
-                                <div className="aspect-video w-full bg-black relative overflow-hidden group">
-                                    <iframe 
-                                        src={getEmbedUrl(video.video_url)} 
-                                        className="absolute top-0 left-0 w-full h-full border-0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                        allowFullScreen
-                                        title={video.title}
-                                    ></iframe>
-                                    {/* Video-specific floating watermark */}
-                                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.15] mix-blend-overlay animate-pulse select-none">
-                                        <p className="text-white transform -rotate-12 font-bold text-xl md:text-2xl whitespace-nowrap drop-shadow-md">
-                                            {watermarkText}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="p-md flex flex-col flex-1">
-                                    <div className="flex justify-between items-start gap-sm mb-sm">
-                                        <h3 className="font-headline-sm text-on-surface line-clamp-2">{video.title}</h3>
-                                    </div>
-                                    <div className="inline-block bg-secondary-container text-on-secondary-container px-sm py-xs rounded text-xs font-label-sm w-fit mt-auto">
-                                        {video.category}
-                                    </div>
-                                </div>
+
+                    {/* Active Student Level Indicator (Batch is hidden in UI) */}
+                    <div className="flex items-center gap-2">
+                        {studentInfo.level && (
+                            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                                <span className="material-symbols-outlined text-[16px]">school</span>
+                                <span>{studentInfo.level}</span>
                             </div>
-                        ))}
+                        )}
+                    </div>
+                </div>
+
+                {error && (
+                    <div className="bg-error/10 text-error p-md rounded-xl flex items-center gap-sm border border-error/30">
+                        <span className="material-symbols-outlined">error</span>
+                        <span>{error}</span>
                     </div>
                 )}
-            </div>
-        </section>
-        </MainContentWrapper>
+
+                {/* Filter and Video Grid */}
+                <div className="rounded-3xl bg-surface-container-lowest p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow min-h-[400px] space-y-6">
+                    {/* Category Filter & Search Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-outline-variant/50">
+                        {/* Category Filter Tabs */}
+                        {!isLoading && categories.length > 1 ? (
+                            <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                                {categories.map(category => (
+                                    <button
+                                        key={category}
+                                        onClick={() => setSelectedCategory(category)}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                                            selectedCategory === category 
+                                                ? 'bg-primary text-on-primary shadow-xs font-bold' 
+                                                : 'bg-surface-container-low border border-outline-variant/60 text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+                                        }`}
+                                    >
+                                        {category}
+                                    </button>
+                                ))}
+                            </div>
+                        ) : <div />}
+
+                        {/* Search Input */}
+                        <div className="relative min-w-[220px]">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+                            <input 
+                                type="text"
+                                placeholder="Search lesson videos..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-1.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Video Grid */}
+                    <div>
+                        {isLoading ? (
+                            <div className="flex flex-col justify-center items-center h-64 gap-3">
+                                <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+                                <p className="text-xs text-on-surface-variant font-medium">Loading your course videos...</p>
+                            </div>
+                        ) : filteredVideos.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center text-center p-xl bg-surface-container/30 rounded-2xl border border-dashed border-outline-variant h-64">
+                                <span className="material-symbols-outlined text-6xl text-outline/40 mb-3">videocam_off</span>
+                                <h3 className="font-headline-sm text-on-surface-variant font-bold">No videos available</h3>
+                                <p className="font-body-md text-outline text-xs mt-1">Check back later or contact your instructor for new lessons.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {filteredVideos.map(video => (
+                                    <div key={video.id} className="group relative bg-surface-container-low rounded-2xl overflow-hidden border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
+                                        {/* Video Player */}
+                                        <div className="aspect-video w-full bg-black relative overflow-hidden group">
+                                            <iframe 
+                                                src={getEmbedUrl(video.video_url)} 
+                                                className="absolute top-0 left-0 w-full h-full border-0 z-10"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                allowFullScreen
+                                                title={video.title}
+                                            ></iframe>
+                                            {/* Video-specific floating watermark */}
+                                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.15] mix-blend-overlay animate-pulse select-none z-20">
+                                                <p className="text-white transform -rotate-12 font-bold text-xl md:text-2xl whitespace-nowrap drop-shadow-md">
+                                                    {watermarkText}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Card Info & Badges */}
+                                        <div className="p-5 flex flex-col flex-1">
+                                            <h3 className="font-headline-sm text-on-surface font-bold text-base line-clamp-2 group-hover:text-primary transition-colors mb-3" title={video.title}>
+                                                {video.title}
+                                            </h3>
+
+                                            {/* Level & Category Badges (Batch hidden in UI) */}
+                                            <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-outline-variant/40">
+                                                {video.level && (
+                                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
+                                                        {video.level}
+                                                    </span>
+                                                )}
+                                                {video.category && (
+                                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-secondary-container text-on-secondary-container">
+                                                        {video.category}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </section>
+        </>
     );
 }

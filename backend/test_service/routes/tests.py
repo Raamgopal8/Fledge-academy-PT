@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 from beanie import PydanticObjectId
-
+from beanie.operators import In
 import models
 from routes.auth import get_current_user
 
@@ -13,6 +13,8 @@ class TestCreate(BaseModel):
     title: str
     description: Optional[str] = None
     level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     due_date: Optional[datetime] = None
 
 class TestSubmit(BaseModel):
@@ -25,9 +27,39 @@ class TestReview(BaseModel):
 
 @router.get("")
 async def get_tests(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    tests = await models.Test.find_all().sort("-created_at").to_list()
+    conditions = []
+    if level and level.strip().lower() not in ["all", "all levels"]:
+        clean_level = level.strip()
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        clean_batch = batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
+        
+    query = {"$and": conditions} if conditions else {}
+    tests = await models.Test.find(query).sort("-created_at").to_list()
     
     response_data = []
     for test in tests:
@@ -36,13 +68,16 @@ async def get_tests(
             "title": test.title,
             "description": test.description,
             "level": test.level,
+            "batch": test.batch,
+            "batches": getattr(test, "batches", []) or [],
             "created_by_id": str(test.created_by_id),
             "created_at": test.created_at,
             "due_date": test.due_date,
         }
         
         # If student, attach their submission status
-        if current_user.role == "student":
+        user_role = (current_user.role or "").lower()
+        if user_role == "student":
             submission = await models.TestSubmission.find_one(
                 models.TestSubmission.test_id == test.id,
                 models.TestSubmission.student_id == PydanticObjectId(current_user.id)
@@ -69,13 +104,16 @@ async def create_test(
     test_data: TestCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
-        raise HTTPException(status_code=403, detail="Only staff can create tests")
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only staff and CEO can create tests")
         
     new_test = models.Test(
         title=test_data.title,
         description=test_data.description,
         level=test_data.level,
+        batch=test_data.batch,
+        batches=test_data.batches or ([test_data.batch] if test_data.batch else []),
         created_by_id=PydanticObjectId(current_user.id),
         due_date=test_data.due_date
     )
@@ -86,10 +124,35 @@ async def create_test(
         "title": new_test.title,
         "description": new_test.description,
         "level": new_test.level,
+        "batch": new_test.batch,
+        "batches": new_test.batches or [],
         "created_by_id": str(new_test.created_by_id),
         "created_at": new_test.created_at,
         "due_date": new_test.due_date
     }
+
+@router.delete("/{test_id}")
+async def delete_test(
+    test_id: str,
+    current_user: models.User = Depends(get_current_user)
+):
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete tests")
+    try:
+        obj_id = PydanticObjectId(test_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid test ID")
+        
+    test = await models.Test.get(obj_id)
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+        
+    await test.delete()
+    submissions = await models.TestSubmission.find(models.TestSubmission.test_id == obj_id).to_list()
+    for s in submissions:
+        await s.delete()
+    return {"message": "Test deleted successfully"}
 
 @router.post("/{test_id}/submit")
 async def submit_test(
@@ -170,7 +233,7 @@ async def get_test_submissions(
             "id": str(sub.id),
             "test_id": str(sub.test_id),
             "student_id": str(sub.student_id),
-            "student_name": sub.student_name if sub.student_name else (student.name if student else "Unknown"),
+            "student_name": getattr(sub, "student_name", None) if getattr(sub, "student_name", None) else (student.name if student else "Unknown"),
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,
             "status": sub.status,
@@ -215,8 +278,16 @@ async def get_all_submissions(
     if current_user.role not in ["staff", "ceo"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
-    submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()
-    
+    staff_batch = getattr(current_user, "batch", None)
+    if current_user.role == "staff" and staff_batch:
+        tests = await models.Test.find({"batch": staff_batch}).to_list()
+        test_ids = [t.id for t in tests]
+        if test_ids:
+            submissions = await models.TestSubmission.find(In(models.TestSubmission.test_id, test_ids)).sort("-submitted_at").to_list()
+        else:
+            submissions = []
+    else:
+        submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()    
     response = []
     for sub in submissions:
         # Get student name
@@ -230,7 +301,7 @@ async def get_all_submissions(
             "test_id": str(sub.test_id),
             "test_title": test.title if test else "Unknown",
             "student_id": str(sub.student_id),
-            "student_name": sub.student_name if sub.student_name else (student.name if student else "Unknown"),
+            "student_name": getattr(sub, "student_name", None) if getattr(sub, "student_name", None) else (student.name if student else "Unknown"),
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,
             "status": sub.status,

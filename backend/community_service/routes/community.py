@@ -12,7 +12,10 @@ class MessageCreate(BaseModel):
     content: str
     author_id: str
     author_name: str
+    author_image: Optional[str] = None
     role: str
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
 @router.post("/messages", response_model=CommunityMessage)
 async def create_message(msg: MessageCreate):
@@ -21,7 +24,10 @@ async def create_message(msg: MessageCreate):
             content=msg.content,
             author_id=msg.author_id,
             author_name=msg.author_name,
-            role=msg.role
+            author_image=msg.author_image,
+            role=msg.role,
+            level=msg.level,
+            batch=msg.batch
         )
         await new_msg.insert()
         return new_msg
@@ -33,7 +39,10 @@ async def create_audio_message(
     audio_file: UploadFile = File(...),
     author_id: str = Form(...),
     author_name: str = Form(...),
-    role: str = Form(...)
+    author_image: Optional[str] = Form(None),
+    role: str = Form(...),
+    level: Optional[str] = Form(None),
+    batch: Optional[str] = Form(None)
 ):
     try:
         # Save the audio file
@@ -50,7 +59,10 @@ async def create_audio_message(
             audio_url=audio_url,
             author_id=author_id,
             author_name=author_name,
-            role=role
+            author_image=author_image,
+            role=role,
+            level=level,
+            batch=batch
         )
         await new_msg.insert()
         return new_msg
@@ -58,9 +70,14 @@ async def create_audio_message(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/messages", response_model=List[CommunityMessage])
-async def get_messages():
+async def get_messages(level: Optional[str] = None, batch: Optional[str] = None):
     try:
-        messages = await CommunityMessage.find_all().sort("created_at").to_list()
+        query = {}
+        if level:
+            query["level"] = level
+        if batch:
+            query["batch"] = batch
+        messages = await CommunityMessage.find(query).sort("+created_at").to_list()
         return messages
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

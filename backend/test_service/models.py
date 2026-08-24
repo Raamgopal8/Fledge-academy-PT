@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from beanie import Document, PydanticObjectId
 from pydantic import Field
 
@@ -9,18 +9,27 @@ class User(Document):
     role: str = "student"
     name: Optional[str] = None
     profile_image_url: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
+    total_fee: Optional[float] = None
     preferences: dict = {}
 
     class Settings:
         name = "users"
 
 class ClassSchedule(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     name: str
     time: str
     location: str
     students: int = 0
     color: str = "primary"
     day_of_week: str
+    class_link: Optional[str] = None
+    expires_at: Optional[datetime] = None
 
     class Settings:
         name = "class_schedules"
@@ -34,6 +43,9 @@ class Attendance(Document):
         name = "attendance"
 
 class Announcement(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     title: str
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -52,9 +64,11 @@ class AnnouncementView(Document):
         name = "announcement_views"
 
 class Material(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     title: str
     description: Optional[str] = None
-    level: Optional[str] = None
     file_url: str
     uploaded_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -63,9 +77,11 @@ class Material(Document):
         name = "materials"
 
 class Test(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     title: str
     description: Optional[str] = None
-    level: Optional[str] = None
     created_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=datetime.utcnow)
     due_date: Optional[datetime] = None
@@ -76,7 +92,6 @@ class Test(Document):
 class TestSubmission(Document):
     test_id: PydanticObjectId
     student_id: PydanticObjectId
-    student_name: Optional[str] = None
     submission_content: str
     submitted_at: datetime = Field(default_factory=datetime.utcnow)
     staff_comments: Optional[str] = None
@@ -103,3 +118,44 @@ class Activity(Document):
 
     class Settings:
         name = "activities"
+
+class FinancialTransaction(Document):
+    amount: float
+    type: str # "income" or "expense"
+    category: str
+    description: Optional[str] = None
+    student_id: Optional[PydanticObjectId] = None
+    date: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "financial_transactions"
+
+
+class CommunityMessage(Document):
+    content: Optional[str] = None
+    audio_url: Optional[str] = None
+    author_id: str
+    author_name: str
+    author_image: Optional[str] = None
+    role: str
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "community_messages"
+
+
+class Video(Document):
+    title: str
+    category: str
+    video_url: str
+    uploaded_by_id: PydanticObjectId
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
+
+    class Settings:
+        name = "videos"

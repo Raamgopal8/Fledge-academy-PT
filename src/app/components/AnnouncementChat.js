@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 
-export default function AnnouncementChat({ role }) {
+export default function AnnouncementChat({ role, overrideBatch }) {
     const [announcements, setAnnouncements] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -16,10 +16,23 @@ export default function AnnouncementChat({ role }) {
 
     const isCEO = role === 'CEO';
 
+    const [userLevel, setUserLevel] = useState('Level 5');
+    const [userBatch, setUserBatch] = useState('');
+
+    useEffect(() => {
+        // Run only on client side
+        if (typeof window !== 'undefined') {
+            const level = localStorage.getItem('level') || 'Level 5';
+            const batch = overrideBatch !== undefined ? overrideBatch : (localStorage.getItem('batch') || '');
+            setUserBatch(batch);
+            setUserLevel(level);
+        }
+    }, [overrideBatch]);
+
     const fetchAnnouncements = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/announcement`, {
+            const res = await fetch(`/api/announcement?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch announcements');
@@ -35,8 +48,10 @@ export default function AnnouncementChat({ role }) {
     };
 
     useEffect(() => {
-        fetchAnnouncements();
-    }, []);
+        if (userLevel && userBatch !== undefined) {
+            fetchAnnouncements();
+        }
+    }, [userLevel, userBatch]);
 
     useEffect(() => {
         // Auto scroll to bottom when new messages arrive
@@ -61,7 +76,12 @@ export default function AnnouncementChat({ role }) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ title, content: newMessage })
+                body: JSON.stringify({ 
+                    title, 
+                    content: newMessage, 
+                    level: userLevel,
+                    ...(userBatch ? { batch: userBatch } : {})
+                })
             });
 
             if (!res.ok) throw new Error('Failed to send announcement');
@@ -123,9 +143,9 @@ export default function AnnouncementChat({ role }) {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-low rounded-2xl border border-outline-variant overflow-hidden shadow-sm max-w-[1000px] mx-auto w-full">
+        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm w-full">
             {/* Header */}
-            <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center z-10 shadow-sm">
+            <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center z-10 shadow-xs">
                 <div>
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Announcements</h2>
                     <p className="font-body-sm text-on-surface-variant">
@@ -133,7 +153,7 @@ export default function AnnouncementChat({ role }) {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary">campaign</span>
+                    <span className="material-symbols-outlined text-primary text-3xl">campaign</span>
                 </div>
             </div>
 

@@ -1,17 +1,25 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from typing import Optional
 import models
+from routes.auth import get_current_user
 from datetime import datetime
 import calendar
 
 router = APIRouter()
 
 @router.get("/ceo/kpi")
-async def get_ceo_kpi():
+async def get_ceo_kpi(batch: Optional[str] = None):
     # Total Students
-    total_students = await models.User.find({"role": "student"}).count()
+    student_query = {"role": "student"}
+    if batch:
+        student_query["batch"] = batch
+    total_students = await models.User.find(student_query).count()
 
     # Total Staff
-    total_staff = await models.User.find({"role": {"$in": ["staff", "ceo"]}}).count()
+    staff_query = {"role": {"$in": ["staff", "ceo"]}}
+    if batch:
+        staff_query["batch"] = batch
+    total_staff = await models.User.find(staff_query).count()
 
     # For "Revenue", assuming a fixed value per student
     total_revenue = total_students * 500
@@ -91,16 +99,73 @@ async def delete_all_recent_activity():
     return {"message": "All activities deleted successfully"}
 
 @router.get("/staff/summary")
-async def get_staff_summary():
+async def get_staff_summary(
+    batch: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
+    student_query = {"role": "student"}
+    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
+        student_query["batch"] = batch
+    elif current_user.role == "staff":
+        staff_batches = getattr(current_user, "batches", None) or []
+        staff_batch = getattr(current_user, "batch", None)
+        if staff_batches and len(staff_batches) > 1:
+            student_query["batch"] = {"$in": staff_batches}
+        elif staff_batches and len(staff_batches) == 1:
+            student_query["batch"] = staff_batches[0]
+        elif staff_batch:
+            student_query["batch"] = staff_batch
+        elif not staff_batches and not staff_batch:
+            return {
+                "name": current_user.name or current_user.email.split('@')[0],
+                "classesToday": 0,
+                "ungradedAssignments": 0,
+                "attendanceRate": "--%"
+            }
+        
+    students = await models.User.find(student_query).to_list()
+    total_students = len(students)
+    
+    today = datetime.now().strftime("%Y-%m-%d")
+    student_ids = [s.id for s in students]
+    
+    if student_ids:
+        attendance_records = await models.Attendance.find({
+            "date": today,
+            "status": "present"
+        }).to_list()
+        
+        present_count = sum(1 for r in attendance_records if r.user_id in student_ids)
+        attendance_rate = f"{int((present_count / total_students) * 100)}%" if total_students > 0 else "--%"
+    else:
+        attendance_rate = "--%"
+        
     return {
-        "name": "Prof. Aris",
-        "classesToday": 4,
-        "ungradedAssignments": 12
+        "name": current_user.name or current_user.email.split('@')[0],
+        "classesToday": 0,
+        "ungradedAssignments": 0,
+        "attendanceRate": attendance_rate
     }
 
 @router.get("/staff/classes")
-async def get_staff_classes():
-    classes = await models.ClassSchedule.find_all().to_list()
+async def get_staff_classes(
+    batch: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
+    query = {}
+    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
+        query["batch"] = batch
+    elif current_user.role == "staff":
+        staff_batches = getattr(current_user, "batches", None) or []
+        staff_batch = getattr(current_user, "batch", None)
+        if staff_batches and len(staff_batches) > 1:
+            query["batch"] = {"$in": staff_batches}
+        elif staff_batches and len(staff_batches) == 1:
+            query["batch"] = staff_batches[0]
+        elif staff_batch:
+            query["batch"] = staff_batch
+        
+    classes = await models.ClassSchedule.find(query).to_list()
     now = datetime.utcnow()
     valid_classes = []
     

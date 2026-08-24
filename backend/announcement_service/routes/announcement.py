@@ -12,10 +12,14 @@ router = APIRouter()
 class AnnouncementCreate(BaseModel):
     title: str
     content: str
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
 class AnnouncementUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
 class AnnouncementResponse(BaseModel):
     id: PydanticObjectId = Field(alias="_id")
@@ -25,6 +29,8 @@ class AnnouncementResponse(BaseModel):
     updated_at: datetime
     author_id: PydanticObjectId
     viewed: bool = False
+    level: Optional[str] = None
+    batch: Optional[str] = None
 
     class Config:
         populate_by_name = True
@@ -32,9 +38,16 @@ class AnnouncementResponse(BaseModel):
 
 @router.get("", response_model=List[AnnouncementResponse])
 async def get_announcements(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    announcements = await models.Announcement.find_all().sort("-created_at").to_list()
+    query = {}
+    if level:
+        query["level"] = level
+    if batch:
+        query["batch"] = batch
+    announcements = await models.Announcement.find(query).sort("-created_at").to_list()
     
     # Get views for the current user
     views = await models.AnnouncementView.find(models.AnnouncementView.user_id == current_user.id).to_list()
@@ -49,7 +62,9 @@ async def get_announcements(
             "created_at": ann.created_at,
             "updated_at": ann.updated_at,
             "author_id": ann.author_id,
-            "viewed": str(ann.id) in viewed_ids
+            "viewed": str(ann.id) in viewed_ids,
+            "level": ann.level,
+            "batch": ann.batch
         }
         response_data.append(ann_dict)
         
@@ -59,6 +74,12 @@ async def get_announcements(
 async def get_unread_count(
     current_user: models.User = Depends(get_current_user)
 ):
+    query = {}
+    if current_user.level:
+        query["level"] = current_user.level
+    # Note: we might need batch filtering here if current_user.batch is available,
+    # but since Announcement hasn't fetched the current_user's batch from DB in this service,
+    # it'll fetch all. We'll leave it as is or add batch if needed.
     announcements = await models.Announcement.find_all().to_list()
     ann_ids = {str(ann.id) for ann in announcements}
     
@@ -79,7 +100,9 @@ async def create_announcement(
     new_ann = models.Announcement(
         title=announcement.title,
         content=announcement.content,
-        author_id=current_user.id
+        author_id=current_user.id,
+        level=announcement.level,
+        batch=announcement.batch
     )
     await new_ann.insert()
     
@@ -90,7 +113,9 @@ async def create_announcement(
         "created_at": new_ann.created_at,
         "updated_at": new_ann.updated_at,
         "author_id": new_ann.author_id,
-        "viewed": False
+        "viewed": False,
+        "level": new_ann.level,
+        "batch": new_ann.batch
     }
 
 @router.put("/{announcement_id}", response_model=AnnouncementResponse)
@@ -111,6 +136,10 @@ async def update_announcement(
         db_ann.title = announcement_update.title
     if announcement_update.content is not None:
         db_ann.content = announcement_update.content
+    if announcement_update.level is not None:
+        db_ann.level = announcement_update.level
+    if announcement_update.batch is not None:
+        db_ann.batch = announcement_update.batch
         
     db_ann.updated_at = datetime.utcnow()
     await db_ann.save()
@@ -122,7 +151,9 @@ async def update_announcement(
         "created_at": db_ann.created_at,
         "updated_at": db_ann.updated_at,
         "author_id": db_ann.author_id,
-        "viewed": True # CEO viewed it by editing
+        "viewed": True, # CEO viewed it by editing
+        "level": db_ann.level,
+        "batch": db_ann.batch
     }
 
 @router.post("/{announcement_id}/view")

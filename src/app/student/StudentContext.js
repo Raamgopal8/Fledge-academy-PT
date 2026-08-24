@@ -7,12 +7,6 @@ export function StudentProvider({ children }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
-    useEffect(() => {
-        if (window.innerWidth >= 768) {
-            setIsMobileNavOpen(true);
-        }
-    }, []);
-
     return (
         <StudentContext.Provider value={{ searchQuery, setSearchQuery, isMobileNavOpen, setIsMobileNavOpen }}>
             {children}

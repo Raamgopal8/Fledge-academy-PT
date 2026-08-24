@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useCEOContext } from '../CEOContext';
 
 export default function CEOTests() {
+    const { selectedBatch } = useCEOContext();
     const [tests, setTests] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     
@@ -12,7 +14,8 @@ export default function CEOTests() {
     const fetchTests = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/`, {
+            const batchQuery = (selectedBatch && selectedBatch !== 'All Batches') ? `?batch=${encodeURIComponent(selectedBatch)}` : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${batchQuery}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -28,7 +31,7 @@ export default function CEOTests() {
 
     useEffect(() => {
         fetchTests();
-    }, []);
+    }, [selectedBatch]);
 
     const fetchSubmissions = async (test) => {
         try {

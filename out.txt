@@ -1,0 +1,50 @@
+Traceback (most recent call last):
+  File "/home/raamgopal-s/Projects/fledgeportal/test_batch.py", line 16, in <module>
+    asyncio.run(check())
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/test_batch.py", line 9, in check
+    await init_beanie(database=db, document_models=[models.User])
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/beanie/odm/utils/init.py", line 750, in init_beanie
+    await Initializer(
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/beanie/odm/utils/init.py", line 128, in __await__
+    yield from self.init_class(model).__await__()
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/beanie/odm/utils/init.py", line 713, in init_class
+    await self.init_document(cls)
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/beanie/odm/utils/init.py", line 545, in init_document
+    build_info = await self.database.command({"buildInfo": 1})
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/_csot.py", line 107, in csot_wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/database.py", line 890, in command
+    with self.__client._conn_for_reads(read_preference, session) as (
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/mongo_client.py", line 1346, in _conn_for_reads
+    server = self._select_server(read_preference, session)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/mongo_client.py", line 1303, in _select_server
+    server = topology.select_server(server_selector)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/topology.py", line 302, in select_server
+    server = self._select_server(selector, server_selection_timeout, address)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/topology.py", line 286, in _select_server
+    servers = self.select_servers(selector, server_selection_timeout, address)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/topology.py", line 237, in select_servers
+    server_descriptions = self._select_servers_loop(selector, server_timeout, address)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/raamgopal-s/Projects/fledgeportal/backend/venv/lib/python3.12/site-packages/pymongo/topology.py", line 259, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 6a857f28003a6711788ad697, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 111] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>

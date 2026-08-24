@@ -14,6 +14,7 @@ export default function StudentNavbar() {
       { name: "Pathway", icon: "route", href: "/dashboard/pathway" },
       { name: "Announcements", icon: "campaign", href: "/dashboard/announcements" },
       { name: "Community", icon: "forum", href: "/community" },
+      { name: "Classmates", icon: "group", href: "/dashboard/classmates" },
       { name: "Tasks", icon: "assignment", href: "/dashboard/tasks" },
       { name: "Schedule", icon: "calendar_today", href: "/dashboard/schedule" },
       { name: "Materials", icon: "library_books", href: "/dashboard/materials" },
@@ -34,13 +35,8 @@ export default function StudentNavbar() {
       <aside className={`fixed left-0 top-0 h-screen w-64 flex flex-col bg-white border-r border-slate-200 py-md z-50 transition-transform duration-300 ease-in-out ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-gutter mb-lg flex items-center justify-between">
           <div className="flex items-center gap-base">
-            <div className="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
-              <span
-                className="material-symbols-outlined text-white"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                school
-              </span>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+              <img src="/icon.png" alt="Logo" />
             </div>
             <div>
               <h2 className="font-headline-md text-headline-md text-primary leading-tight">

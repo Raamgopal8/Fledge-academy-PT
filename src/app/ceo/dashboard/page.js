@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import StudentPerformanceChart from '@/app/components/StudentPerformanceChart';
 import { useCEOContext } from '@/app/ceo/CEOContext';
 export default function CEODashboard() {
-    const { searchQuery } = useCEOContext();
+    const { searchQuery, selectedBatch } = useCEOContext();
     const [kpiData, setKpiData] = useState(null);
     const [activityData, setActivityData] = useState(null);
     const [chartData, setChartData] = useState(null);
@@ -11,6 +11,8 @@ export default function CEODashboard() {
     const [submissionsData, setSubmissionsData] = useState(null);
     const [profile, setProfile] = useState(null);
     const [financeSummary, setFinanceSummary] = useState(null);
+    const [staffList, setStaffList] = useState([]);
+    const [studentList, setStudentList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showActivityMenu, setShowActivityMenu] = useState(false);
@@ -23,14 +25,17 @@ export default function CEODashboard() {
                 'Authorization': `Bearer ${token}`
             };
 
-            const [kpiRes, activityRes, chartRes, attendanceRes, submissionsRes, profileRes, financeRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/kpi`, { headers }),
+            const batchQuery = (selectedBatch && selectedBatch !== 'All Batches') ? `?batch=${encodeURIComponent(selectedBatch)}` : '';
+            const [kpiRes, activityRes, chartRes, attendanceRes, submissionsRes, profileRes, financeRes, staffRes, studentRes] = await Promise.all([
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/kpi${batchQuery}`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/recent-activity`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/performance-chart`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/today`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/finance`, { headers })
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/finance`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/staff`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/students`, { headers })
             ]);
 
             if (!kpiRes.ok || !activityRes.ok || !chartRes.ok || !attendanceRes.ok) {
@@ -51,6 +56,12 @@ export default function CEODashboard() {
                 const financeData = await financeRes.json();
                 setFinanceSummary(financeData.summary);
             }
+            if (staffRes.ok) {
+                setStaffList(await staffRes.json());
+            }
+            if (studentRes.ok) {
+                setStudentList(await studentRes.json());
+            }
         } catch (err) {
             console.error("Error fetching dashboard data:", err);
             setError(err.message);
@@ -63,7 +74,7 @@ export default function CEODashboard() {
         fetchDashboardData(true);
         const interval = setInterval(() => fetchDashboardData(false), 30000); // Auto refresh every 30 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedBatch]);
 
     if (isLoading) {
         return (
@@ -137,11 +148,6 @@ export default function CEODashboard() {
                             <h2 className="text-4xl font-extrabold text-gray-900 transition-transform group-hover:scale-[1.02] origin-left">{kpiData?.activeStudents || '0'}</h2>
                         </div>
                     </div>
-                    <div className="flex items-center gap-xs mt-auto">
-                        <span className="material-symbols-outlined text-[16px] text-green-600">arrow_upward</span>
-                        <span className="font-label-sm text-green-600 font-medium">12%</span>
-                        <span className="font-label-sm text-on-surface-variant">this month</span>
-                    </div>
                 </div>
 
                 {/* Total Staff */}
@@ -155,11 +161,7 @@ export default function CEODashboard() {
                             <h2 className="text-4xl font-extrabold text-gray-900 transition-transform group-hover:scale-[1.02] origin-left">{kpiData?.activeStaff || '0'}</h2>
                         </div>
                     </div>
-                    <div className="flex items-center gap-xs mt-auto">
-                        <span className="material-symbols-outlined text-[16px] text-green-600">arrow_upward</span>
-                        <span className="font-label-sm text-green-600 font-medium">5%</span>
-                        <span className="font-label-sm text-on-surface-variant">this month</span>
-                    </div>
+                  
                 </div>
 
                 {/* Active Courses */}
@@ -173,11 +175,7 @@ export default function CEODashboard() {
                             <h2 className="text-4xl font-extrabold text-gray-900 transition-transform group-hover:scale-[1.02] origin-left">{kpiData?.activeCourses || '1'}</h2>
                         </div>
                     </div>
-                    <div className="flex items-center gap-xs mt-auto">
-                        <span className="material-symbols-outlined text-[16px] text-green-600">arrow_upward</span>
-                        <span className="font-label-sm text-green-600 font-medium">8%</span>
-                        <span className="font-label-sm text-on-surface-variant">this month</span>
-                    </div>
+                    
                 </div>
 
                 {/* Total Balance */}
@@ -189,15 +187,11 @@ export default function CEODashboard() {
                         <div>
                             <p className="text-sm font-medium text-gray-500 mb-xs">Total Balance</p>
                             <h2 className="text-4xl font-extrabold text-gray-900 transition-transform group-hover:scale-[1.02] origin-left">
-                                ${financeSummary?.balance?.toFixed(2) || '0.00'}
+                                ${financeSummary?.balance > 10000 ? (financeSummary.balance / 1000).toFixed(1) + 'K' : (financeSummary?.balance?.toFixed(2) || '0.00')}
                             </h2>
                         </div>
                     </div>
-                    <div className="flex items-center gap-xs mt-auto">
-                        <span className="material-symbols-outlined text-[16px] text-green-600">arrow_upward</span>
-                        <span className="font-label-sm text-green-600 font-medium">2%</span>
-                        <span className="font-label-sm text-on-surface-variant">this month</span>
-                    </div>
+
                 </div>
             </div>
 
@@ -218,7 +212,7 @@ export default function CEODashboard() {
                 <StudentPerformanceChart data={chartData} />
             </div>
 
-            {/* Bottom Grid for Activities and Attendance */}
+            {/* Bottom Grid for Feeds and Lists */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
                 {/* Staff Activities Feed */}
                 <div className="bento-card rounded-3xl bg-white p-lg flex flex-col h-full max-h-[400px] border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
@@ -328,6 +322,74 @@ export default function CEODashboard() {
                             ))
                         ) : (
                             <p className="text-body-sm text-on-surface-variant text-center mt-md">No attendance marked today.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Active Students List */}
+                <div className="bento-card rounded-3xl bg-white p-lg flex flex-col h-full max-h-[400px] border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-center mb-md">
+                        <div>
+                            <h3 className="font-headline-md text-headline-md text-on-surface">Active Students</h3>
+                            <p className="font-body-sm text-on-surface-variant">Currently enrolled students</p>
+                        </div>
+                        <span className="material-symbols-outlined text-blue-600 text-[32px]">school</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-sm custom-scrollbar">
+                        {studentList.length > 0 ? (
+                            studentList.filter(student => {
+                                const matchesSearch = (student.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+                                                      student.email.toLowerCase().includes((searchQuery || '').toLowerCase());
+                                const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+                                const matchesBatch = overrideBatch ? (student.batch || '').trim() === overrideBatch.trim() : true;
+                                return matchesSearch && matchesBatch;
+                            }).map((student, index) => (
+                                <div key={index} className="flex items-center gap-sm p-sm bg-surface-variant/50 rounded-lg group hover:bg-surface-variant transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold shrink-0">
+                                        {student.name ? student.name.charAt(0).toUpperCase() : (student.email ? student.email.charAt(0).toUpperCase() : 'S')}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-label-md text-on-surface truncate">{student.name || 'N/A'}</p>
+                                        <p className="text-xs text-on-surface-variant truncate">{student.level || 'Student'} {student.batch ? `• ${student.batch}` : ''}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-body-sm text-on-surface-variant text-center mt-md">No active students found.</p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Active Staff List */}
+                <div className="bento-card rounded-3xl bg-white p-lg flex flex-col h-full max-h-[400px] border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-center mb-md">
+                        <div>
+                            <h3 className="font-headline-md text-headline-md text-on-surface">Active Staff</h3>
+                            <p className="font-body-sm text-on-surface-variant">Currently assigned staff</p>
+                        </div>
+                        <span className="material-symbols-outlined text-gray-600 text-[32px]">badge</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-sm custom-scrollbar">
+                        {staffList.length > 0 ? (
+                            staffList.filter(staff => {
+                                const matchesSearch = (staff.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+                                                      staff.email.toLowerCase().includes((searchQuery || '').toLowerCase());
+                                const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+                                const matchesBatch = overrideBatch ? (staff.batch || '').trim() === overrideBatch.trim() : true;
+                                return matchesSearch && matchesBatch;
+                            }).map((staff, index) => (
+                                <div key={index} className="flex items-center gap-sm p-sm bg-surface-variant/50 rounded-lg group hover:bg-surface-variant transition-colors">
+                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-sm font-bold shrink-0">
+                                        {staff.name ? staff.name.charAt(0).toUpperCase() : (staff.email ? staff.email.charAt(0).toUpperCase() : 'S')}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-label-md text-on-surface truncate">{staff.name || 'N/A'}</p>
+                                        <p className="text-xs text-on-surface-variant truncate">{staff.level || 'Staff'} {staff.batch ? `• ${staff.batch}` : ''}</p>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-body-sm text-on-surface-variant text-center mt-md">No active staff found.</p>
                         )}
                     </div>
                 </div>

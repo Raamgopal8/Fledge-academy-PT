@@ -35,9 +35,39 @@ except OSError:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.get("/", response_model=List[dict])
-async def get_materials(current_user: models.User = Depends(get_current_user)):
+async def get_materials(
+    level: Optional[str] = None, 
+    batch: Optional[str] = None, 
+    current_user: models.User = Depends(get_current_user)
+):
     """Fetch all materials (accessible by all authenticated users)"""
-    materials = await models.Material.find_all().sort("-created_at").to_list()
+    conditions = []
+    if level and level.strip().lower() not in ["all", "all levels"]:
+        clean_level = level.strip()
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        clean_batch = batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
+        
+    query = {"$and": conditions} if conditions else {}
+    materials = await models.Material.find(query).sort("-created_at").to_list()
     
     return [
         {
@@ -45,6 +75,7 @@ async def get_materials(current_user: models.User = Depends(get_current_user)):
             "title": m.title,
             "description": m.description,
             "level": m.level,
+            "batch": m.batch,
             "file_url": m.file_url,
             "uploaded_by_id": str(m.uploaded_by_id),
             "created_at": m.created_at.isoformat() if m.created_at else None
@@ -57,12 +88,14 @@ async def upload_material(
     title: str = Form(...),
     description: Optional[str] = Form(None),
     level: Optional[str] = Form(None),
+    batch: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     link: Optional[str] = Form(None),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Upload a new material (restricted to staff and ceo)"""
-    if current_user.role not in ["staff", "ceo"]:
+    """Upload a new material (restricted to staff, ceo, and admin)"""
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to upload materials"
@@ -103,6 +136,7 @@ async def upload_material(
         title=title,
         description=description,
         level=level,
+        batch=batch,
         file_url=file_url,
         uploaded_by_id=current_user.id
     )
@@ -114,6 +148,7 @@ async def upload_material(
         "title": new_material.title,
         "description": new_material.description,
         "level": new_material.level,
+        "batch": new_material.batch,
         "file_url": new_material.file_url,
         "uploaded_by_id": str(new_material.uploaded_by_id),
         "created_at": new_material.created_at.isoformat() if new_material.created_at else None
@@ -124,8 +159,9 @@ async def delete_material(
     material_id: str,
     current_user: models.User = Depends(get_current_user)
 ):
-    """Delete a material (restricted to staff and ceo)"""
-    if current_user.role not in ["staff", "ceo"]:
+    """Delete a material (restricted to staff, ceo, and admin)"""
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete materials"

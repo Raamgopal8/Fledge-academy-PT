@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import MainContentWrapper from '@/app/dashboard/MainContentWrapper';
 
 const DAYS_OF_WEEK = [
     'Monday',
@@ -27,10 +26,12 @@ export default function StudentSchedulePage() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const headers = {
+            const level = localStorage.getItem('level') || 'Level 5';
+            const batch = localStorage.getItem('batch') || '';
+                        const headers = {
                 'Authorization': `Bearer ${token}`
             };
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule`, { headers });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers });
             if (!res.ok) {
                 throw new Error('Failed to fetch schedule items');
             }
@@ -92,20 +93,17 @@ export default function StudentSchedulePage() {
 
     if (isLoading && schedules.length === 0) {
         return (
-            <MainContentWrapper>
-                <div className="p-gutter max-w-[1440px] mx-auto min-h-[50vh] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4 text-primary">
-                        <span className="material-symbols-outlined text-[48px] animate-spin">progress_activity</span>
-                        <p className="font-label-lg">Loading Schedules...</p>
-                    </div>
+            <div className="p-gutter max-w-[1440px] mx-auto min-h-[50vh] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4 text-primary">
+                    <span className="material-symbols-outlined text-[48px] animate-spin">progress_activity</span>
+                    <p className="font-label-lg">Loading Schedules...</p>
                 </div>
-            </MainContentWrapper>
+            </div>
         );
     }
 
     return (
-        <MainContentWrapper>
-            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg mt-6 animate-fade-in">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg mt-6 animate-fade-in">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
                     <div>
@@ -242,7 +240,6 @@ export default function StudentSchedulePage() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </MainContentWrapper>
+        </div>
     );
 }

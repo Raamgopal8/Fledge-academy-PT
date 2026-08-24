@@ -3,6 +3,18 @@ const nextConfig = {
   /* config options here */
   reactCompiler: true,
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
+    ],
+  },
   async rewrites() {
     return [
       {

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useStaffContext } from '@/app/staff/StaffContext';
 
 const COLOR_CLASSES = {
     primary: 'border-primary',
@@ -10,6 +11,7 @@ const COLOR_CLASSES = {
 };
 
 export default function StaffDashboard() {
+    const { selectedBatch } = useStaffContext();
     const [summary, setSummary] = useState(null);
     const [classes, setClasses] = useState(null);
     const [activities, setActivities] = useState(null);
@@ -29,9 +31,13 @@ export default function StaffDashboard() {
                     'Authorization': `Bearer ${token}`
                 };
 
+                const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
+                    ? `?batch=${encodeURIComponent(selectedBatch)}` 
+                    : '';
+
                 const [summaryRes, classesRes, activitiesRes, profileRes] = await Promise.all([
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/summary`, { headers }),
-                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/classes`, { headers }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/summary${batchParam}`, { headers }),
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/classes${batchParam}`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, { headers }),
                     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, { headers })
                 ]);
@@ -55,7 +61,7 @@ export default function StaffDashboard() {
         };
 
         fetchDashboardData();
-    }, []);
+    }, [selectedBatch]);
 
     if (isLoading) {
         return (
@@ -173,16 +179,6 @@ export default function StaffDashboard() {
                     <div className="text-3xl font-bold text-on-surface mb-1">{classes?.length || 0}</div>
                     <p className="font-body-sm text-on-surface-variant mb-md">Sessions scheduled</p>
                     <p className="text-sm font-label-md text-tertiary mt-auto">Next in 45 mins</p>
-                </div>
-                <div className="bg-surface-container-lowest p-md rounded-xl border border-surface-container custom-shadow flex flex-col justify-between hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-sm">
-                        <span className="font-label-md text-outline">Active Students</span>
-                        <span className="material-symbols-outlined text-secondary">groups</span>
-                    </div>
-                    <div className="text-3xl font-bold text-on-surface mb-1">
-                        {classes ? classes.reduce((total, c) => total + (Number(c.students) || 0), 0) : 0}
-                    </div>
-                    <p className="font-body-sm text-on-surface-variant mt-auto">Enrolled across courses</p>
                 </div>
                 <div className="bg-surface-container-lowest p-md rounded-xl border border-surface-container custom-shadow flex flex-col justify-between hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-sm">

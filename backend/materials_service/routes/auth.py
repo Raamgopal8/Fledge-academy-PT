@@ -50,6 +50,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         email: str = payload.get("sub")
         role: str = payload.get("role", "student")
         uid: str = payload.get("uid")
+        batch: str = payload.get("batch")
         if email is None or uid is None:
             raise credentials_exception
     except jwt.PyJWTError:

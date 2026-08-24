@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from beanie import Document, PydanticObjectId
 from pydantic import Field
 
@@ -10,6 +10,8 @@ class User(Document):
     name: Optional[str] = None
     profile_image_url: Optional[str] = None
     level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     total_fee: Optional[float] = None
     preferences: dict = {}
 
@@ -17,6 +19,9 @@ class User(Document):
         name = "users"
 
 class ClassSchedule(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     name: str
     time: str
     location: str
@@ -38,6 +43,9 @@ class Attendance(Document):
         name = "attendance"
 
 class Announcement(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     title: str
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -56,6 +64,9 @@ class AnnouncementView(Document):
         name = "announcement_views"
 
 class Material(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     title: str
     description: Optional[str] = None
     file_url: str
@@ -66,6 +77,9 @@ class Material(Document):
         name = "materials"
 
 class Test(Document):
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
     title: str
     description: Optional[str] = None
     created_by_id: PydanticObjectId
@@ -115,3 +129,33 @@ class FinancialTransaction(Document):
 
     class Settings:
         name = "financial_transactions"
+
+
+class CommunityMessage(Document):
+    content: Optional[str] = None
+    audio_url: Optional[str] = None
+    author_id: str
+    author_name: str
+    author_image: Optional[str] = None
+    role: str
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "community_messages"
+
+
+class Video(Document):
+    title: str
+    category: str
+    video_url: str
+    uploaded_by_id: PydanticObjectId
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = []
+
+    class Settings:
+        name = "videos"

@@ -36,6 +36,10 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
             if (res.ok) {
                 setMessage('Profile updated successfully!');
                 const updatedProfile = await res.json();
+                if (typeof window !== 'undefined') {
+                    if (profile.profile_image_url !== undefined) localStorage.setItem('userProfileImage', profile.profile_image_url);
+                    if (profile.name) localStorage.setItem('userName', profile.name);
+                }
                 if (onProfileUpdated) {
                     onProfileUpdated(updatedProfile);
                 }

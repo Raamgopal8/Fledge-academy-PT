@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from beanie import PydanticObjectId
 
 import models
@@ -15,12 +15,15 @@ class UserProfileUpdate(BaseModel):
 
 @router.get("/profile")
 async def get_profile(current_user: models.User = Depends(get_current_user)):
+    user_batches = getattr(current_user, "batches", None) or ([current_user.batch] if getattr(current_user, "batch", None) else [])
     return {
         "email": current_user.email,
         "name": current_user.name,
         "role": current_user.role,
         "profile_image_url": current_user.profile_image_url,
         "level": current_user.level,
+        "batch": current_user.batch or (user_batches[0] if user_batches else None),
+        "batches": user_batches,
         "preferences": current_user.preferences
     }
 
@@ -57,12 +60,14 @@ class StudentCreate(BaseModel):
     email: str
     password: str
     level: Optional[str] = None
+    batch: Optional[str] = None
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
     level: Optional[str] = None
+    batch: Optional[str] = None
 
 @router.get("/students")
 async def get_students(current_user: models.User = Depends(get_current_user)):
@@ -76,7 +81,8 @@ async def get_students(current_user: models.User = Depends(get_current_user)):
             "id": str(s.id),
             "name": s.name,
             "email": s.email,
-            "level": s.level
+            "level": s.level,
+            "batch": s.batch
         } for s in students
     ]
 
@@ -98,7 +104,8 @@ async def create_student(
         email=student_data.email,
         password=student_data.password,
         role="student",
-        level=student_data.level
+        level=student_data.level,
+        batch=student_data.batch
     )
     await new_student.insert()
     
@@ -126,6 +133,8 @@ async def update_student(
         student.password = student_data.password
     if student_data.level is not None:
         student.level = student_data.level
+    if student_data.batch is not None:
+        student.batch = student_data.batch
         
     await student.save()
     return {"message": "Student updated successfully"}
@@ -150,11 +159,17 @@ class StaffCreate(BaseModel):
     name: str
     email: str
     password: str
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = None
 
 class StaffUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = None
 
 @router.get("/staff")
 async def get_staff(current_user: models.User = Depends(get_current_user)):
@@ -167,7 +182,10 @@ async def get_staff(current_user: models.User = Depends(get_current_user)):
         {
             "id": str(s.id),
             "name": s.name,
-            "email": s.email
+            "email": s.email,
+            "level": s.level,
+            "batch": s.batch or (s.batches[0] if getattr(s, "batches", None) else None),
+            "batches": s.batches if getattr(s, "batches", None) else ([s.batch] if getattr(s, "batch", None) else [])
         } for s in staff_members
     ]
 
@@ -184,11 +202,17 @@ async def create_staff(
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
+    staff_batches = staff_data.batches or ([staff_data.batch] if staff_data.batch else [])
+    primary_batch = staff_data.batch or (staff_batches[0] if staff_batches else None)
+
     new_staff = models.User(
         name=staff_data.name,
         email=staff_data.email,
         password=staff_data.password,
-        role="staff"
+        role="staff",
+        level=staff_data.level,
+        batch=primary_batch,
+        batches=staff_batches
     )
     await new_staff.insert()
     
@@ -214,9 +238,40 @@ async def update_staff(
         staff.email = staff_data.email
     if staff_data.password is not None:
         staff.password = staff_data.password
+    if staff_data.level is not None:
+        staff.level = staff_data.level
+    if staff_data.batches is not None:
+        staff.batches = staff_data.batches
+        if not staff_data.batch and staff_data.batches:
+            staff.batch = staff_data.batches[0]
+    if staff_data.batch is not None:
+        staff.batch = staff_data.batch
+        if not staff_data.batches:
+            staff.batches = [staff_data.batch] if staff_data.batch else []
         
     await staff.save()
     return {"message": "Staff member updated successfully"}
+
+class StaffLevelUpdate(BaseModel):
+    level: str
+
+@router.put("/staff/{staff_id}/level")
+async def update_staff_level(
+    staff_id: PydanticObjectId,
+    level_data: StaffLevelUpdate,
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "ceo":
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    staff = await models.User.find_one({"_id": staff_id, "role": "staff"})
+    
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff member not found")
+        
+    staff.level = level_data.level
+    await staff.save()
+    return {"message": "Staff level updated successfully"}
 
 @router.delete("/staff/{staff_id}")
 async def delete_staff(
@@ -233,3 +288,69 @@ async def delete_staff(
         
     await staff.delete()
     return {"message": "Staff member deleted successfully"}
+
+@router.get("/classroom/members")
+async def get_classroom_members(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetch instructors and classmates for a given level and batch"""
+    # 1. Student matching
+    student_conditions = [{"role": {"$in": ["student", "Student"]}}]
+    if level and level.strip().lower() not in ["all", "all levels"]:
+        student_conditions.append({"level": {"$regex": f"^{level.strip()}$", "$options": "i"}})
+    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        clean_batch = batch.strip()
+        student_conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}}
+            ]
+        })
+    student_query = {"$and": student_conditions}
+
+    # 2. Staff / Instructor matching
+    staff_conditions = [{"role": {"$in": ["staff", "Staff", "ceo", "CEO", "admin", "Admin"]}}]
+    if level and level.strip().lower() not in ["all", "all levels"]:
+        clean_level = level.strip()
+        staff_conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        clean_batch = batch.strip()
+        staff_conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
+    staff_query = {"$and": staff_conditions}
+
+    combined_query = {"$or": [student_query, staff_query]}
+    members = await models.User.find(combined_query).to_list()
+    
+    return [
+        {
+            "id": str(m.id),
+            "name": m.name,
+            "email": m.email,
+            "role": (m.role or "").lower(),
+            "profile_image_url": m.profile_image_url,
+            "level": m.level,
+            "batch": m.batch,
+            "batches": getattr(m, "batches", []) or []
+        } for m in members
+    ]
