@@ -11,7 +11,7 @@ from bson import ObjectId
 load_dotenv("backend/materials_service/.env")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-MONGODB_URL = os.getenv("MONGODB_URL")
+MONGODB_URL = os.getenv("MONGODB_URL_6")
 
 def create_access_token(data: dict):
     to_encode = data.copy()
