@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -123,15 +124,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-        {/* Footer Stats */}
-        <div className="relative z-10 flex gap-xl mt-auto">
-          <div>
-            <p className="text-headline-md text-white">4.9/5</p>
-            <p className="text-label-sm text-primary-fixed uppercase tracking-widest">
-              Student Rating
-            </p>
-          </div>
-        </div>
+        
       </section>
 
       {/* Right Side: Login Form */}
@@ -193,10 +186,7 @@ export default function LoginPage() {
                   required
                   type="email"
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    localStorage.setItem("loginEmail", e.target.value);
-                  }}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -236,7 +226,7 @@ export default function LoginPage() {
 
             {/* Submit Button */}
             <button
-              className="w-full h-[56px] bg-primary text-white text-label-md text-[16px] rounded-xl hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full h-[56px] bg-primary text-white text-label-md text-[16px] rounded-xl hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               type="submit"
               disabled={isLoading}
             >
@@ -250,6 +240,16 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Register Link */}
+          <div className="pt-3 text-center">
+            <p className="text-body-sm text-on-surface-variant">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-primary font-bold hover:underline">
+                Create an account
+              </Link>
+            </p>
+          </div>
 
           {/* Social Links */}
           <div className="pt-4 space-y-6">

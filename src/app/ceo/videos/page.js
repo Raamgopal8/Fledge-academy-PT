@@ -348,7 +348,7 @@ export default function CEOVideos() {
 
                         {/* YouTube URL */}
                         <div>
-                            <label className="block font-label-md text-on-surface mb-1 font-semibold text-sm">YouTube Video URL</label>
+                            <label className="block font-label-md text-on-surface mb-1 font-semibold text-sm">Video URL (Google Drive, YouTube, Vimeo, MP4)</label>
                             <input 
                                 type="url"
                                 name="video_url"
@@ -356,7 +356,7 @@ export default function CEOVideos() {
                                 onChange={handleInputChange}
                                 required
                                 className="w-full px-3.5 py-2.5 bg-surface-container border border-outline-variant rounded-xl focus:border-primary focus:outline-none transition-colors text-sm text-on-surface"
-                                placeholder="https://www.youtube.com/watch?v=..."
+                                placeholder="https://drive.google.com/file/d/... or YouTube URL"
                             />
                         </div>
 

@@ -50,27 +50,97 @@ export default function CEOAttendance() {
     const absentCount = studentsList.filter(s => s.status === 'absent').length;
     const totalCount = studentsList.length;
 
+    const [isExporting, setIsExporting] = useState(false);
+
     const handleExport = async () => {
-        if (!studentsList || studentsList.length === 0) {
-            return;
+        setIsExporting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            // Fetch complete historical attendance records
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/export`, { headers });
+            
+            let exportData = null;
+            if (res.ok) {
+                exportData = await res.json();
+            }
+
+            const XLSX = await import('xlsx');
+            const workbook = XLSX.utils.book_new();
+            const todayStr = attendanceOverview?.date || new Date().toISOString().split('T')[0];
+
+            if (exportData && exportData.students && exportData.students.length > 0) {
+                const dates = exportData.dates || [];
+
+                // 1. Matrix Summary Sheet (Student info, stats, and date-by-date breakdown)
+                const matrixRows = exportData.students.map(s => {
+                    const row = {
+                        'Student Name': s.name,
+                        'Email': s.email,
+                        'Batch': s.batch,
+                        'Level': s.level,
+                        'Total Present': s.total_present,
+                        'Total Absent': s.total_absent,
+                        'Attendance Rate': s.attendance_rate,
+                    };
+                    dates.forEach(d => {
+                        const statusRaw = s.daily_status?.[d] || 'not_marked';
+                        row[d] = statusRaw.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    });
+                    return row;
+                });
+
+                const summarySheet = XLSX.utils.json_to_sheet(matrixRows);
+                
+                // Column width sizing for Summary
+                const colWidths = [
+                    { wch: 25 }, // Name
+                    { wch: 30 }, // Email
+                    { wch: 15 }, // Batch
+                    { wch: 12 }, // Level
+                    { wch: 14 }, // Total Present
+                    { wch: 14 }, // Total Absent
+                    { wch: 18 }, // Attendance Rate
+                    ...dates.map(() => ({ wch: 14 })) // Date columns
+                ];
+                summarySheet['!cols'] = colWidths;
+                XLSX.utils.book_append_sheet(workbook, summarySheet, "Attendance Summary");
+
+                // 2. Detailed Daily Log Sheet
+                if (exportData.flat_records && exportData.flat_records.length > 0) {
+                    const detailSheet = XLSX.utils.json_to_sheet(exportData.flat_records);
+                    detailSheet['!cols'] = [
+                        { wch: 14 }, // Date
+                        { wch: 25 }, // Name
+                        { wch: 30 }, // Email
+                        { wch: 15 }, // Batch
+                        { wch: 12 }, // Level
+                        { wch: 15 }, // Status
+                    ];
+                    XLSX.utils.book_append_sheet(workbook, detailSheet, "Daily Records Log");
+                }
+
+                const startDateStr = dates[0] || todayStr;
+                XLSX.writeFile(workbook, `Fledge_Attendance_Report_${startDateStr}_to_${todayStr}.xlsx`);
+            } else {
+                // Fallback to today's list if no history returned
+                const fallbackData = (studentsList || []).map(student => ({
+                    'Name': student.name,
+                    'Email': student.email,
+                    'Status': student.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                    'Date': todayStr
+                }));
+                const worksheet = XLSX.utils.json_to_sheet(fallbackData);
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Today Attendance");
+                XLSX.writeFile(workbook, `Fledge_Attendance_Report_${todayStr}.xlsx`);
+            }
+        } catch (err) {
+            console.error("Failed to export complete attendance:", err);
+            alert("Failed to export complete attendance history. Please try again.");
+        } finally {
+            setIsExporting(false);
         }
-
-        const exportData = studentsList.map(student => ({
-            'Name': student.name,
-            'Email': student.email,
-            'Status': student.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            'Date': attendanceOverview?.date || new Date().toISOString().split('T')[0]
-        }));
-
-        const XLSX = await import('xlsx');
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-        
-        // Adjust column widths
-        worksheet["!cols"] = [ { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 15 } ];
-
-        XLSX.writeFile(workbook, `Attendance_Report_${attendanceOverview?.date || new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
     if (isLoading) {
@@ -126,10 +196,14 @@ export default function CEOAttendance() {
                     </button>
                     <button 
                         onClick={handleExport}
-                        className="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 font-label-md shadow-sm"
+                        disabled={isExporting}
+                        className="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 font-label-md shadow-sm disabled:opacity-50 cursor-pointer"
+                        title="Export complete attendance history from starting date to current date"
                     >
-                        <span className="material-symbols-outlined text-[18px]">download</span>
-                        Export
+                        <span className={`material-symbols-outlined text-[18px] ${isExporting ? 'animate-spin' : ''}`}>
+                            {isExporting ? 'progress_activity' : 'download'}
+                        </span>
+                        {isExporting ? 'Exporting...' : 'Export (All Dates)'}
                     </button>
                 </div>
             </div>

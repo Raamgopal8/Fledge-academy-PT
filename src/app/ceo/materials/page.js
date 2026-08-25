@@ -152,10 +152,16 @@ export default function CEOMaterials() {
         return match ? match.color : 'bg-primary/10 text-primary border-primary/20';
     };
 
+    const checkIsFile = (url) => {
+        if (!url) return false;
+        return url.includes('/materials/') || url.includes('/uploads/') || url.includes('/api/materials/file/') || /\.(pdf|png|jpg|jpeg|webp|doc|docx|xls|xlsx|ppt|pptx)$/i.test(url);
+    };
+
     const filteredMaterials = materials.filter(m => {
         if (filterLevel !== 'All' && m.level !== filterLevel) return false;
-        if (filterType === 'file' && m.file_url.startsWith('http') && !m.file_url.includes('/uploads/')) return false;
-        if (filterType === 'link' && (!m.file_url.startsWith('http') || m.file_url.includes('/uploads/'))) return false;
+        const isFile = checkIsFile(m.file_url);
+        if (filterType === 'file' && !isFile) return false;
+        if (filterType === 'link' && isFile) return false;
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             const titleMatch = (m.title || '').toLowerCase().includes(q);
@@ -264,7 +270,8 @@ export default function CEOMaterials() {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredMaterials.map((material) => {
-                            const isLink = material.file_url.startsWith('http') && !material.file_url.includes('/uploads/');
+                            const isFile = checkIsFile(material.file_url);
+                            const isLink = !isFile && material.file_url.startsWith('http');
                             const fileDownloadUrl = material.file_url.startsWith('http')
                                 ? material.file_url 
                                 : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`;

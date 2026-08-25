@@ -248,7 +248,8 @@ async def review_submission(
     review_data: TestReview,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff can review tests")
         
     submission = await models.TestSubmission.get(submission_id)
@@ -273,35 +274,70 @@ async def review_submission(
 
 @router.get("/submissions/all")
 async def get_all_submissions(
+    batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
-    staff_batch = getattr(current_user, "batch", None)
-    if current_user.role == "staff" and staff_batch:
-        tests = await models.Test.find({"batch": staff_batch}).to_list()
+    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global"]) else None
+    
+    if target_batch:
+        tests = await models.Test.find({
+            "$or": [
+                {"batch": {"$regex": f"^{target_batch.strip()}$", "$options": "i"}},
+                {"batches": {"$in": [target_batch.strip()]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        }).to_list()
         test_ids = [t.id for t in tests]
         if test_ids:
             submissions = await models.TestSubmission.find(In(models.TestSubmission.test_id, test_ids)).sort("-submitted_at").to_list()
         else:
             submissions = []
     else:
-        submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()    
+        staff_batches = getattr(current_user, "batches", []) or []
+        staff_batch = getattr(current_user, "batch", None)
+        if user_role == "staff" and (staff_batches or staff_batch):
+            allowed_batches = list(staff_batches)
+            if staff_batch and staff_batch not in allowed_batches:
+                allowed_batches.append(staff_batch)
+            allowed_batches.extend(["All Batches", "All", "Global", None, ""])
+            
+            tests = await models.Test.find({
+                "$or": [
+                    {"batch": {"$in": allowed_batches}},
+                    {"batches": {"$in": allowed_batches}},
+                    {"batch": None},
+                    {"batch": ""}
+                ]
+            }).to_list()
+            test_ids = [t.id for t in tests]
+            if test_ids:
+                submissions = await models.TestSubmission.find(In(models.TestSubmission.test_id, test_ids)).sort("-submitted_at").to_list()
+            else:
+                submissions = []
+        else:
+            submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()    
+
     response = []
     for sub in submissions:
-        # Get student name
         student = await models.User.get(sub.student_id)
-        
-        # Get test title
         test = await models.Test.get(sub.test_id)
         
         response.append({
             "id": str(sub.id),
             "test_id": str(sub.test_id),
             "test_title": test.title if test else "Unknown",
+            "test_level": test.level if test else None,
+            "test_batch": test.batch if test else None,
             "student_id": str(sub.student_id),
             "student_name": getattr(sub, "student_name", None) if getattr(sub, "student_name", None) else (student.name if student else "Unknown"),
+            "student_email": student.email if student else None,
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,
             "status": sub.status,

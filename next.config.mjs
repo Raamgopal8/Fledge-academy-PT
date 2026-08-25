@@ -1,6 +1,19 @@
+import withPWAInit from "@ducanh2912/next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
+  register: true,
+  skipWaiting: true,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   /* config options here */
+  turbopack: {},
   reactCompiler: true,
   output: "standalone",
   images: {
@@ -34,6 +47,10 @@ const nextConfig = {
         destination: 'http://localhost:8003/api/tests/:path*'
       },
       {
+        source: '/api/materials/:path*',
+        destination: 'http://localhost:8005/api/materials/:path*'
+      },
+      {
         source: '/api/:path*',
         destination: 'http://localhost:8000/api/:path*'
       }
@@ -41,4 +58,4 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

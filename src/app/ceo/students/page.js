@@ -48,7 +48,7 @@ export default function CEOStudents() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ email: formData.email.trim() })
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -190,8 +190,17 @@ export default function CEOStudents() {
                         <tbody>
                             {filteredStudents.map(student => (
                                 <tr key={student.id} className="border-b border-outline-variant hover:bg-surface-container-lowest transition-colors">
-                                    <td className="p-md font-body-md text-on-surface">{student.name || 'N/A'}</td>
-                                    <td className="p-md font-body-md text-on-surface-variant">{student.email}</td>
+                                    <td className="p-md font-body-md text-on-surface">
+                                        {student.name ? (
+                                            student.name
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                Pending Registration
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="p-md font-body-md text-on-surface-variant font-mono text-xs">{student.email}</td>
                                     <td className="p-md font-body-md text-on-surface-variant">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                             student.level === 'Level 5' ? 'bg-blue-100 text-blue-800' :
@@ -243,73 +252,29 @@ export default function CEOStudents() {
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-surface rounded-2xl p-xl w-[90%] max-w-[500px] shadow-2xl">
-                        <h2 className="font-headline-md text-on-surface mb-md">Add New Student</h2>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[24px]">person_add</span>
+                            </div>
+                            <h2 className="font-headline-md text-on-surface font-bold">Add Student</h2>
+                        </div>
+                        <p className="text-sm text-on-surface-variant mb-4">
+                            Enter the student&apos;s email address to pre-enroll them into the academy. The student will provide their name, password, phone, and profile details when registering.
+                        </p>
                         {formError && <p className="text-error mb-4 text-sm bg-error-container p-2 rounded">{formError}</p>}
                         <form onSubmit={handleAddSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-label-md text-on-surface-variant mb-1">Name</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-label-md text-on-surface-variant mb-1">Email</label>
+                                <label className="block text-label-md font-medium text-on-surface mb-1.5">
+                                    Student Email Address <span className="text-error">*</span>
+                                </label>
                                 <input 
                                     type="email" 
                                     required
+                                    placeholder="e.g. student@fledgeacademy.com"
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
                                     value={formData.email}
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-label-md text-on-surface-variant mb-1">Password</label>
-                                <div className="relative">
-                                    <input 
-                                        type={showPassword ? "text" : "password"}
-                                        required
-                                        className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 pr-12 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
-                                    >
-                                        <span className="material-symbols-outlined">
-                                            {showPassword ? "visibility_off" : "visibility"}
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-label-md text-on-surface-variant mb-1">Level</label>
-                                <select 
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.level}
-                                    onChange={(e) => setFormData({...formData, level: e.target.value})}
-                                >
-                                    <option value="Level 5">Level 5</option>
-                                    <option value="Level 4">Level 4</option>
-                                    <option value="Level 3">Level 3</option>
-                                    <option value="Level 2">Level 2</option>
-                                    <option value="Level 1">Level 1</option>
-                                </select>
-
-                            </div>
-                            <div>
-                                <label className="block text-label-md text-on-surface-variant mb-1">Batch</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="e.g. batch-1"
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                    value={formData.batch}
-                                    onChange={(e) => setFormData({...formData, batch: e.target.value})}
+                                    autoFocus
                                 />
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
@@ -322,7 +287,7 @@ export default function CEOStudents() {
                                 </button>
                                 <button 
                                     type="submit"
-                                    className="px-6 py-2 rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-md"
+                                    className="px-6 py-2 rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-md font-bold"
                                 >
                                     Add Student
                                 </button>

@@ -32,18 +32,10 @@ export default function StudentNavbar() {
       )}
 
       {/* SideNavBar (Desktop & Mobile Off-canvas) */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 flex flex-col bg-white border-r border-slate-200 py-md z-50 transition-transform duration-300 ease-in-out ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed left-0 top-0 h-screen w-64 flex flex-col bg-surface-container-low border-r border-outline-variant py-md z-50 transition-transform duration-300 ease-in-out ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-gutter mb-lg flex items-center justify-between">
-          <div className="flex items-center gap-base">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-              <img src="/icon.png" alt="Logo" />
-            </div>
-            <div>
-              <h2 className="font-headline-md text-headline-md text-primary leading-tight">
-                Fledge Academy
-              </h2>
-              <p className="font-body-sm text-body-sm text-outline">Learning Portal</p>
-            </div>
+          <div className="flex items-center">
+            <img src="/fledgeacad.png" alt="Fledge Academy Logo" className="w-40 h-auto object-contain drop-shadow-sm" />
           </div>
           {/* Close button for mobile */}
           <button 

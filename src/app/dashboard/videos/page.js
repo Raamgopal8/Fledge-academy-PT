@@ -166,19 +166,73 @@ export default function StudentVideos() {
 
     const getEmbedUrl = (url) => {
         if (!url) return '';
-        try {
-            const urlObj = new URL(url);
-            let videoId = '';
-            if (urlObj.hostname.includes('youtube.com')) {
-                videoId = urlObj.searchParams.get('v');
-            } else if (urlObj.hostname.includes('youtu.be')) {
-                videoId = urlObj.pathname.slice(1);
+        const cleanUrl = url.trim();
+
+        // 1. Google Drive Links
+        if (cleanUrl.includes('drive.google.com')) {
+            // Match /file/d/FILE_ID
+            const fileMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileMatch && fileMatch[1]) {
+                return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
             }
-            if (videoId) {
-                return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1&iv_load_policy=3`;
+            // Match ?id=FILE_ID or &id=FILE_ID
+            const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
             }
-        } catch (e) {}
-        return url;
+            return cleanUrl;
+        }
+
+        // 2. YouTube Links
+        if (cleanUrl.includes('youtube.com/watch')) {
+            const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1`;
+            }
+        }
+        if (cleanUrl.includes('youtu.be/')) {
+            const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1`;
+            }
+        }
+
+        // 3. Vimeo Links
+        if (cleanUrl.includes('vimeo.com/')) {
+            const match = cleanUrl.match(/vimeo\.com\/([0-9]+)/);
+            if (match && match[1]) {
+                return `https://player.vimeo.com/video/${match[1]}`;
+            }
+        }
+
+        return cleanUrl;
+    };
+
+    const toggleFullscreen = (containerId) => {
+        const elem = document.getElementById(containerId);
+        if (!elem) return;
+
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.error(err));
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(err => console.error(err));
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
     };
 
     const getLevelBadgeClass = (lvl) => {
@@ -323,20 +377,37 @@ export default function StudentVideos() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVideos.map(video => (
                                     <div key={video.id} className="group relative bg-surface-container-low rounded-2xl overflow-hidden border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
-                                        {/* Video Player */}
-                                        <div className="aspect-video w-full bg-black relative overflow-hidden group">
+                                        {/* Video Player Container */}
+                                        <div 
+                                            id={`video-player-${video.id}`} 
+                                            className="aspect-video w-full bg-black relative overflow-hidden group select-none"
+                                        >
                                             <iframe 
                                                 src={getEmbedUrl(video.video_url)} 
                                                 className="absolute top-0 left-0 w-full h-full border-0 z-10"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
                                                 allowFullScreen
                                                 title={video.title}
                                             ></iframe>
+
                                             {/* Video-specific floating watermark */}
                                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.15] mix-blend-overlay animate-pulse select-none z-20">
                                                 <p className="text-white transform -rotate-12 font-bold text-xl md:text-2xl whitespace-nowrap drop-shadow-md">
                                                     {watermarkText}
                                                 </p>
+                                            </div>
+
+                                            {/* Top-Right Drive Pop-Out Blocker & Fullscreen Button */}
+                                            <div className="absolute top-0 right-0 z-30 w-14 h-12 flex items-center justify-center pointer-events-auto">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleFullscreen(`video-player-${video.id}`)}
+                                                    className="w-8 h-8 rounded-full bg-black/75 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
+                                                    title="Toggle Fullscreen"
+                                                    aria-label="Toggle Fullscreen"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">fullscreen</span>
+                                                </button>
                                             </div>
                                         </div>
 

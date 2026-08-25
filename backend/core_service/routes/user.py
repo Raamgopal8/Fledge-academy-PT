@@ -56,11 +56,11 @@ async def update_profile(
     }
 
 class StudentCreate(BaseModel):
-    name: str
     email: str
-    password: str
-    level: Optional[str] = None
-    batch: Optional[str] = None
+    name: Optional[str] = None
+    password: Optional[str] = None
+    level: Optional[str] = "Level 5"
+    batch: Optional[str] = "Batch - 1"
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
@@ -94,22 +94,28 @@ async def create_student(
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Check if email exists
-    existing_user = await models.User.find_one({"email": student_data.email})
+    clean_email = student_data.email.strip().lower()
+    if not clean_email or "@" not in clean_email:
+        raise HTTPException(status_code=400, detail="Please provide a valid email address.")
+    
+    # Check if email exists (case-insensitive)
+    existing_user = await models.User.find_one({
+        "email": {"$regex": f"^{clean_email}$", "$options": "i"}
+    })
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="This email is already registered or pre-enrolled.")
         
     new_student = models.User(
-        name=student_data.name,
-        email=student_data.email,
-        password=student_data.password,
+        name=student_data.name or "",
+        email=clean_email,
+        password=student_data.password or "",
         role="student",
-        level=student_data.level,
-        batch=student_data.batch
+        level=student_data.level or "Level 5",
+        batch=student_data.batch or "Batch - 1"
     )
     await new_student.insert()
     
-    return {"message": "Student created successfully", "id": str(new_student.id)}
+    return {"message": "Student pre-enrolled successfully", "id": str(new_student.id)}
 
 @router.put("/students/{student_id}")
 async def update_student(

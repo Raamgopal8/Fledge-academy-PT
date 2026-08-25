@@ -5,7 +5,6 @@ import { useCEOContext } from '@/app/ceo/CEOContext';
 export default function CEODashboard() {
     const { searchQuery, selectedBatch } = useCEOContext();
     const [kpiData, setKpiData] = useState(null);
-    const [activityData, setActivityData] = useState(null);
     const [chartData, setChartData] = useState(null);
     const [attendanceData, setAttendanceData] = useState(null);
     const [submissionsData, setSubmissionsData] = useState(null);
@@ -15,7 +14,6 @@ export default function CEODashboard() {
     const [studentList, setStudentList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [showActivityMenu, setShowActivityMenu] = useState(false);
 
     const fetchDashboardData = async (showLoading = false) => {
         if (showLoading) setIsLoading(true);
@@ -26,9 +24,8 @@ export default function CEODashboard() {
             };
 
             const batchQuery = (selectedBatch && selectedBatch !== 'All Batches') ? `?batch=${encodeURIComponent(selectedBatch)}` : '';
-            const [kpiRes, activityRes, chartRes, attendanceRes, submissionsRes, profileRes, financeRes, staffRes, studentRes] = await Promise.all([
+            const [kpiRes, chartRes, attendanceRes, submissionsRes, profileRes, financeRes, staffRes, studentRes] = await Promise.all([
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/kpi${batchQuery}`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/recent-activity`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/performance-chart`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/today`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, { headers }),
@@ -38,12 +35,11 @@ export default function CEODashboard() {
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/students`, { headers })
             ]);
 
-            if (!kpiRes.ok || !activityRes.ok || !chartRes.ok || !attendanceRes.ok) {
+            if (!kpiRes.ok || !chartRes.ok || !attendanceRes.ok) {
                 throw new Error('Failed to fetch dashboard data');
             }
 
             setKpiData(await kpiRes.json());
-            setActivityData(await activityRes.json());
             setChartData(await chartRes.json());
             setAttendanceData(await attendanceRes.json());
             if (submissionsRes.ok) {
@@ -100,11 +96,6 @@ export default function CEODashboard() {
             </section>
         );
     }
-
-    const filteredActivityData = activityData?.filter(activity =>
-        activity.user.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-        activity.action.toLowerCase().includes((searchQuery || '').toLowerCase())
-    ) || [];
 
     const filteredAttendanceNames = attendanceData?.names?.filter(name =>
         name.toLowerCase().includes((searchQuery || '').toLowerCase())
@@ -195,100 +186,32 @@ export default function CEODashboard() {
                 </div>
             </div>
 
-            {/* Dashboard Main Chart */}
-            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden relative group border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-start mb-lg">
-                    <div>
-                        <h3 className="font-headline-md text-headline-md text-on-surface">Student Performance Trends</h3>
-                        <p className="font-body-sm text-body-sm text-on-surface-variant">Average score across all departments</p>
-                    </div>
-                    <select className="bg-surface border border-outline-variant rounded-lg font-label-sm text-label-sm text-on-surface focus:ring-0 cursor-pointer hover:bg-surface-variant transition-colors p-2">
-                        <option>Last 6 Months</option>
-                        <option>Academic Year</option>
-                    </select>
-                </div>
-
-                {/* Render the chart component here, passing data */}
-                <StudentPerformanceChart data={chartData} />
-            </div>
-
+          
             {/* Bottom Grid for Feeds and Lists */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-md">
-                {/* Staff Activities Feed */}
+                {/* Quick Links Card */}
                 <div className="bento-card rounded-3xl bg-white p-lg flex flex-col h-full max-h-[400px] border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-center mb-md relative">
-                        <h3 className="font-headline-md text-headline-md text-on-surface">Recent Activities</h3>
-                        <div className="relative">
-                            <span
-                                className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-on-surface transition-colors hover:scale-110 active:scale-95"
-                                onClick={() => setShowActivityMenu(!showActivityMenu)}
-                            >
-                                more_vert
-                            </span>
-                            {showActivityMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-48 bg-surface shadow-lg rounded-xl border border-outline-variant overflow-hidden z-10">
-                                    <button
-                                        onClick={async () => {
-                                            try {
-                                                const token = localStorage.getItem('token');
-                                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/ceo/recent-activity`, {
-                                                    method: 'DELETE',
-                                                    headers: { 'Authorization': `Bearer ${token}` }
-                                                });
-                                                if (res.ok) {
-                                                    setActivityData([]);
-                                                } else {
-                                                    console.error('Failed to delete activities');
-                                                }
-                                            } catch (err) {
-                                                console.error('Error deleting activities:', err);
-                                            } finally {
-                                                setShowActivityMenu(false);
-                                            }
-                                        }}
-                                        className="w-full text-left px-4 py-3 hover:bg-surface-variant transition-colors text-error flex items-center gap-2 font-label-md"
-                                    >
-                                        <span className="material-symbols-outlined text-[20px]">delete</span>
-                                        Clear All Activities
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                    <div className="flex justify-between items-center mb-md">
+                        <h3 className="font-headline-md text-headline-md text-on-surface">Quick Actions</h3>
+                        <span className="material-symbols-outlined text-primary text-[28px]">bolt</span>
                     </div>
-                    <div className="flex-1 overflow-y-auto space-y-md custom-scrollbar pr-xs">
-                        {filteredActivityData.map((activity) => (
-                            <div key={activity.id} className="flex gap-sm group cursor-pointer hover:bg-surface-variant p-2 -mx-2 rounded-lg transition-colors">
-                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <span className="material-symbols-outlined text-blue-600 text-[18px]">
-                                        {activity.type === 'enrollment' ? 'person_add' : activity.type === 'completion' ? 'school' : 'admin_panel_settings'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <p className="font-label-md text-label-md text-on-surface">{activity.user}</p>
-                                    <p className="font-body-sm text-body-sm text-on-surface-variant">{activity.action}</p>
-                                    <p className="font-label-sm text-label-sm text-on-surface-variant/60 mt-xs">{activity.time}</p>
-                                </div>
-                            </div>
-                        ))}
-
-                        {filteredActivityData.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-6 text-center h-full">
-                                <svg width="140" height="100" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-4 opacity-80">
-                                    <rect x="30" y="20" width="100" height="80" rx="8" fill="#EFF6FF"/>
-                                    <path d="M50 45H110" stroke="#93C5FD" strokeWidth="6" strokeLinecap="round"/>
-                                    <path d="M50 65H90" stroke="#93C5FD" strokeWidth="6" strokeLinecap="round"/>
-                                    <path d="M50 85H100" stroke="#93C5FD" strokeWidth="6" strokeLinecap="round"/>
-                                    <circle cx="120" cy="85" r="16" fill="#3B82F6" className="animate-bounce" style={{animationDuration: '2s'}}/>
-                                    <path d="M114 85L118 89L126 81" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                                <h4 className="text-label-lg font-bold text-on-surface mb-1">No activities found</h4>
-                                <p className="text-body-sm text-on-surface-variant mb-4 max-w-[220px]">It looks like there hasn't been any recent activity. Check back later or create one!</p>
-                                <button className="bg-blue-600 hover:bg-blue-700 text-white font-label-md py-2 px-5 rounded-full transition-colors flex items-center gap-2 shadow-sm hover:shadow-md active:scale-95">
-                                    <span className="material-symbols-outlined text-[18px]">add</span>
-                                    Create new activity
-                                </button>
-                            </div>
-                        )}
+                    <div className="grid grid-cols-2 gap-4 flex-1 h-full">
+                        <a href="/ceo/students" className="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-2xl transition-colors text-center group cursor-pointer h-full">
+                            <span className="material-symbols-outlined text-[32px] mb-2 group-hover:scale-110 transition-transform">person_add</span>
+                            <span className="font-label-md font-bold">Students</span>
+                        </a>
+                        <a href="/ceo/staff" className="flex flex-col items-center justify-center p-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-2xl transition-colors text-center group cursor-pointer h-full">
+                            <span className="material-symbols-outlined text-[32px] mb-2 group-hover:scale-110 transition-transform">badge</span>
+                            <span className="font-label-md font-bold">Staffs</span>
+                        </a>
+                        <a href="/ceo/finances" className="flex flex-col items-center justify-center p-4 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-2xl transition-colors text-center group cursor-pointer h-full">
+                            <span className="material-symbols-outlined text-[32px] mb-2 group-hover:scale-110 transition-transform">payments</span>
+                            <span className="font-label-md font-bold">Finances</span>
+                        </a>
+                        <a href="/ceo/attendance" className="flex flex-col items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-2xl transition-colors text-center group cursor-pointer h-full">
+                            <span className="material-symbols-outlined text-[32px] mb-2 group-hover:scale-110 transition-transform">assignment</span>
+                            <span className="font-label-md font-bold">Attendance</span>
+                        </a>
                     </div>
                 </div>
 

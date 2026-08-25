@@ -22,6 +22,13 @@ export default function DashboardOverview() {
   const [tests, setTests] = useState([]);
   const [profile, setProfile] = useState(null);
   const [activeMaterialFilter, setActiveMaterialFilter] = useState("All");
+
+  // Notes state
+  const [notes, setNotes] = useState([]);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteLink, setNoteLink] = useState("");
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [noteMessage, setNoteMessage] = useState({ type: '', text: '' });
   
   const [isLoading, setIsLoading] = useState({
     schedules: true,
@@ -29,6 +36,7 @@ export default function DashboardOverview() {
     announcements: true,
     tests: true,
     attendanceStats: true,
+    notes: true,
   });
 
   const [error, setError] = useState({});
@@ -89,10 +97,84 @@ export default function DashboardOverview() {
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch tests'))
         .then(data => { setTests(data); setIsLoading(prev => ({ ...prev, tests: false })); })
         .catch(err => { setError(prev => ({ ...prev, tests: err })); setIsLoading(prev => ({ ...prev, tests: false })); });
+
+      // Fetch Student Notes
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes?batch=${encodeURIComponent(batch)}&level=${encodeURIComponent(level)}`, { headers, cache: 'no-store' })
+        .then(res => res.ok ? res.json() : [])
+        .then(data => { setNotes(data); setIsLoading(prev => ({ ...prev, notes: false })); })
+        .catch(err => { console.error("Error fetching notes:", err); setIsLoading(prev => ({ ...prev, notes: false })); });
     };
 
     fetchData();
   }, []);
+
+  const handleUploadNote = async (e) => {
+    e.preventDefault();
+    if (!noteLink.trim()) {
+      setNoteMessage({ type: 'error', text: 'Please enter a valid notes link URL.' });
+      return;
+    }
+
+    setIsSubmittingNote(true);
+    setNoteMessage({ type: '', text: '' });
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Your session has expired or you are not logged in. Please log in again.');
+      }
+
+      const level = localStorage.getItem('level') || 'Level 5';
+      const batch = localStorage.getItem('batch') || '';
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: noteTitle.trim() || 'Study Notes',
+          note_link: noteLink.trim(),
+          level,
+          batch
+        })
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Failed to upload notes link.');
+      }
+
+      const createdNote = await res.json();
+      setNotes(prev => [createdNote, ...prev]);
+      setNoteTitle('');
+      setNoteLink('');
+      setNoteMessage({ type: 'success', text: 'Notes link uploaded successfully and shared with your instructors!' });
+
+      setTimeout(() => setNoteMessage({ type: '', text: '' }), 4000);
+    } catch (err) {
+      setNoteMessage({ type: 'error', text: err.message || 'Error submitting notes link.' });
+    } finally {
+      setIsSubmittingNote(false);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes/${noteId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        setNotes(prev => prev.filter(n => n.id !== noteId));
+      }
+    } catch (err) {
+      console.error("Failed to delete note:", err);
+    }
+  };
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
@@ -387,6 +469,152 @@ export default function DashboardOverview() {
               </div>
             )}
           </div>
+
+          {/* Student Upload Notes Links Section */}
+          <div className="bg-white rounded-2xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] border border-outline-variant p-md">
+            <div className="flex items-center justify-between mb-md">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[22px]">note_add</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-md text-headline-md text-on-surface">
+                    Upload Notes Link
+                  </h3>
+                  <p className="font-body-sm text-xs text-on-surface-variant">
+                    Submit links to your study notes (Google Docs, Notion, OneDrive) for staff review.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification messages */}
+            {noteMessage.text && (
+              <div className={`p-3 rounded-xl mb-4 text-xs font-medium flex items-center gap-2 ${
+                noteMessage.type === 'success' 
+                  ? 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/30' 
+                  : 'bg-error/10 text-error border border-error/30'
+              }`}>
+                <span className="material-symbols-outlined text-[18px]">
+                  {noteMessage.type === 'success' ? 'check_circle' : 'error'}
+                </span>
+                <span>{noteMessage.text}</span>
+              </div>
+            )}
+
+            {/* Upload Input Form */}
+            <form onSubmit={handleUploadNote} className="space-y-3 bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/60">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div className="md:col-span-4">
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                    Topic / Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Chapter 4 Summary"
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                    className="w-full h-[42px] px-3.5 bg-white border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  />
+                </div>
+                <div className="md:col-span-8">
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                    Notes Link URL <span className="text-primary">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">
+                      link
+                    </span>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://docs.google.com/... or https://notion.so/..."
+                      value={noteLink}
+                      onChange={(e) => setNoteLink(e.target.value)}
+                      className="w-full h-[42px] pl-10 pr-3.5 bg-white border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  disabled={isSubmittingNote}
+                  className="px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-all shadow-sm active:scale-[0.98] flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                >
+                  {isSubmittingNote ? (
+                    <>
+                      <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                      <span>Upload Notes Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Submitted Notes List */}
+            <div className="mt-4 space-y-2">
+              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                My Shared Notes ({notes.length})
+              </h4>
+              {isLoading.notes ? (
+                <div className="flex justify-center p-4 text-primary">
+                  <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+                </div>
+              ) : notes.length === 0 ? (
+                <p className="text-xs text-on-surface-variant text-center py-4 bg-surface-container-low/30 rounded-xl border border-dashed border-outline-variant/60">
+                  No notes uploaded yet. Paste your first notes link above!
+                </p>
+              ) : (
+                <div className="divide-y divide-outline-variant/40 rounded-xl border border-outline-variant/60 overflow-hidden bg-white">
+                  {notes.map((n) => (
+                    <div key={n.id} className="p-3 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <span className="material-symbols-outlined text-[18px]">description</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-on-surface truncate">
+                            {n.title || 'Study Notes'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-on-surface-variant">
+                            <span className="truncate max-w-[200px] text-primary">{n.note_link}</span>
+                            <span>•</span>
+                            <span>{new Date(n.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={n.note_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant text-primary hover:bg-primary hover:text-white transition-colors text-xs font-semibold flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                          <span>Open</span>
+                        </a>
+                        <button
+                          onClick={() => handleDeleteNote(n.id)}
+                          className="p-1.5 text-outline hover:text-error hover:bg-error/10 rounded-lg transition-colors"
+                          title="Delete Note"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Sidebar Content (Right Column) */}
@@ -554,12 +782,12 @@ export default function DashboardOverview() {
                               className="w-full py-2 bg-primary text-white rounded-lg font-label-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors shadow-sm active:scale-[0.98]"
                             >
                               <span className="material-symbols-outlined text-sm">video_camera_front</span>
-                              Join Virtual Room
+                              Join
                             </a>
                           ) : (
                             <button disabled className="w-full py-2 bg-surface-variant text-on-surface-variant rounded-lg font-label-sm flex items-center justify-center gap-2 opacity-70 cursor-not-allowed shadow-sm">
                               <span className="material-symbols-outlined text-sm">videocam_off</span>
-                              No Virtual Link
+                              No Class
                             </button>
                           )}
                         </div>

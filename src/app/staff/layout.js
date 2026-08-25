@@ -18,7 +18,7 @@ export default function StaffLayout({ children }) {
                         <StaffTopNav />
                         
                         {/* Content Area */}
-                        <div className="flex-grow relative p-margin-mobile md:p-margin-desktop">
+                        <div className="flex-grow relative">
                             {children}
                         </div>
                         

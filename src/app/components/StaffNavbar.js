@@ -19,6 +19,7 @@ export default function StaffNavbar() {
         { name: 'Overview', href: '/staff/dashboard', icon: 'dashboard' },
         { name: 'Announcements', href: '/staff/announcements', icon: 'campaign' },
         { name: 'Materials', href: '/staff/materials', icon: 'library_books' },
+        { name: 'Videos', href: '/staff/videos', icon: 'smart_display' },
         { name: 'Tests', href: '/staff/tests', icon: 'quiz' },
         { name: 'Test Activities', href: '/staff/activities', icon: 'assignment' },
         { name: 'Student Progress', href: '/staff/progress', icon: 'monitoring' },
@@ -40,16 +41,8 @@ export default function StaffNavbar() {
             <aside className={`h-screen w-64 fixed left-0 top-0 flex flex-col bg-surface-container-low border-r border-outline-variant py-md z-50 transition-transform duration-300 ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Brand Header */}
                 <div className="px-gutter mb-md flex justify-between items-center">
-                   <div className="flex items-center gap-base">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-                            <img src="/icon.png" alt="Logo" />
-                        </div>
-                        <div>
-                            <h2 className="font-headline-md text-headline-md text-primary leading-tight">
-                                Fledge Academy
-                            </h2>
-                            <p className="font-body-sm text-body-sm text-outline">Staff Portal</p>
-                        </div>
+                    <div className="flex items-center">
+                        <img src="/fledgeacad.png" alt="Fledge Academy Logo" className="w-40 h-auto object-contain drop-shadow-sm" />
                     </div>    
                      <button 
                         onClick={() => setIsMobileNavOpen(false)}

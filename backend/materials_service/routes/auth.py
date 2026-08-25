@@ -51,19 +51,33 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         role: str = payload.get("role", "student")
         uid: str = payload.get("uid")
         batch: str = payload.get("batch")
-        if email is None or uid is None:
+        batches: list = payload.get("batches", [])
+        if email is None and uid is None:
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
     
     from beanie import PydanticObjectId
-    try:
-        user_id = PydanticObjectId(uid)
-    except Exception:
-        raise credentials_exception
+    user_id = None
+    if uid:
+        try:
+            user_id = PydanticObjectId(uid)
+        except Exception:
+            pass
         
-    user = models.User(email=email, password="", role=role)
-    user.id = user_id
+    user = await models.User.get(user_id) if user_id else await models.User.find_one(models.User.email == email)
+    
+    if not user:
+        user = models.User(
+            email=email or "user@fledgeacademy.com", 
+            password="", 
+            role=role,
+            batch=batch,
+            batches=batches
+        )
+        if user_id:
+            user.id = user_id
+            
     return user
 
 @router.post("/login", response_model=Token)

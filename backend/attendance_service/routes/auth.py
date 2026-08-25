@@ -29,12 +29,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
-        role: str = payload.get("role")
-        uid: str = payload.get("uid")
+        role: str = payload.get("role", "student")
+        uid: str = payload.get("uid") or ""
         batch: str = payload.get("batch")
-        if email is None or uid is None:
-            raise credentials_exception
         batches = payload.get('batches') or ([batch] if batch else [])
-        return DummyUser(id=uid, email=email, role=role, batch=batch, batches=batches)
+        if not email and not uid:
+            raise credentials_exception
+        return DummyUser(id=uid or email, email=email or "user@fledgeacademy.com", role=role, batch=batch, batches=batches)
     except jwt.PyJWTError:
         raise credentials_exception

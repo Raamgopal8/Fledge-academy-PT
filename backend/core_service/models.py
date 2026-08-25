@@ -13,6 +13,10 @@ class User(Document):
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
     total_fee: Optional[float] = None
+    phone: Optional[str] = None
+    dob: Optional[str] = None
+    terms_accepted: Optional[bool] = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     preferences: dict = {}
 
     class Settings:
@@ -159,3 +163,17 @@ class Video(Document):
 
     class Settings:
         name = "videos"
+
+
+class StudentNote(Document):
+    title: Optional[str] = "Notes"
+    note_link: str
+    uploader_name: str
+    uploader_id: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "student_notes"
+

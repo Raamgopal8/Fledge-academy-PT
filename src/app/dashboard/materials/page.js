@@ -75,8 +75,14 @@ export default function StudentMaterials() {
         return LEVEL_COLORS[lvl] || 'bg-primary/10 text-primary border-primary/20';
     };
 
+    const checkIsFile = (url) => {
+        if (!url) return false;
+        return url.includes('/materials/') || url.includes('/uploads/') || url.includes('/api/materials/file/') || /\.(pdf|png|jpg|jpeg|webp|doc|docx|xls|xlsx|ppt|pptx)$/i.test(url);
+    };
+
     const filteredMaterials = materials.filter(m => {
-        const isLink = m.file_url.startsWith('http') && !m.file_url.includes('/uploads/');
+        const isFile = checkIsFile(m.file_url);
+        const isLink = !isFile && m.file_url.startsWith('http');
         if (filterType === 'file' && isLink) return false;
         if (filterType === 'link' && !isLink) return false;
         if (searchQuery.trim()) {
@@ -172,7 +178,8 @@ export default function StudentMaterials() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {filteredMaterials.map((material) => {
-                                    const isLink = material.file_url.startsWith('http') && !material.file_url.includes('/uploads/');
+                                    const isFile = checkIsFile(material.file_url);
+                                    const isLink = !isFile && material.file_url.startsWith('http');
                                     const fileDownloadUrl = material.file_url.startsWith('http') 
                                         ? material.file_url 
                                         : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`;
