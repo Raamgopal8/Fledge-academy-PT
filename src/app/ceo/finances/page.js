@@ -199,7 +199,7 @@ export default function CEOFinancesPage() {
                                 <h3 className="font-title-md text-title-md text-on-surface">Total Balance</h3>
                             </div>
                             <p className={`font-display-sm text-display-sm relative ${summary.balance >= 0 ? 'text-primary' : 'text-error'}`}>
-                                ${summary.balance.toFixed(2)}
+                                ₹{summary.balance.toFixed(2)}
                             </p>
                         </div>
 
@@ -212,7 +212,7 @@ export default function CEOFinancesPage() {
                                 <h3 className="font-title-md text-title-md text-on-surface">Total Income</h3>
                             </div>
                             <p className="font-display-sm text-display-sm text-emerald-500 relative">
-                                ${summary.total_income.toFixed(2)}
+                                ₹{summary.total_income.toFixed(2)}
                             </p>
                         </div>
 
@@ -225,7 +225,7 @@ export default function CEOFinancesPage() {
                                 <h3 className="font-title-md text-title-md text-on-surface">Total Expenses</h3>
                             </div>
                             <p className="font-display-sm text-display-sm text-error relative">
-                                ${summary.total_expense.toFixed(2)}
+                                ₹{summary.total_expense.toFixed(2)}
                             </p>
                         </div>
                     </div>
@@ -241,7 +241,7 @@ export default function CEOFinancesPage() {
                                     style={{ height: `${incomePercent}%`, minHeight: '4px' }}
                                 ></div>
                                 <div className="mt-2 font-label-md text-on-surface">Income</div>
-                                <div className="font-body-sm text-on-surface-variant">${summary.total_income.toFixed(2)}</div>
+                                <div className="font-body-sm text-on-surface-variant">₹{summary.total_income.toFixed(2)}</div>
                             </div>
                             
                             {/* Expense Bar */}
@@ -251,7 +251,7 @@ export default function CEOFinancesPage() {
                                     style={{ height: `${expensePercent}%`, minHeight: '4px' }}
                                 ></div>
                                 <div className="mt-2 font-label-md text-on-surface">Expense</div>
-                                <div className="font-body-sm text-on-surface-variant">${summary.total_expense.toFixed(2)}</div>
+                                <div className="font-body-sm text-on-surface-variant">₹{summary.total_expense.toFixed(2)}</div>
                             </div>
                         </div>
                     </div>
@@ -357,8 +357,8 @@ export default function CEOFinancesPage() {
                                     </div>
                                     
                                     <div className="flex justify-between font-label-md text-on-surface">
-                                        <span>Paid: ${paid.toFixed(2)}</span>
-                                        <span>Total: ${total.toFixed(2)}</span>
+                                        <span>Paid: ₹{paid.toFixed(2)}</span>
+                                        <span>Total: ₹{total.toFixed(2)}</span>
                                     </div>
                                     
                                     {/* Progress Bar Chart */}
@@ -371,7 +371,7 @@ export default function CEOFinancesPage() {
                                     
                                     <div className="text-right font-label-sm mt-1">
                                         {pending > 0 ? (
-                                            <span className="text-error">Pending: ${pending.toFixed(2)}</span>
+                                            <span className="text-error">Pending: ₹{pending.toFixed(2)}</span>
                                         ) : (
                                             <span className="text-emerald-500">Fully Paid</span>
                                         )}
@@ -399,7 +399,7 @@ export default function CEOFinancesPage() {
                         
                         <form onSubmit={handleSubmit} className="space-y-md">
                             <div>
-                                <label className="block font-label-md text-label-md text-on-surface mb-xs">Amount ($)</label>
+                                <label className="block font-label-md text-label-md text-on-surface mb-xs">Amount (₹)</label>
                                 <input
                                     type="number"
                                     step="0.01"
@@ -486,7 +486,7 @@ export default function CEOFinancesPage() {
                         
                         <form onSubmit={handleFeeSubmit} className="space-y-md">
                             <div>
-                                <label className="block font-label-md text-label-md text-on-surface mb-xs">Total Expected Fee ($)</label>
+                                <label className="block font-label-md text-label-md text-on-surface mb-xs">Total Expected Fee (₹)</label>
                                 <input
                                     type="number"
                                     step="0.01"

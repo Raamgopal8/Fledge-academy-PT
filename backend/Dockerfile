@@ -23,8 +23,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire backend application code
 COPY . .
 
-# Expose the port that FastAPI runs on
-EXPOSE 8000
+# Make entrypoint script executable
+RUN chmod +x entrypoint.sh
 
-# Command to run the FastAPI server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose ports for all microservices
+EXPOSE 8000 8001 8002 8003 8004 8005 8006 8009
+
+# Run all microservices
+CMD ["/bin/bash", "./entrypoint.sh"]
