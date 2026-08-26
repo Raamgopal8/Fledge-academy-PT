@@ -8,8 +8,8 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    subject: "",
-    message: "",
+    phone: "",
+    feedback: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success' or 'error'
@@ -27,16 +27,33 @@ export default function ContactPage() {
     setIsSubmitting(true);
     setSubmitStatus(null);
 
-    // Simulate API call for form submission
+    // Send to your email using FormSubmit AJAX API
+    // Note: Change "support@fledgeacademy.com" to your actual email address
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setSubmitStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        subject: "",
-        message: "",
+      const response = await fetch("https://formsubmit.co/ajax/fledgeacademy@gmail.com", {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          _subject: "New Feedback Submission from Fledge Academy",
+          _template: "table" // Beautiful email template
+        })
       });
+
+      if (response.ok) {
+        setSubmitStatus("success");
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          feedback: "",
+        });
+      } else {
+        setSubmitStatus("error");
+      }
     } catch (err) {
       setSubmitStatus("error");
     } finally {
@@ -95,44 +112,27 @@ export default function ContactPage() {
                   <span className="material-symbols-outlined text-primary-fixed text-[24px] mt-xs">call</span>
                   <div>
                     <h4 className="text-label-sm text-primary-fixed uppercase tracking-wider">Call Us</h4>
-                    <p className="text-body-md font-medium">+1 (800) 555-FLEDGE</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-sm">
-                  <span className="material-symbols-outlined text-primary-fixed text-[24px] mt-xs">location_on</span>
-                  <div>
-                    <h4 className="text-label-sm text-primary-fixed uppercase tracking-wider">Our Campus</h4>
-                    <p className="text-body-md leading-relaxed">
-                      100 Learning Way, Suite 400<br />
-                      San Francisco, CA 94107
-                    </p>
+                    <p className="text-body-md font-medium">+ </p>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="relative z-10 mt-xl border-t border-white/20 pt-md">
-              <p className="text-body-sm text-primary-fixed opacity-80">
-                Our support team is available Monday through Friday, 9:00 AM - 6:00 PM PST.
-              </p>
             </div>
           </div>
 
           {/* Contact Form Card */}
           <div className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-3xl p-gutter md:p-xl shadow-sm flex flex-col justify-between">
             <div>
-              <h2 className="text-headline-lg text-on-surface mb-xs">Send a Message</h2>
+              <h2 className="text-headline-lg text-on-surface mb-xs">Share Your Feedback</h2>
               <p className="text-body-md text-on-surface-variant mb-lg">
-                Fill out the form below and our team will get back to you within 24 hours.
+                We value your experience! Please share your thoughts with us.
               </p>
 
               {submitStatus === "success" && (
                 <div className="mb-md p-4 bg-secondary-container text-on-secondary-container rounded-2xl flex items-start gap-sm animate-fade-in">
                   <span className="material-symbols-outlined text-[24px] text-secondary">check_circle</span>
                   <div>
-                    <h4 className="font-semibold text-body-md">Message Sent Successfully!</h4>
-                    <p className="text-body-sm opacity-90">Thank you for reaching out. We will get back to you shortly.</p>
+                    <h4 className="font-semibold text-body-md">Feedback Submitted Successfully!</h4>
+                    <p className="text-body-sm opacity-90">Thank you for your valuable feedback.</p>
                   </div>
                 </div>
               )}
@@ -142,7 +142,7 @@ export default function ContactPage() {
                   <span className="material-symbols-outlined text-[24px]">error</span>
                   <div>
                     <h4 className="font-semibold text-body-md">Submission Failed</h4>
-                    <p className="text-body-sm opacity-90">Something went wrong. Please try again or email us directly.</p>
+                    <p className="text-body-sm opacity-90">Something went wrong. Please try again.</p>
                   </div>
                 </div>
               )}
@@ -178,30 +178,30 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                {/* Subject Input */}
+                {/* Phone Input */}
                 <div className="space-y-xs">
-                  <label htmlFor="subject" className="text-label-md text-on-surface-variant">Subject</label>
+                  <label htmlFor="phone" className="text-label-md text-on-surface-variant">Phone Number</label>
                   <input 
-                    type="text" 
-                    id="subject"
-                    value={formData.subject}
+                    type="tel" 
+                    id="phone"
+                    value={formData.phone}
                     onChange={handleChange}
                     required
-                    placeholder="How can we help you?"
+                    placeholder="+1 (555) 000-0000"
                     className="w-full h-[52px] px-4 bg-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
                   />
                 </div>
 
-                {/* Message Input */}
+                {/* Feedback Input */}
                 <div className="space-y-xs">
-                  <label htmlFor="message" className="text-label-md text-on-surface-variant">Message</label>
+                  <label htmlFor="feedback" className="text-label-md text-on-surface-variant">Your Feedback</label>
                   <textarea 
-                    id="message"
+                    id="feedback"
                     rows="5"
-                    value={formData.message}
+                    value={formData.feedback}
                     onChange={handleChange}
                     required
-                    placeholder="Type your message here..."
+                    placeholder="Tell us about your experience..."
                     className="w-full p-4 bg-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md resize-none"
                   ></textarea>
                 </div>
@@ -215,11 +215,11 @@ export default function ContactPage() {
                   {isSubmitting ? (
                     <>
                       <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                      Sending...
+                      Submitting...
                     </>
                   ) : (
                     <>
-                      Send Message
+                      Submit Feedback
                       <span className="material-symbols-outlined">send</span>
                     </>
                   )}

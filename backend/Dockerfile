@@ -12,6 +12,8 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
+    nginx \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file first to leverage Docker cache
@@ -26,8 +28,8 @@ COPY . .
 # Make entrypoint script executable
 RUN chmod +x entrypoint.sh
 
-# Expose ports for all microservices
-EXPOSE 8000 8001 8002 8003 8004 8005 8006 8009
+# Expose ports for API Gateway (10000) and microservices
+EXPOSE 10000 8000 8001 8002 8003 8004 8005 8006 8009
 
 # Run all microservices
 CMD ["/bin/bash", "./entrypoint.sh"]
