@@ -112,7 +112,7 @@ export default function ContactPage() {
                   <span className="material-symbols-outlined text-primary-fixed text-[24px] mt-xs">call</span>
                   <div>
                     <h4 className="text-label-sm text-primary-fixed uppercase tracking-wider">Call Us</h4>
-                    <p className="text-body-md font-medium">+ </p>
+                    <p className="text-body-md font-medium">+91 8072702576</p>
                   </div>
                 </div>
               </div>
