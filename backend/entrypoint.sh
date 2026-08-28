@@ -3,8 +3,8 @@ set -e
 
 echo "Starting Fledge Portal Backend Services..."
 
-# Configure Nginx API Gateway with assigned PORT (Render default is 10000)
-export PORT="${PORT:-10000}"
+# Configure Nginx API Gateway with assigned PORT (Cloud Run / Firebase default is 8080)
+export PORT="${PORT:-8080}"
 echo "Configuring Nginx Gateway on PORT $PORT..."
 envsubst '${PORT}' < /app/nginx.conf.template > /etc/nginx/sites-available/default
 mkdir -p /etc/nginx/sites-enabled
