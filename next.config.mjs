@@ -15,8 +15,9 @@ const nextConfig = {
   /* config options here */
   turbopack: {},
   reactCompiler: true,
-  output: "standalone",
+  output: process.env.NEXT_EXPORT === "true" ? "export" : "standalone",
   images: {
+    unoptimized: process.env.NEXT_EXPORT === "true",
     remotePatterns: [
       {
         protocol: 'https',

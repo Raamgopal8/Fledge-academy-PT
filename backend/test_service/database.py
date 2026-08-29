@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGODB_URL = os.getenv("MONGODB_URL_4")
+MONGODB_URL = os.getenv("MONGODB_URL_4") or os.getenv("MONGODB_URL")
 
 if not MONGODB_URL:
-    raise ValueError("MONGODB_URL_4 environment variable is not set.")
+    raise ValueError("MONGODB_URL_4 or MONGODB_URL environment variable is not set.")
 
 async def init_db():
     client = AsyncIOMotorClient(MONGODB_URL)

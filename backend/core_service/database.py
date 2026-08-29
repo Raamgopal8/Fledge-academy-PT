@@ -6,10 +6,10 @@ from models import User, Material, TestSubmission, Test, ClassSchedule, Activity
 
 load_dotenv()
 
-MONGODB_URL = os.getenv("MONGODB_URL_1")
+MONGODB_URL = os.getenv("MONGODB_URL_1") or os.getenv("MONGODB_URL")
 
 if not MONGODB_URL:
-    raise ValueError("MONGODB_URL_1 environment variable is not set.")
+    raise ValueError("MONGODB_URL_1 or MONGODB_URL environment variable is not set.")
 
 async def init_db():
     # Create Motor client
