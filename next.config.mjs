@@ -41,8 +41,16 @@ const nextConfig = {
 
     return [
       {
+        source: '/api/announcement',
+        destination: `${announcementApi}/api/announcement`
+      },
+      {
         source: '/api/announcement/:path*',
         destination: `${announcementApi}/api/announcement/:path*`
+      },
+      {
+        source: '/api/attendance',
+        destination: `${attendanceApi}/api/attendance`
       },
       {
         source: '/api/attendance/:path*',
@@ -53,24 +61,48 @@ const nextConfig = {
         destination: `${testApi}/api/tests/submissions/:path*`
       },
       {
+        source: '/api/tests',
+        destination: `${testApi}/api/tests`
+      },
+      {
         source: '/api/tests/:path*',
         destination: `${testApi}/api/tests/:path*`
+      },
+      {
+        source: '/api/materials',
+        destination: `${materialsApi}/api/materials`
       },
       {
         source: '/api/materials/:path*',
         destination: `${materialsApi}/api/materials/:path*`
       },
       {
+        source: '/api/video',
+        destination: `${videoApi}/api/video`
+      },
+      {
         source: '/api/video/:path*',
         destination: `${videoApi}/api/video/:path*`
+      },
+      {
+        source: '/api/videos',
+        destination: `${videoApi}/api/videos`
       },
       {
         source: '/api/videos/:path*',
         destination: `${videoApi}/api/videos/:path*`
       },
       {
+        source: '/api/community',
+        destination: `${communityApi}/api/community`
+      },
+      {
         source: '/api/community/:path*',
         destination: `${communityApi}/api/community/:path*`
+      },
+      {
+        source: '/api',
+        destination: `${coreApi}/api`
       },
       {
         source: '/api/:path*',

@@ -32,7 +32,8 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     const fetchAnnouncements = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/announcement?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, {
+            const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
+            const res = await fetch(`${annApiBase}/api/announcement?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch announcements');
@@ -70,7 +71,8 @@ export default function AnnouncementChat({ role, overrideBatch }) {
         try {
             const token = localStorage.getItem('token');
             const title = `CEO Update - ${new Date().toLocaleDateString()}`;
-            const res = await fetch(`/api/announcement`, {
+            const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
+            const res = await fetch(`${annApiBase}/api/announcement`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -101,7 +103,8 @@ export default function AnnouncementChat({ role, overrideBatch }) {
         
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`/api/announcement/${id}`, {
+            const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
+            const res = await fetch(`${annApiBase}/api/announcement/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -169,17 +172,18 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                     </div>
                 ) : (
                     announcements.map((ann) => {
+                        const annId = ann.id || ann._id;
                         const date = new Date(ann.created_at);
                         const isOwn = isCEO; // CEO authors all announcements here
                         
                         return (
-                            <div key={ann.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} group`}>
+                            <div key={annId} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} group`}>
                                 <div className="flex items-baseline gap-2 mb-1 px-1">
                                     <span className="font-label-sm text-on-surface-variant">{isOwn ? 'You' : 'CEO'}</span>
                                     <span className="text-[10px] text-outline">{date.toLocaleString()}</span>
                                 </div>
                                 
-                                {editingId === ann.id ? (
+                                {editingId === annId ? (
                                     <div className="w-full max-w-[85%] bg-surface-container border border-primary rounded-xl p-3 shadow-sm">
                                         <textarea
                                             value={editContent}
@@ -195,7 +199,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                                                 Cancel
                                             </button>
                                             <button 
-                                                onClick={() => handleEditMessage(ann.id)}
+                                                onClick={() => handleEditMessage(annId)}
                                                 className="px-3 py-1 rounded bg-primary text-on-primary font-label-sm hover:bg-primary/90"
                                             >
                                                 Save
@@ -207,7 +211,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                                         {isOwn && (
                                             <button 
                                                 onClick={() => {
-                                                    setEditingId(ann.id);
+                                                    setEditingId(annId);
                                                     setEditContent(ann.content);
                                                 }}
                                                 className="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-surface-container mt-1"
