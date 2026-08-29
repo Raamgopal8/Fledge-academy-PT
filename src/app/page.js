@@ -51,11 +51,23 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Login failed. Please check your credentials.");
+        let errorMsg = "Login failed. Please check your credentials.";
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.detail || errorMsg;
+        } catch (_) {
+          // If server returned HTML (e.g. cold start or error page)
+          errorMsg = `Server error (${response.status}). Please try again in a few seconds.`;
+        }
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (_) {
+        throw new Error("Invalid response from server. Please try again.");
+      }
       
       // Store token and role
       localStorage.setItem("token", data.access_token);

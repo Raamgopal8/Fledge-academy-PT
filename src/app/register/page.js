@@ -97,10 +97,22 @@ export default function RegisterPage() {
                 })
             });
 
-            const data = await res.json();
-
             if (!res.ok) {
-                throw new Error(data.detail || 'Registration failed. Please try again.');
+                let errorMsg = 'Registration failed. Please try again.';
+                try {
+                    const errData = await res.json();
+                    errorMsg = errData.detail || errorMsg;
+                } catch (_) {
+                    errorMsg = `Server error (${res.status}). Please try again in a few moments.`;
+                }
+                throw new Error(errorMsg);
+            }
+
+            let data;
+            try {
+                data = await res.json();
+            } catch (_) {
+                throw new Error('Invalid response from server. Please try again.');
             }
 
             // Save login credentials to localStorage
