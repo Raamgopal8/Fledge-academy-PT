@@ -17,8 +17,8 @@ export default function CEOAttendance() {
             };
 
             const [overviewRes, studentsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/today`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/students`, { headers })
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/today`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students`, { headers })
             ]);
 
             if (!overviewRes.ok || !studentsRes.ok) {
@@ -59,7 +59,7 @@ export default function CEOAttendance() {
             const headers = { 'Authorization': `Bearer ${token}` };
 
             // Fetch complete historical attendance records
-            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/export`, { headers });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/export`, { headers });
             
             let exportData = null;
             if (res.ok) {

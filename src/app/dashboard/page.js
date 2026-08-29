@@ -63,13 +63,13 @@ export default function DashboardOverview() {
         .catch(err => console.error("Error fetching profile:", err));
 
       // Fetch Attendance
-      fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/my-status`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/my-status`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setAttendanceStatus(data.status); })
         .catch(err => console.error("Error fetching attendance:", err));
 
       // Fetch Attendance Stats
-      fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/my-stats`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/my-stats`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : null)
         .then(data => { 
           if (data) setAttendanceStats(data);
@@ -81,7 +81,7 @@ export default function DashboardOverview() {
         });
 
       // Fetch Materials
-      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch materials'))
         .then(data => { setMaterials(data); setIsLoading(prev => ({ ...prev, materials: false })); })
         .catch(err => { setError(prev => ({ ...prev, materials: err })); setIsLoading(prev => ({ ...prev, materials: false })); });
@@ -93,7 +93,7 @@ export default function DashboardOverview() {
         .catch(err => { setError(prev => ({ ...prev, announcements: err })); setIsLoading(prev => ({ ...prev, announcements: false })); });
 
       // Fetch Tests (Pending Tasks)
-      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch tests'))
         .then(data => { setTests(data); setIsLoading(prev => ({ ...prev, tests: false })); })
         .catch(err => { setError(prev => ({ ...prev, tests: err })); setIsLoading(prev => ({ ...prev, tests: false })); });
@@ -452,7 +452,7 @@ export default function DashboardOverview() {
                       
                       <div className="mt-3 sm:mt-0 sm:ml-4 flex justify-end">
                         <a 
-                          href={material.file_url?.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`}
+                          href={material.file_url?.startsWith('http') ? material.file_url : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}${material.file_url}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant text-primary font-label-sm hover:bg-primary hover:text-white hover:border-primary transition-colors"

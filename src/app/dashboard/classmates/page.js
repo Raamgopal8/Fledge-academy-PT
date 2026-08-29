@@ -18,7 +18,7 @@ export default function ClassmatesPage() {
 
                 if (!level || !batch) {
                     try {
-                        const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/user/profile`, {
+                        const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (profRes.ok) {

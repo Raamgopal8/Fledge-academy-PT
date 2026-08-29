@@ -72,7 +72,8 @@ export default function StaffVideos() {
                 ? `?batch=${encodeURIComponent(selectedBatch)}`
                 : '';
             
-            const res = await fetch(`http://localhost:8006/api/videos/${batchParam}`, {
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
+            const res = await fetch(`${videoApiBase}/api/videos/${batchParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -111,7 +112,8 @@ export default function StaffVideos() {
                 batch: formData.batch.trim() || 'All Batches'
             };
 
-            const res = await fetch('http://localhost:8006/api/videos/', {
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
+            const res = await fetch(`${videoApiBase}/api/videos/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -149,7 +151,8 @@ export default function StaffVideos() {
         try {
             const token = localStorage.getItem('token');
             const videoId = videoToDelete.id || videoToDelete._id;
-            const res = await fetch(`http://localhost:8006/api/videos/${videoId}`, {
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
+            const res = await fetch(`${videoApiBase}/api/videos/${videoId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

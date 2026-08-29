@@ -62,7 +62,8 @@ export default function CEOVideos() {
                 ? `?batch=${encodeURIComponent(selectedBatch)}`
                 : '';
             
-            const res = await fetch(`http://localhost:8006/api/videos/${batchParam}`, {
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
+            const res = await fetch(`${videoApiBase}/api/videos/${batchParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -101,7 +102,8 @@ export default function CEOVideos() {
                 batch: formData.batch.trim()
             };
 
-            const res = await fetch('http://localhost:8006/api/videos/', {
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
+            const res = await fetch(`${videoApiBase}/api/videos/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -138,7 +140,8 @@ export default function CEOVideos() {
         setError(null);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8006/api/videos/${videoToDelete.id}`, {
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
+            const res = await fetch(`${videoApiBase}/api/videos/${videoToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

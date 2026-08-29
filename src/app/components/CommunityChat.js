@@ -79,7 +79,8 @@ export default function CommunityChat({ role, overrideBatch }) {
 
     const fetchMessages = async () => {
         try {
-            const res = await fetch(`http://localhost:8009/api/community/messages?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`);
+            const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
+            const res = await fetch(`${communityApiBase}/api/community/messages?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -124,7 +125,8 @@ export default function CommunityChat({ role, overrideBatch }) {
             
             setNewMessage('');
             
-            const res = await fetch('http://localhost:8009/api/community/messages', {
+            const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
+            const res = await fetch(`${communityApiBase}/api/community/messages`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(msgData)
@@ -181,7 +183,8 @@ export default function CommunityChat({ role, overrideBatch }) {
             formData.append('level', userLevel);
             if (userBatch) formData.append('batch', userBatch);
 
-            const res = await fetch('http://localhost:8009/api/community/messages/audio', {
+            const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
+            const res = await fetch(`${communityApiBase}/api/community/messages/audio`, {
                 method: 'POST',
                 body: formData
             });

@@ -58,7 +58,7 @@ export default function StaffTests() {
             const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
                 ? `?batch=${encodeURIComponent(selectedBatch)}` 
                 : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests${batchParam}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests${batchParam}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -88,7 +88,7 @@ export default function StaffTests() {
                 due_date: dueDate ? new Date(dueDate).toISOString() : null
             };
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ export default function StaffTests() {
         setIsDeleting(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${testToDelete.id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${testToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -148,7 +148,7 @@ export default function StaffTests() {
     const fetchSubmissions = async (test) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${test.id}/submissions`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${test.id}/submissions`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -165,7 +165,7 @@ export default function StaffTests() {
         setIsSubmittingReview(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/${subId}/review`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/${subId}/review`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

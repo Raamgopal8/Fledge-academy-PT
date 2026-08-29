@@ -36,7 +36,6 @@ origins = [
     "http://127.0.0.1:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3001",
-    "https://fledge-academy-pt-1.onrender.com",
     "https://fledgeportal.vercel.app",
     "https://fledgeportal-backend-844515198625.us-central1.run.app",
     "https://fledgeportal.web.app",

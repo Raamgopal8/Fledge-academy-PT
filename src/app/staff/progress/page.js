@@ -27,7 +27,7 @@ export default function StudentProgress() {
                 ? `?batch=${encodeURIComponent(selectedBatch)}` 
                 : '';
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all${batchParam}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -55,7 +55,7 @@ export default function StudentProgress() {
         setIsSavingReview(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/${activeSubmission.id}/review`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/${activeSubmission.id}/review`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

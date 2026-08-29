@@ -121,7 +121,7 @@ export default function StudentVideos() {
             // If level or batch not set in localStorage, fetch from profile
             if (!level || !batch) {
                 try {
-                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/user/profile`, {
+                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (profRes.ok) {
@@ -140,7 +140,7 @@ export default function StudentVideos() {
             batch = batch || '';
             setStudentInfo({ level, batch });
 
-            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || 'http://localhost:8006';
+            const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
             const queryParams = new URLSearchParams();
             if (level) queryParams.append('level', level);
             if (batch) queryParams.append('batch', batch);

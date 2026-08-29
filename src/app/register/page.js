@@ -79,7 +79,7 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
-            const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
             const res = await fetch(`${apiBase}/api/register`, {
                 method: 'POST',
                 headers: {

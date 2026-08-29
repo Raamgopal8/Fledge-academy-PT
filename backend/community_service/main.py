@@ -17,7 +17,15 @@ app = FastAPI(title="Community Service", lifespan=lifespan)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-origins = ["*"]
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "https://fledgeportal.vercel.app",
+    "https://fledgeportal.web.app",
+    "https://fledgeportal-backend-844515198625.us-central1.run.app",
+]
 
 app.add_middleware(
     CORSMiddleware,

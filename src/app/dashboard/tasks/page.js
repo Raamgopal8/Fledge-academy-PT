@@ -42,7 +42,7 @@ export default function StudentTasks() {
             // If level or batch not in storage, fetch from profile
             if (!level || !batch) {
                 try {
-                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/user/profile`, {
+                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (profRes.ok) {
@@ -66,7 +66,7 @@ export default function StudentTasks() {
             if (level) queryParams.append('level', level);
             if (batch) queryParams.append('batch', batch);
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests?${queryParams.toString()}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests?${queryParams.toString()}`, {
                 headers: { 'Authorization': `Bearer ${token}` },
                 cache: 'no-store'
             });
@@ -93,7 +93,7 @@ export default function StudentTasks() {
         setError(null);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${activeTaskForSubmission.id}/submit`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${activeTaskForSubmission.id}/submit`, {
                 method: 'POST',
                 headers: { 
                     'Authorization': `Bearer ${token}`,

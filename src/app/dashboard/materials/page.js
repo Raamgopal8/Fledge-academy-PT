@@ -32,7 +32,7 @@ export default function StudentMaterials() {
             // Fallback from profile
             if (!level || !batch) {
                 try {
-                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/user/profile`, {
+                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (profRes.ok) {
@@ -55,7 +55,7 @@ export default function StudentMaterials() {
             if (level) queryParams.append('level', level);
             if (batch) queryParams.append('batch', batch);
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials?${queryParams.toString()}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials?${queryParams.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -182,7 +182,7 @@ export default function StudentMaterials() {
                                     const isLink = !isFile && material.file_url.startsWith('http');
                                     const fileDownloadUrl = material.file_url.startsWith('http') 
                                         ? material.file_url 
-                                        : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`;
+                                        : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}${material.file_url}`;
 
                                     return (
                                         <div key={material.id} className="group relative bg-surface-container-low rounded-2xl p-5 flex flex-col justify-between border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300">

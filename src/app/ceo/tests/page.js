@@ -15,7 +15,7 @@ export default function CEOTests() {
         try {
             const token = localStorage.getItem('token');
             const batchQuery = (selectedBatch && selectedBatch !== 'All Batches') ? `?batch=${encodeURIComponent(selectedBatch)}` : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${batchQuery}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${batchQuery}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -36,7 +36,7 @@ export default function CEOTests() {
     const fetchSubmissions = async (test) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/${test.id}/submissions`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${test.id}/submissions`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {

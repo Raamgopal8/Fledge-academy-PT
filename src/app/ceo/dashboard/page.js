@@ -27,8 +27,8 @@ export default function CEODashboard() {
             const [kpiRes, chartRes, attendanceRes, submissionsRes, profileRes, financeRes, staffRes, studentRes] = await Promise.all([
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/kpi${batchQuery}`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/ceo/performance-chart`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/today`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/today`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/finance`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/staff`, { headers }),

@@ -30,13 +30,14 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    const coreApi = process.env.CORE_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const announcementApi = process.env.ANNOUNCEMENT_API_URL || process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || 'http://localhost:8001';
-    const attendanceApi = process.env.ATTENDANCE_API_URL || process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002';
-    const testApi = process.env.TEST_API_URL || process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003';
-    const materialsApi = process.env.MATERIALS_API_URL || process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005';
-    const videoApi = process.env.VIDEO_API_URL || process.env.NEXT_PUBLIC_VIDEO_API_URL || 'http://localhost:8006';
-    const communityApi = process.env.COMMUNITY_API_URL || process.env.NEXT_PUBLIC_COMMUNITY_API_URL || 'http://localhost:8009';
+    const defaultGateway = process.env.NEXT_PUBLIC_API_URL || 'https://fledgeportal-backend-844515198625.us-central1.run.app';
+    const coreApi = process.env.CORE_API_URL || defaultGateway;
+    const announcementApi = process.env.ANNOUNCEMENT_API_URL || process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || defaultGateway;
+    const attendanceApi = process.env.ATTENDANCE_API_URL || process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || defaultGateway;
+    const testApi = process.env.TEST_API_URL || process.env.NEXT_PUBLIC_TEST_API_URL || defaultGateway;
+    const materialsApi = process.env.MATERIALS_API_URL || process.env.NEXT_PUBLIC_MATERIALS_API_URL || defaultGateway;
+    const videoApi = process.env.VIDEO_API_URL || process.env.NEXT_PUBLIC_VIDEO_API_URL || defaultGateway;
+    const communityApi = process.env.COMMUNITY_API_URL || process.env.NEXT_PUBLIC_COMMUNITY_API_URL || defaultGateway;
 
     return [
       {
@@ -62,6 +63,10 @@ const nextConfig = {
       {
         source: '/api/video/:path*',
         destination: `${videoApi}/api/video/:path*`
+      },
+      {
+        source: '/api/videos/:path*',
+        destination: `${videoApi}/api/videos/:path*`
       },
       {
         source: '/api/community/:path*',

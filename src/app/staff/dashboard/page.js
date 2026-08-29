@@ -43,7 +43,7 @@ export default function StaffDashboard() {
             const [summaryRes, classesRes, activitiesRes, profileRes, notesRes] = await Promise.all([
                 fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/summary${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/classes${batchParam}`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/all${batchParam}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/student-notes${batchParam}`, { headers }).catch(() => null)
             ]);
@@ -82,7 +82,7 @@ export default function StaffDashboard() {
         
         for (const id of selectedActivities) {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/${id}/review`, {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/${id}/review`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ export default function StaffDashboard() {
                 ? `[Score: ${quickGradeScore}/100] ${quickGradeComments}`
                 : quickGradeComments || 'Graded by instructor';
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || 'http://localhost:8003'}/api/tests/submissions/${selectedSubmission.id}/review`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/${selectedSubmission.id}/review`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

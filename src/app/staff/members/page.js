@@ -17,7 +17,7 @@ export default function StaffMembers() {
             const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
                 ? `?batch=${encodeURIComponent(selectedBatch)}` 
                 : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/students${batchParam}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students${batchParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -45,7 +45,7 @@ export default function StaffMembers() {
         setMarkingStatus(prev => ({ ...prev, [studentId]: true }));
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || 'http://localhost:8002'}/api/attendance/mark`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/mark`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

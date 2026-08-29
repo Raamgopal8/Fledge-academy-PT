@@ -54,7 +54,7 @@ export default function StaffMaterials() {
             const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
                 ? `?batch=${encodeURIComponent(selectedBatch)}` 
                 : '';
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials${batchParam}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials${batchParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -91,7 +91,7 @@ export default function StaffMaterials() {
         }
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -126,7 +126,7 @@ export default function StaffMaterials() {
         setIsDeleting(true);
         const token = localStorage.getItem('token');
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}/api/materials/${materialToDelete.id}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/${materialToDelete.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -275,7 +275,7 @@ export default function StaffMaterials() {
                             const isLink = !isFile && material.file_url.startsWith('http');
                             const fileDownloadUrl = material.file_url.startsWith('http')
                                 ? material.file_url 
-                                : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || 'http://localhost:8005'}${material.file_url}`;
+                                : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}${material.file_url}`;
 
                             return (
                                 <div key={material.id} className="group relative bg-surface-container-lowest rounded-2xl p-5 flex flex-col justify-between border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300">
