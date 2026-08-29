@@ -25,7 +25,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
         setMessage('');
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                 method: 'PUT',
                 headers: { 
                     'Authorization': `Bearer ${token}`,

@@ -41,11 +41,11 @@ export default function StaffDashboard() {
                 : '';
 
             const [summaryRes, classesRes, activitiesRes, profileRes, notesRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/summary${batchParam}`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/staff/classes${batchParam}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/staff/summary${batchParam}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/staff/classes${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/user/profile`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/student-notes${batchParam}`, { headers }).catch(() => null)
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${batchParam}`, { headers }).catch(() => null)
             ]);
 
             if (summaryRes && summaryRes.ok) setSummary(await summaryRes.json());
@@ -691,7 +691,7 @@ export default function StaffDashboard() {
                                                         if(confirm('Are you sure you want to delete this note?')) {
                                                             try {
                                                                 const token = localStorage.getItem('token');
-                                                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/student-notes/${note.id}`, {
+                                                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes/${note.id}`, {
                                                                     method: 'DELETE',
                                                                     headers: { 'Authorization': `Bearer ${token}` }
                                                                 });

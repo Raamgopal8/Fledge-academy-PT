@@ -58,7 +58,7 @@ export default function SchedulePage() {
             const batchQuery = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
                 ? `?batch=${encodeURIComponent(selectedBatch)}` 
                 : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule${batchQuery}`, { headers });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule${batchQuery}`, { headers });
             if (!res.ok) {
                 throw new Error('Failed to fetch schedule items');
             }
@@ -123,8 +123,8 @@ export default function SchedulePage() {
         };
 
         const url = editingSchedule 
-            ? `${process.env.NEXT_PUBLIC_API_URL}/api/schedule/${editingSchedule.id}`
-            : `${process.env.NEXT_PUBLIC_API_URL}/api/schedule`;
+            ? `${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule/${editingSchedule.id}`
+            : `${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule`;
         
         const method = editingSchedule ? 'PUT' : 'POST';
 
@@ -165,7 +165,7 @@ export default function SchedulePage() {
         };
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule/${id}`, {
                 method: 'DELETE',
                 headers
             });
