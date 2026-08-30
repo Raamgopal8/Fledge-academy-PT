@@ -51,6 +51,7 @@ def get_s3_client():
 
 router = APIRouter()
 
+@router.get("", response_model=List[dict])
 @router.get("/", response_model=List[dict])
 async def get_materials(
     level: Optional[str] = None, 
@@ -100,6 +101,7 @@ async def get_materials(
         for m in materials
     ]
 
+@router.post("", response_model=dict)
 @router.post("/", response_model=dict)
 async def upload_material(
     title: str = Form(...),

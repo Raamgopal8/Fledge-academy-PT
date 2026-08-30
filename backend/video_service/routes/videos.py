@@ -26,6 +26,7 @@ class VideoResponse(BaseModel):
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
 
+@router.get("", response_model=List[VideoResponse])
 @router.get("/", response_model=List[VideoResponse])
 async def get_videos(
     category: Optional[str] = None, 
@@ -33,7 +34,7 @@ async def get_videos(
     batch: Optional[str] = None, 
     current_user: models.User = Depends(get_current_user)
 ):
-    """Fetch all videos, optionally filtered by category, level, and batch"""
+    """Fetch all videos with optional filtering"""
     conditions = []
     
     # 1. Category Filter
@@ -87,6 +88,7 @@ async def get_videos(
         for v in videos
     ]
 
+@router.post("", response_model=VideoResponse)
 @router.post("/", response_model=VideoResponse)
 async def upload_video(video: VideoCreate, current_user: models.User = Depends(get_current_user)):
     """Upload a new video link (restricted to staff, ceo, and admin)"""

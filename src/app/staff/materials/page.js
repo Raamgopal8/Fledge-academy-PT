@@ -111,11 +111,11 @@ export default function StaffMaterials() {
                 setTimeout(() => setSuccessMessage(''), 4000);
             } else {
                 const errData = await response.json().catch(() => ({}));
-                setErrorMessage(errData.detail || 'Upload failed. Please try again.');
+                setErrorMessage(errData.detail || `Upload failed (Status: ${response.status}). Please try again.`);
             }
         } catch (error) {
             console.error('Error uploading material:', error);
-            setErrorMessage('Network error during upload.');
+            setErrorMessage(error.message || 'Network error during upload.');
         } finally {
             setIsUploading(false);
         }
