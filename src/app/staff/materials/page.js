@@ -174,7 +174,7 @@ export default function StaffMaterials() {
     });
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
             {/* Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
@@ -186,14 +186,14 @@ export default function StaffMaterials() {
                             Course Materials Management
                         </h1>
                     </div>
-                    <p className="font-body-md text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
                         Upload lecture slides, practice worksheets, and reference resources for students.
                     </p>
                 </div>
                 
                 <button 
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95 self-start md:self-auto"
+                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
                 >
                     <span className="material-symbols-outlined text-[20px]">add</span>
                     <span>Upload Material</span>
@@ -201,22 +201,22 @@ export default function StaffMaterials() {
             </section>
 
             {successMessage && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30 text-xs sm:text-sm">
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30">
                     <span className="material-symbols-outlined text-[22px]">check_circle</span>
-                    <span className="font-medium">{successMessage}</span>
+                    <span className="text-sm font-medium">{successMessage}</span>
                 </div>
             )}
 
             {/* Filter Controls Bar */}
-            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-4 md:p-5 custom-shadow flex flex-wrap items-center justify-between gap-3 w-full max-w-full">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-4 md:p-5 custom-shadow flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     {/* Level Filter */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                         <span className="text-xs text-on-surface-variant font-medium">Level:</span>
                         <select
                             value={filterLevel}
                             onChange={(e) => setFilterLevel(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
                         >
                             <option value="All">All Levels</option>
                             {LEVELS.map(l => (
@@ -226,12 +226,12 @@ export default function StaffMaterials() {
                     </div>
 
                     {/* Resource Type Filter */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                         <span className="text-xs text-on-surface-variant font-medium">Type:</span>
                         <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
                         >
                             <option value="All">All Formats</option>
                             <option value="file">Files & Docs</option>
@@ -241,7 +241,7 @@ export default function StaffMaterials() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative w-full sm:w-64 min-w-[180px]">
+                <div className="relative min-w-[220px]">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">search</span>
                     <input 
                         type="text"

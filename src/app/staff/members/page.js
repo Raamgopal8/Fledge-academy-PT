@@ -98,79 +98,88 @@ export default function StaffMembers() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
             {/* Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="material-symbols-outlined text-primary text-3xl">how_to_reg</span>
+                        <span className="material-symbols-outlined text-primary text-3xl">groups</span>
                         <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             Members & Attendance
                         </h1>
                     </div>
-                    <p className="font-body-md text-on-surface-variant max-w-2xl">
-                        Mark attendance for students for today's classes and manage enrollments.
+                    <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
+                        Mark attendance and track enrolled students for today's classes.
                     </p>
                 </div>
             </section>
 
-            <div className="bg-surface-container-lowest rounded-3xl custom-shadow overflow-hidden border border-outline-variant/60 p-5 md:p-6 flex flex-col">
-                <div className="overflow-x-auto custom-scrollbar w-full border border-outline-variant/40 rounded-2xl">
-                    <table className="w-full text-left min-w-[580px]">
-                        <thead className="bg-surface-container-low border-b border-outline-variant/60">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all flex flex-col">
+                <div className="overflow-x-auto custom-scrollbar border border-outline-variant/40 rounded-2xl">
+                    <table className="w-full text-left min-w-[800px]">
+                        <thead className="bg-surface-container-low border-b border-surface-variant">
                             <tr>
-                                <th className="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Student</th>
-                                <th className="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Email</th>
-                                <th className="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider">Today's Status</th>
-                                <th className="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right">Action</th>
+                                <th className="px-md py-4 font-label-md text-label-md text-outline">Student</th>
+                                <th className="px-md py-4 font-label-md text-label-md text-outline">Email</th>
+                                <th className="px-md py-4 font-label-md text-label-md text-outline">Today's Status</th>
+                                <th className="px-md py-4 font-label-md text-label-md text-outline">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-outline-variant/30">
+                        <tbody className="divide-y divide-surface-variant">
                             {students.map((student) => (
-                                <tr key={student.id} className="hover:bg-surface-container-low/60 transition-colors">
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-primary/20 overflow-hidden shrink-0 flex items-center justify-center">
+                                <tr key={student.id} className="hover:bg-surface-container-low transition-colors">
+                                    <td className="px-md py-4">
+                                        <div className="flex items-center gap-sm">
+                                            <div className="w-10 h-10 rounded-full bg-primary/20 overflow-hidden shrink-0">
                                                 {student.profile_image_url ? (
                                                     <img src={student.profile_image_url} alt={student.name} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                                                    <div className="w-full h-full flex items-center justify-center text-primary font-bold">
                                                         {student.name.charAt(0).toUpperCase()}
                                                     </div>
                                                 )}
                                             </div>
-                                            <span className="font-bold text-xs text-on-surface">{student.name}</span>
+                                            <span className="font-label-md text-label-md text-on-surface font-bold">{student.name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-xs text-on-surface-variant">
+                                    <td className="px-md py-4 font-body-md text-body-md text-on-surface-variant">
                                         {student.email}
                                     </td>
-                                    <td className="px-4 py-3">
-                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border
-                                            ${student.status === 'present' ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' : 
-                                              student.status === 'absent' ? 'bg-error/15 text-error border-error/30' : 
-                                              'bg-surface-container-high text-on-surface-variant border-outline-variant/40'}`}>
-                                            <span className="material-symbols-outlined text-[14px]">
+                                    <td className="px-md py-4">
+                                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-label-sm font-label-sm ${
+                                            student.status === 'present' 
+                                                ? 'bg-primary-container text-on-primary-container' 
+                                                : student.status === 'absent' 
+                                                    ? 'bg-error-container text-on-error-container' 
+                                                    : 'bg-surface-variant text-on-surface-variant'
+                                        }`}>
+                                            <span className="material-symbols-outlined text-[16px]">
                                                 {student.status === 'present' ? 'check_circle' : student.status === 'absent' ? 'cancel' : 'help'}
                                             </span>
-                                            <span className="capitalize">{student.status === 'present' ? 'Present' : student.status === 'absent' ? 'Absent' : 'Not Marked'}</span>
+                                            {student.status === 'present' ? 'Present' : student.status === 'absent' ? 'Absent' : 'Not Marked'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-2">
+                                    <td className="px-md py-4">
+                                        <div className="flex items-center gap-sm">
                                             <button 
                                                 onClick={() => markAttendance(student.id, 'present')}
                                                 disabled={markingStatus[student.id]}
-                                                className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95
-                                                ${student.status === 'present' ? 'bg-primary text-on-primary shadow-xs' : 'border border-primary text-primary hover:bg-primary/10 disabled:opacity-50'}`}
+                                                className={`px-4 py-2 rounded-lg font-label-md text-label-md transition-colors ${
+                                                    student.status === 'present' 
+                                                        ? 'bg-primary text-on-primary' 
+                                                        : 'border border-primary text-primary hover:bg-primary-container disabled:opacity-50'
+                                                }`}
                                             >
                                                 Present
                                             </button>
                                             <button 
                                                 onClick={() => markAttendance(student.id, 'absent')}
                                                 disabled={markingStatus[student.id]}
-                                                className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95
-                                                ${student.status === 'absent' ? 'bg-error text-on-error shadow-xs' : 'border border-error text-error hover:bg-error/10 disabled:opacity-50'}`}
+                                                className={`px-4 py-2 rounded-lg font-label-md text-label-md transition-colors ${
+                                                    student.status === 'absent' 
+                                                        ? 'bg-error text-on-error' 
+                                                        : 'border border-error text-error hover:bg-error-container disabled:opacity-50'
+                                                }`}
                                             >
                                                 Absent
                                             </button>
@@ -180,7 +189,7 @@ export default function StaffMembers() {
                             ))}
                             {students.length === 0 && (
                                 <tr>
-                                    <td colSpan="4" className="px-4 py-8 text-center text-xs text-on-surface-variant">
+                                    <td colSpan="4" className="px-md py-6 text-center font-body-md text-on-surface-variant">
                                         No students found.
                                     </td>
                                 </tr>

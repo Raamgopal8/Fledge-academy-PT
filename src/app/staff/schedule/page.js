@@ -210,7 +210,7 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
             {/* Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
@@ -220,18 +220,20 @@ export default function SchedulePage() {
                             Class Schedule Management
                         </h1>
                     </div>
-                    <p className="font-body-md text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
                         Create, update, and manage weekly class sessions and room allocations.
                     </p>
                 </div>
                 
-                <button 
-                    onClick={openAddModal}
-                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95 self-start md:self-auto"
-                >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                    <span>Add Class</span>
-                </button>
+                <div className="flex gap-sm">
+                    <button 
+                        onClick={openAddModal}
+                        className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">add</span>
+                        <span>Add Class</span>
+                    </button>
+                </div>
             </section>
 
             {/* Error Callout */}
@@ -246,10 +248,10 @@ export default function SchedulePage() {
             )}
 
             {/* Main Workspace Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start w-full max-w-full">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all grid grid-cols-1 lg:grid-cols-4 gap-5 items-start w-full">
                 
                 {/* Left Side: Days Navigation */}
-                <div className="bg-surface-container-lowest p-2 rounded-3xl custom-shadow border border-outline-variant/60 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 custom-scrollbar w-full max-w-full">
+                <div className="bg-surface-container-lowest p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 scrollbar-none">
                     {DAYS_OF_WEEK.map((day) => {
                         const count = schedules.filter(s => s.day_of_week === day).length;
                         const isActive = activeTab === day;
@@ -277,12 +279,12 @@ export default function SchedulePage() {
                 </div>
 
                 {/* Right Side: Schedule List */}
-                <div className="lg:col-span-3 space-y-md w-full max-w-full">
-                    <div className="bg-surface-container-lowest p-5 md:p-6 rounded-3xl custom-shadow border border-outline-variant/60 relative overflow-hidden">
+                <div className="lg:col-span-3 space-y-md">
+                    <div className="bg-surface-container-lowest p-md rounded-xl custom-shadow border border-surface-container relative overflow-hidden">
                         <div className="h-1 w-full absolute top-0 left-0 bg-primary"></div>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-headline-sm text-on-surface font-bold text-base">{activeTab} Schedule</h3>
-                            <span className="text-xs text-on-surface-variant font-medium">{filteredSchedules.length} class(es) scheduled</span>
+                        <div className="flex items-center justify-between mb-md">
+                            <h3 className="font-headline-md text-headline-md">{activeTab} Schedule</h3>
+                            <span className="text-body-sm text-on-surface-variant">{filteredSchedules.length} class(es) scheduled</span>
                         </div>
 
                         {filteredSchedules.length === 0 ? (

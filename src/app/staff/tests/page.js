@@ -207,16 +207,16 @@ export default function StaffTests() {
 
     if (activeTest) {
         return (
-            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
+            <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
                 <button 
-                    onClick={() => { setActiveTest(null); setSubmissions([]); }}
-                    className="flex items-center gap-2 text-primary font-bold text-xs hover:underline cursor-pointer"
+                    onClick={() => setActiveTest(null)}
+                    className="flex items-center gap-2 text-on-surface hover:text-primary transition-colors font-label-md mb-2 cursor-pointer"
                 >
-                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                     <span>Back to Tests</span>
                 </button>
                 
-                <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow space-y-2">
+                <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md space-y-3">
                     <div className="flex items-start justify-between gap-3">
                         <div>
                             <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -333,7 +333,7 @@ export default function StaffTests() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
             {/* Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
@@ -343,7 +343,7 @@ export default function StaffTests() {
                             Tests & Assignments
                         </h1>
                     </div>
-                    <p className="font-body-md text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
                         Create coursework, assign tests to specific batches, and grade student submissions.
                     </p>
                 </div>
@@ -357,7 +357,7 @@ export default function StaffTests() {
                             setBatch(staffBatches[0]);
                         }
                     }}
-                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95 self-start md:self-auto"
+                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
                 >
                     <span className="material-symbols-outlined text-[20px]">add</span>
                     <span>Create Test</span>
@@ -365,20 +365,20 @@ export default function StaffTests() {
             </section>
 
             {successMessage && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30 text-xs sm:text-sm">
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30">
                     <span className="material-symbols-outlined text-[22px]">check_circle</span>
-                    <span className="font-medium">{successMessage}</span>
+                    <span className="text-sm font-medium">{successMessage}</span>
                 </div>
             )}
 
             {/* Filter Controls Bar */}
-            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-4 md:p-5 custom-shadow flex flex-wrap items-center justify-between gap-3 w-full max-w-full">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 custom-shadow flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-on-surface-variant font-medium">Level:</span>
                     <select
                         value={filterLevel}
                         onChange={(e) => setFilterLevel(e.target.value)}
-                        className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
+                        className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
                     >
                         <option value="All">All Levels</option>
                         {LEVELS.map(l => (
@@ -387,7 +387,7 @@ export default function StaffTests() {
                     </select>
                 </div>
 
-                <div className="relative w-full sm:w-64 min-w-[180px]">
+                <div className="relative min-w-[220px]">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">search</span>
                     <input 
                         type="text"
@@ -407,17 +407,17 @@ export default function StaffTests() {
                         <p className="text-xs text-on-surface-variant">Loading tests...</p>
                     </div>
                 ) : filteredTests.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center p-12 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant/60 h-64 custom-shadow">
-                        <span className="material-symbols-outlined text-5xl text-outline/40 mb-3">quiz</span>
-                        <h3 className="font-headline-sm text-on-surface font-bold text-base">No assignments created yet</h3>
-                        <p className="font-body-md text-on-surface-variant text-xs mt-1">
-                            Click "Create Test" to assign tasks and worksheets to your students.
+                    <div className="flex flex-col items-center justify-center text-center p-12 bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant h-64 custom-shadow">
+                        <span className="material-symbols-outlined text-6xl text-outline/40 mb-3">assignment</span>
+                        <h3 className="font-headline-sm text-on-surface-variant font-bold">No Tests Found</h3>
+                        <p className="font-body-md text-outline text-xs mt-1">
+                            Click "Create Test" to assign coursework to your students.
                         </p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredTests.map(test => (
-                            <div key={test.id} className="group relative bg-surface-container-lowest rounded-3xl p-5 md:p-6 flex flex-col justify-between border border-outline-variant/60 hover:border-primary/50 custom-shadow hover:shadow-md transition-all">
+                            <div key={test.id} className="group relative bg-surface-container-lowest rounded-2xl p-5 flex flex-col justify-between border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300">
                                 <div>
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">

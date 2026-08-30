@@ -56,120 +56,116 @@ export default function StaffActivities() {
     if (isLoading) return <div className="p-gutter min-h-screen text-center"><span className="material-symbols-outlined animate-spin text-4xl">progress_activity</span></div>;
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
             {/* Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="material-symbols-outlined text-primary text-3xl">assignment_turned_in</span>
+                        <span className="material-symbols-outlined text-primary text-3xl">assignment</span>
                         <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             Test Activities
                         </h1>
                     </div>
-                    <p className="font-body-md text-on-surface-variant max-w-2xl">
-                        Monitor and grade recent student submissions.
+                    <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
+                        Monitor and grade recent student assessment submissions.
                     </p>
                 </div>
             </section>
 
-            <div className="space-y-4 w-full max-w-full">
+            <div className="space-y-4">
                 {submissions.length === 0 ? (
-                    <div className="text-center py-12 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant/60 custom-shadow">
-                        <span className="material-symbols-outlined text-5xl text-outline/40 mb-3">inbox</span>
-                        <p className="text-on-surface-variant text-xs">No test activities to show.</p>
+                    <div className="text-center py-12 bg-surface-container-lowest rounded-3xl border border-outline-variant/60 custom-shadow">
+                        <span className="material-symbols-outlined text-[48px] text-on-surface-variant mb-3 opacity-50">inbox</span>
+                        <p className="text-on-surface-variant font-body-md">No test activities to show.</p>
                     </div>
                 ) : (
                     submissions.map(sub => (
-                        <div key={sub.id} className="bg-surface-container-lowest p-5 md:p-6 rounded-3xl border border-outline-variant/60 custom-shadow hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                        <h3 className="font-bold text-sm text-on-surface">{sub.student_name}</h3>
-                                        <span className="text-on-surface-variant text-xs">•</span>
-                                        <span className="text-xs text-on-surface-variant font-medium">{sub.test_title}</span>
+                        <div key={sub.id} className="bg-surface-container-lowest p-5 md:p-6 rounded-3xl border border-outline-variant/60 custom-shadow hover:shadow-md transition-all">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="font-title-md text-on-surface">{sub.student_name}</h3>
+                                            <span className="text-on-surface-variant">•</span>
+                                            <span className="text-sm text-on-surface-variant font-medium">{sub.test_title}</span>
+                                        </div>
+                                        <p className="text-xs text-on-surface-variant">{new Date(sub.submitted_at).toLocaleString()}</p>
                                     </div>
-                                    <p className="text-[11px] text-on-surface-variant">{new Date(sub.submitted_at).toLocaleString()}</p>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                                        sub.status === 'Reviewed' ? 'bg-primary-container/30 text-primary border-primary/20' : 
+                                        sub.status === 'Needs Work' ? 'bg-error-container/30 text-error border-error/20' :
+                                        'bg-tertiary-container/30 text-tertiary border-tertiary/20'
+                                    }`}>
+                                        {sub.status}
+                                    </span>
                                 </div>
-                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                                    sub.status === 'Reviewed' ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' : 
-                                    sub.status === 'Needs Work' ? 'bg-error/15 text-error border-error/30' :
-                                    'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
-                                }`}>
-                                    {sub.status}
-                                </span>
-                            </div>
-                            
-                            <div className="bg-surface-container-low p-3.5 rounded-2xl mb-4 border border-outline-variant/40">
-                                <h4 className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[14px] text-primary">description</span>
-                                    <span>Student Submission</span>
-                                </h4>
-                                {sub.submission_content.startsWith('http') ? (
-                                    <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all text-xs font-semibold flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                                        {sub.submission_content}
-                                    </a>
+                                
+                                <div className="bg-surface-container-lowest p-sm rounded-xl mb-4 border border-outline-variant">
+                                    <h4 className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Student Submission</h4>
+                                    {sub.submission_content.startsWith('http') ? (
+                                        <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all font-body-md flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px]">link</span>
+                                            {sub.submission_content}
+                                        </a>
+                                    ) : (
+                                        <p className="whitespace-pre-wrap font-body-md text-on-surface">{sub.submission_content}</p>
+                                    )}
+                                </div>
+
+                                {sub.staff_comments ? (
+                                    <div className={`p-sm rounded-xl border ${sub.status === 'Needs Work' ? 'bg-error/5 border-error/20' : 'bg-primary/5 border-primary/20'}`}>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h4 className={`text-xs font-semibold uppercase tracking-wider ${sub.status === 'Needs Work' ? 'text-error' : 'text-primary'}`}>
+                                                Your Review
+                                            </h4>
+                                            <button 
+                                                onClick={() => { setIsReviewing(sub.id); setReviewComment(sub.staff_comments); }}
+                                                className="text-xs text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">edit</span>
+                                                Edit
+                                            </button>
+                                        </div>
+                                        <p className="whitespace-pre-wrap font-body-md text-on-surface">{sub.staff_comments}</p>
+                                    </div>
                                 ) : (
-                                    <p className="whitespace-pre-wrap text-xs text-on-surface leading-relaxed">{sub.submission_content}</p>
+                                    !isReviewing && (
+                                        <button 
+                                            onClick={() => { setIsReviewing(sub.id); setReviewComment(''); }}
+                                            className="mt-2 text-sm flex items-center gap-1 text-primary hover:bg-primary/10 px-4 py-2 rounded-lg transition-colors border border-primary/20 font-medium"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">rate_review</span>
+                                            Review Submission
+                                        </button>
+                                    )
+                                )}
+
+                                {isReviewing === sub.id && (
+                                    <div className="space-y-3 mt-4 border-t border-outline-variant pt-4">
+                                        <textarea
+                                            className="w-full bg-surface-container-lowest border border-outline rounded-xl p-4 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-body-md text-on-surface"
+                                            placeholder="Write your constructive feedback here..."
+                                            value={reviewComment}
+                                            onChange={(e) => setReviewComment(e.target.value)}
+                                        ></textarea>
+                                        <div className="flex gap-2 justify-end">
+                                            <button onClick={() => setIsReviewing(null)} className="px-4 py-2 rounded-lg text-on-surface font-medium hover:bg-surface-container transition-colors">Cancel</button>
+                                            <button 
+                                                onClick={() => handleReviewSubmit(sub.id, 'Needs Work')} 
+                                                className="px-4 py-2 rounded-lg bg-error-container text-on-error-container font-medium hover:bg-error-container/80 transition-colors shadow-sm"
+                                            >
+                                                Request Resubmission
+                                            </button>
+                                            <button 
+                                                onClick={() => handleReviewSubmit(sub.id, 'Reviewed')} 
+                                                className="px-4 py-2 rounded-lg bg-primary text-on-primary font-medium hover:bg-primary/90 transition-colors shadow-sm"
+                                            >
+                                                Mark as Reviewed
+                                            </button>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-
-                            {sub.staff_comments ? (
-                                <div className={`p-3.5 rounded-2xl border ${sub.status === 'Needs Work' ? 'bg-error/5 border-error/20' : 'bg-primary/5 border-primary/20'}`}>
-                                    <div className="flex justify-between items-start mb-1.5">
-                                        <h4 className={`text-[11px] font-bold uppercase tracking-wider ${sub.status === 'Needs Work' ? 'text-error' : 'text-primary'}`}>
-                                            Your Review
-                                        </h4>
-                                        <button 
-                                            onClick={() => { setIsReviewing(sub.id); setReviewComment(sub.staff_comments); }}
-                                            className="text-xs font-semibold text-primary hover:underline transition-colors flex items-center gap-1 cursor-pointer"
-                                        >
-                                            <span className="material-symbols-outlined text-[14px]">edit</span>
-                                            Edit
-                                        </button>
-                                    </div>
-                                    <p className="whitespace-pre-wrap text-xs text-on-surface leading-relaxed">{sub.staff_comments}</p>
-                                </div>
-                            ) : (
-                                !isReviewing && (
-                                    <button 
-                                        onClick={() => { setIsReviewing(sub.id); setReviewComment(''); }}
-                                        className="text-xs font-bold flex items-center gap-1 text-primary hover:bg-primary/10 px-3.5 py-1.5 rounded-xl transition-colors border border-primary/30 cursor-pointer"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">rate_review</span>
-                                        Review Submission
-                                    </button>
-                                )
-                            )}
-
-                            {isReviewing === sub.id && (
-                                <div className="space-y-3 mt-4 border-t border-outline-variant/40 pt-4">
-                                    <textarea
-                                        className="w-full bg-surface-container-low border border-outline-variant rounded-2xl p-3 text-xs focus:outline-none focus:border-primary resize-none text-on-surface"
-                                        placeholder="Write your constructive feedback here..."
-                                        rows="3"
-                                        value={reviewComment}
-                                        onChange={(e) => setReviewComment(e.target.value)}
-                                    ></textarea>
-                                    <div className="flex gap-2 justify-end">
-                                        <button onClick={() => setIsReviewing(null)} className="px-3.5 py-1.5 rounded-xl text-xs text-on-surface font-semibold hover:bg-surface-container transition-colors cursor-pointer">Cancel</button>
-                                        <button 
-                                            onClick={() => handleReviewSubmit(sub.id, 'Needs Work')} 
-                                            className="px-4 py-1.5 rounded-xl text-xs font-bold bg-error/15 text-error border border-error/30 hover:bg-error/25 transition-colors cursor-pointer"
-                                        >
-                                            Request Resubmission
-                                        </button>
-                                        <button 
-                                            onClick={() => handleReviewSubmit(sub.id, 'Reviewed')} 
-                                            className="px-4 py-1.5 rounded-xl text-xs font-bold bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
-                                        >
-                                            Mark as Reviewed
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))
+                        ))
                 )}
             </div>
         </div>
