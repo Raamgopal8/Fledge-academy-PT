@@ -353,40 +353,40 @@ export default function SchedulePage() {
 
             {/* Modal Dialog */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-gutter">
-                    <div className="bg-surface-container-lowest w-full max-w-[540px] rounded-2xl shadow-xl border border-surface-container overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+                    <div className="bg-surface-container-lowest w-full max-w-[500px] max-h-[88vh] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl shadow-2xl border border-outline-variant/60 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
-                        <div className="px-md py-md bg-surface-container border-b border-outline-variant flex items-center justify-between">
-                            <h3 className="font-headline-md text-headline-md">
+                        <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-surface-container border-b border-outline-variant flex items-center justify-between shrink-0">
+                            <h3 className="font-bold text-base sm:text-lg text-on-surface">
                                 {editingSchedule ? 'Edit Class Schedule' : 'Add New Class Schedule'}
                             </h3>
                             <button 
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-1 hover:bg-surface-container-high rounded-full transition-colors cursor-pointer"
+                                className="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
                             >
-                                <span className="material-symbols-outlined">close</span>
+                                <span className="material-symbols-outlined text-[18px]">close</span>
                             </button>
                         </div>
 
                         {/* Modal Form */}
-                        <form onSubmit={handleFormSubmit} className="p-md space-y-md">
+                        <form onSubmit={handleFormSubmit} className="p-3.5 sm:p-5 space-y-3 sm:space-y-4 overflow-y-auto custom-scrollbar flex-1">
                             {formError && (
-                                <div className="p-3 bg-error-container text-on-error-container rounded-lg text-body-sm flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-[20px]">error</span>
-                                    {formError}
+                                <div className="p-2.5 bg-error-container text-on-error-container rounded-xl text-xs flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[18px]">error</span>
+                                    <span>{formError}</span>
                                 </div>
                             )}
 
                             {/* Class Name */}
-                            <div className="space-y-xs">
-                                <label className="text-label-md text-on-surface-variant" htmlFor="className">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-on-surface-variant" htmlFor="className">
                                     Class Name / Course Title
                                 </label>
                                 <input
                                     id="className"
                                     type="text"
                                     required
-                                    className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                    className="w-full h-10 px-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface"
                                     placeholder="e.g. Adv. Mathematics II"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -394,15 +394,15 @@ export default function SchedulePage() {
                             </div>
 
                             {/* Grid row for Day & Time */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+                            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                                 {/* Day of Week */}
-                                <div className="space-y-xs">
-                                    <label className="text-label-md text-on-surface-variant" htmlFor="dayOfWeek">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-on-surface-variant" htmlFor="dayOfWeek">
                                         Day of Week
                                     </label>
                                     <select
                                         id="dayOfWeek"
-                                        className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md cursor-pointer"
+                                        className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface cursor-pointer"
                                         value={formData.day_of_week}
                                         onChange={(e) => setFormData({ ...formData, day_of_week: e.target.value })}
                                     >
@@ -413,15 +413,15 @@ export default function SchedulePage() {
                                 </div>
 
                                 {/* Time Slot */}
-                                <div className="space-y-xs">
-                                    <label className="text-label-md text-on-surface-variant" htmlFor="timeSlot">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-on-surface-variant" htmlFor="timeSlot">
                                         Time Slot
                                     </label>
                                     <input
                                         id="timeSlot"
                                         type="text"
                                         required
-                                        className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                        className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface"
                                         placeholder="e.g. 09:00 AM - 10:30 AM"
                                         value={formData.time}
                                         onChange={(e) => setFormData({ ...formData, time: e.target.value })}
@@ -430,17 +430,17 @@ export default function SchedulePage() {
                             </div>
 
                             {/* Grid row for Location & Students */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
+                            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                                 {/* Location */}
-                                <div className="space-y-xs">
-                                    <label className="text-label-md text-on-surface-variant" htmlFor="location">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-on-surface-variant" htmlFor="location">
                                         Location / Room
                                     </label>
                                     <input
                                         id="location"
                                         type="text"
                                         required
-                                        className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                        className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface"
                                         placeholder="e.g. Room 304 or Virtual"
                                         value={formData.location}
                                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -448,8 +448,8 @@ export default function SchedulePage() {
                                 </div>
 
                                 {/* Enrolled Students */}
-                                <div className="space-y-xs">
-                                    <label className="text-label-md text-on-surface-variant" htmlFor="students">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-on-surface-variant" htmlFor="students">
                                         Students Enrolled
                                     </label>
                                     <input
@@ -457,7 +457,7 @@ export default function SchedulePage() {
                                         type="number"
                                         min="0"
                                         required
-                                        className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                        className="w-full h-10 px-3 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface"
                                         value={formData.students}
                                         onChange={(e) => setFormData({ ...formData, students: parseInt(e.target.value) || 0 })}
                                     />
@@ -465,14 +465,14 @@ export default function SchedulePage() {
                             </div>
 
                             {/* Class Link */}
-                            <div className="space-y-xs">
-                                <label className="text-label-md text-on-surface-variant" htmlFor="classLink">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-on-surface-variant" htmlFor="classLink">
                                     Class Link
                                 </label>
                                 <input
                                     id="classLink"
                                     type="url"
-                                    className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                    className="w-full h-10 px-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface"
                                     placeholder="e.g. https://zoom.us/j/123456789"
                                     value={formData.class_link}
                                     onChange={(e) => setFormData({ ...formData, class_link: e.target.value })}
@@ -480,28 +480,28 @@ export default function SchedulePage() {
                             </div>
 
                             {/* Target Batch */}
-                            <div className="space-y-xs">
-                                <label className="text-label-md text-on-surface-variant" htmlFor="batchInput">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-on-surface-variant" htmlFor="batchInput">
                                     Target Batch
                                 </label>
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     <input
                                         id="batchInput"
                                         type="text"
-                                        className="w-full h-[48px] px-4 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
+                                        className="w-full h-10 px-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-xs sm:text-sm text-on-surface"
                                         placeholder="e.g. Batch - 1, Batch - 2, or All Batches"
                                         value={formData.batch}
                                         onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
                                     />
                                     {/* Quick Batch Suggestions */}
-                                    <div className="flex flex-wrap gap-1.5 items-center">
-                                        <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick select:</span>
+                                    <div className="flex flex-wrap gap-1 items-center">
+                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
                                         {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4'].map((b) => (
                                             <button
                                                 key={b}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, batch: b })}
-                                                className={`text-[11px] px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
                                                     formData.batch === b
                                                         ? 'bg-primary text-on-primary border-primary font-semibold'
                                                         : 'border-outline-variant hover:bg-surface-container text-on-surface'
@@ -515,42 +515,42 @@ export default function SchedulePage() {
                             </div>
 
                             {/* Level Category */}
-                            <div className="space-y-xs">
-                                <label className="text-label-md text-on-surface-variant">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-on-surface-variant">
                                     Japanese Level
                                 </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-sm">
+                                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                                     {COLOR_OPTIONS.map((opt) => (
                                         <button
                                             key={opt.value}
                                             type="button"
                                             onClick={() => setFormData({ ...formData, color: opt.value })}
-                                            className={`flex items-center gap-2 p-2 rounded-xl border text-body-sm font-medium transition-all cursor-pointer ${
+                                            className={`flex items-center gap-1.5 p-1.5 sm:p-2 rounded-xl border text-[11px] sm:text-xs font-medium transition-all cursor-pointer ${
                                                 formData.color === opt.value
                                                     ? `${opt.border} bg-surface-container-high ring-2 ring-primary/20 font-bold`
-                                                    : 'border-outline-variant hover:bg-surface-container-low'
+                                                    : 'border-outline-variant hover:bg-surface-container-low text-on-surface'
                                             }`}
                                         >
-                                            <span className={`w-3 h-3 rounded-full ${opt.bg} ${opt.border} border-2`} />
-                                            <span>{opt.label}</span>
+                                            <span className={`w-2.5 h-2.5 rounded-full ${opt.bg} ${opt.border} border-2 shrink-0`} />
+                                            <span className="truncate">{opt.label}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             {/* Form Actions */}
-                            <div className="flex justify-end gap-sm pt-md border-t border-outline-variant mt-lg">
+                            <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant mt-2 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-5 py-2.5 border border-outline-variant text-on-surface hover:bg-surface-container-low rounded-lg font-label-md text-label-md transition-colors cursor-pointer"
+                                    className="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-container-low rounded-xl text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="px-5 py-2.5 bg-primary text-on-primary hover:opacity-90 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed rounded-lg font-label-md text-label-md transition-all flex items-center gap-1 cursor-pointer"
+                                    className="px-4 py-2 bg-primary text-on-primary hover:opacity-90 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 cursor-pointer"
                                 >
                                     {isSubmitting ? (
                                         <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>
