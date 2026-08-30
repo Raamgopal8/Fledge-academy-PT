@@ -248,7 +248,7 @@ export default function StaffDashboard() {
                                     onClick={() => openGradingDrawer(pendingSubmissions[0])}
                                     className="text-xs font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
                                 >
-                                    Grade Next <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                    Reviews <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                                 </button>
                             )}
                         </div>

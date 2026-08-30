@@ -9,7 +9,6 @@ export default function CommunityChat({ role, overrideBatch }) {
     const [userName, setUserName] = useState('Anonymous');
     const [userEmail, setUserEmail] = useState('Anonymous');
     const [isRecording, setIsRecording] = useState(false);
-    const messagesEndRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
 
@@ -99,14 +98,6 @@ export default function CommunityChat({ role, overrideBatch }) {
             return () => clearInterval(interval);
         }
     }, [userLevel, userBatch]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -268,7 +259,6 @@ export default function CommunityChat({ role, overrideBatch }) {
                             </div>
                         );
                     })}
-                    <div ref={messagesEndRef} />
                 </div>
 
                 {/* Chat Input */}
