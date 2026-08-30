@@ -137,32 +137,37 @@ export default function CEOFinancesPage() {
     const expensePercent = (summary.total_expense / maxBarValue) * 100;
 
     return (
-        <div className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in pb-12 w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 md:mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-on-surface mb-0.5">Academy Finances</h1>
-                    <p className="text-xs sm:text-base text-on-surface-variant">
-                        Track and manage all income, expenses, and student fees.
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">payments</span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                            Academy Finances
+                        </h1>
+                    </div>
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
+                        Track and manage all income, expenses, and student tuition fees.
                     </p>
                 </div>
-                <div className="flex gap-2 self-start sm:self-auto">
+                <div className="flex gap-2 self-start md:self-auto">
                     <button 
                         onClick={() => handleOpenModal('expense')}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border-2 border-error text-error hover:bg-error/10 transition-colors shadow-xs"
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold border-2 border-error text-error hover:bg-error/10 transition-colors shadow-xs cursor-pointer active:scale-95"
                     >
                         <span className="material-symbols-outlined text-[18px]">remove</span>
                         Add Expense
                     </button>
                     <button 
                         onClick={() => handleOpenModal('income')}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-xs"
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-xs cursor-pointer active:scale-95"
                     >
                         <span className="material-symbols-outlined text-[18px]">add</span>
                         Add Income
                     </button>
                 </div>
-            </div>
+            </section>
 
             {/* Custom Tabs */}
             <div className="flex gap-4 border-b border-outline-variant mb-4">
@@ -189,12 +194,12 @@ export default function CEOFinancesPage() {
             {activeTab === 'overview' && (
                 <>
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-md">
-                        <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                        <div className="bg-surface-container-lowest rounded-3xl p-5 md:p-6 border border-outline-variant/60 custom-shadow hover:shadow-md transition-all relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-primary/5 rounded-bl-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
                             <div className="flex items-center gap-2.5 mb-2 relative">
-                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
-                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">account_balance_wallet</span>
+                                <div className="w-10 h-10 rounded-2xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[22px]">account_balance_wallet</span>
                                 </div>
                                 <h3 className="text-xs sm:text-base font-bold text-on-surface">Total Balance</h3>
                             </div>
@@ -203,11 +208,11 @@ export default function CEOFinancesPage() {
                             </p>
                         </div>
 
-                        <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
+                        <div className="bg-surface-container-lowest rounded-3xl p-5 md:p-6 border border-outline-variant/60 custom-shadow hover:shadow-md transition-all relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-emerald-500/5 rounded-bl-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
                             <div className="flex items-center gap-2.5 mb-2 relative">
-                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">trending_up</span>
+                                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[22px]">trending_up</span>
                                 </div>
                                 <h3 className="text-xs sm:text-base font-bold text-on-surface">Total Income</h3>
                             </div>
@@ -216,11 +221,11 @@ export default function CEOFinancesPage() {
                             </p>
                         </div>
 
-                        <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
+                        <div className="bg-surface-container-lowest rounded-3xl p-5 md:p-6 border border-outline-variant/60 custom-shadow hover:shadow-md transition-all relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-error/5 rounded-bl-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
                             <div className="flex items-center gap-2.5 mb-2 relative">
-                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
-                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">trending_down</span>
+                                <div className="w-10 h-10 rounded-2xl bg-error-container text-on-error-container flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[22px]">trending_down</span>
                                 </div>
                                 <h3 className="text-xs sm:text-base font-bold text-on-surface">Total Expenses</h3>
                             </div>

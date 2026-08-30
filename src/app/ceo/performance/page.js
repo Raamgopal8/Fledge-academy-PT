@@ -128,28 +128,28 @@ export default function CEOPerformance() {
     };
 
     return (
-        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">
                             monitoring
                         </span>
-                        <h1 className="text-2xl sm:text-4xl font-bold text-on-surface tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                        <h1 className="text-3xl md:text-4xl font-bold text-on-surface tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Activity & Performance Monitor
                         </h1>
                     </div>
-                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
                         Real-time student & staff online status, login/logout tracking, and institutional activity audit stream.
                     </p>
                 </div>
                 
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-2 self-start md:self-auto">
                     <button 
                         onClick={() => fetchData(false)}
                         disabled={isRefreshing}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs cursor-pointer"
                         title="Refresh live activity"
                     >
                         <span className={`material-symbols-outlined text-[18px] ${isRefreshing ? 'animate-spin text-primary' : ''}`}>
@@ -158,12 +158,12 @@ export default function CEOPerformance() {
                         <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
                     </button>
                 </div>
-            </div>
+            </section>
 
             {/* KPI Metric Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-md">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {/* 1. Online Users */}
-                <div className="bento-card rounded-2xl bg-surface-container-lowest border border-outline-variant p-4 md:p-5 flex flex-col justify-between shadow-xs">
+                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 p-5 md:p-6 flex flex-col justify-between custom-shadow hover:shadow-md transition-all">
                     <div className="flex items-center justify-between">
                         <span className="text-xs sm:text-sm font-bold text-on-surface-variant">Currently Online</span>
                         <span className="relative flex h-3 w-3">
@@ -183,7 +183,7 @@ export default function CEOPerformance() {
                 </div>
 
                 {/* 2. Logins Today */}
-                <div className="bento-card rounded-2xl bg-surface-container-lowest border border-outline-variant p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 p-5 md:p-6 flex flex-col justify-between custom-shadow hover:shadow-md transition-all">
                     <div className="flex items-center justify-between">
                         <span className="text-xs sm:text-sm font-bold text-on-surface-variant">Logins Today</span>
                         <span className="material-symbols-outlined text-primary text-[22px]">login</span>
@@ -200,7 +200,7 @@ export default function CEOPerformance() {
                 </div>
 
                 {/* 3. Actions Today */}
-                <div className="bento-card rounded-2xl bg-surface-container-lowest border border-outline-variant p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 p-5 md:p-6 flex flex-col justify-between custom-shadow hover:shadow-md transition-all">
                     <div className="flex items-center justify-between">
                         <span className="text-xs sm:text-sm font-bold text-on-surface-variant">Total Actions</span>
                         <span className="material-symbols-outlined text-purple-600 text-[22px]">bolt</span>
@@ -217,7 +217,7 @@ export default function CEOPerformance() {
                 </div>
 
                 {/* 4. Total Users */}
-                <div className="bento-card rounded-2xl bg-surface-container-lowest border border-outline-variant p-4 sm:p-5 flex flex-col justify-between shadow-xs">
+                <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/60 p-5 md:p-6 flex flex-col justify-between custom-shadow hover:shadow-md transition-all">
                     <div className="flex items-center justify-between">
                         <span className="text-xs sm:text-sm font-bold text-on-surface-variant">Total Members</span>
                         <span className="material-symbols-outlined text-amber-600 text-[22px]">group</span>
@@ -235,7 +235,7 @@ export default function CEOPerformance() {
             </div>
 
             {/* Main Tabs Container */}
-            <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest border border-outline-variant shadow-xs overflow-hidden w-full max-w-full">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl custom-shadow hover:shadow-md overflow-hidden flex flex-col w-full max-w-full">
                 {/* Tab Controls & Filters Toolbar */}
                 <div className="p-4 sm:p-6 border-b border-outline-variant/60 bg-surface-container-low space-y-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -574,6 +574,6 @@ export default function CEOPerformance() {
                     )}
                 </div>
             </div>
-        </section>
+        </div>
     );
 }

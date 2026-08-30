@@ -212,41 +212,41 @@ export default function CEOVideos() {
     const uniqueCategories = ['All', ...new Set(videos.map(v => v.category).filter(Boolean))];
 
     return (
-        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">
                             video_library
                         </span>
-                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Video Library
                         </h1>
                     </div>
-                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
                         Upload and manage learning video resources targeted by Japanese level and student batches.
                     </p>
                 </div>
-            </div>
+            </section>
 
             {error && (
-                <div className="bg-error/10 text-error p-3 sm:p-md rounded-xl flex items-center gap-2 border border-error/30 text-xs sm:text-sm">
+                <div className="bg-error/10 text-error p-4 rounded-2xl flex items-center gap-2 border border-error/30 text-xs sm:text-sm">
                     <span className="material-symbols-outlined text-[20px]">error</span>
                     <span>{error}</span>
                 </div>
             )}
 
             {successMessage && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-3 sm:p-md rounded-xl flex items-center gap-2 border border-green-500/30 text-xs sm:text-sm">
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2 border border-green-500/30 text-xs sm:text-sm">
                     <span className="material-symbols-outlined text-[20px]">check_circle</span>
                     <span>{successMessage}</span>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-lg items-start w-full max-w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start w-full max-w-full">
                 {/* Upload Form */}
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 sm:p-6 custom-shadow space-y-4 w-full">
+                <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all space-y-4 w-full">
                     <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/60">
                         <span className="material-symbols-outlined text-primary text-[20px] sm:text-[22px]">upload_file</span>
                         <h2 className="text-base sm:text-lg font-bold text-on-surface">Add Video Resource</h2>
@@ -463,7 +463,7 @@ export default function CEOVideos() {
                             {filteredVideos.map(video => {
                                 const thumb = getYouTubeThumbnail(video.video_url);
                                 return (
-                                    <div key={video.id} className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden custom-shadow flex flex-col hover:border-primary/50 transition-all group">
+                                    <div key={video.id} className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl overflow-hidden custom-shadow hover:shadow-md flex flex-col hover:border-primary/50 transition-all group">
                                         {/* Thumbnail Area */}
                                         {thumb ? (
                                             <div className="relative aspect-video w-full bg-black/10 overflow-hidden">
@@ -600,6 +600,6 @@ export default function CEOVideos() {
                     </div>
                 </div>
             )}
-        </section>
+        </div>
     );
 }

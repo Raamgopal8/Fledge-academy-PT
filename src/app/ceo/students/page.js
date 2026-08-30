@@ -157,27 +157,31 @@ export default function CEOStudents() {
     });
 
     return (
-        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">school</span>
-                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Student Management</h1>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">school</span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                            Student Management
+                        </h1>
                     </div>
-                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">View, add, edit, and remove student accounts.</p>
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
+                        View, add, edit, and manage student accounts and batch enrollments.
+                    </p>
                 </div>
                 <button 
                     onClick={() => { setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' }); setFormError(''); setIsAddModalOpen(true); }}
-                    className="bg-primary text-on-primary px-4 py-2 sm:px-lg sm:py-sm rounded-xl sm:rounded-full font-label-md text-xs sm:text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto shadow-xs"
+                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 self-start md:self-auto shadow-xs cursor-pointer active:scale-95"
                 >
-                    <span className="material-symbols-outlined text-[18px]">person_add</span>
-                    Add Student
+                    <span className="material-symbols-outlined text-[20px]">person_add</span>
+                    <span>Add Student</span>
                 </button>
-            </div>
+            </section>
 
-            <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest p-3.5 md:p-lg overflow-hidden border border-outline-variant/60 shadow-xs hover:shadow-md transition-all w-full max-w-full">
-                <div className="w-full overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse min-w-[580px]">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all flex flex-col">
+                <div className="w-full overflow-x-auto custom-scrollbar border border-outline-variant/40 rounded-2xl">
+                    <table className="w-full text-left border-collapse min-w-[650px]">
                         <thead className="bg-surface-container-low border-b border-outline-variant/60">
                             <tr>
                                 <th className="p-2.5 md:p-md text-xs sm:text-sm font-semibold text-on-surface-variant">Name</th>
@@ -418,6 +422,6 @@ export default function CEOStudents() {
                     </div>
                 </div>
             )}
-        </section>
+        </div>
     );
 }

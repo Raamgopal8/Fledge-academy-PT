@@ -53,41 +53,41 @@ export default function CEOTests() {
 
     if (activeTest) {
         return (
-            <div className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg min-h-screen w-full max-w-full overflow-x-hidden animate-fade-in">
+            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
                 <button 
                     onClick={() => setActiveTest(null)}
-                    className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-on-surface hover:text-primary transition-colors mb-2"
+                    className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-on-surface hover:text-primary transition-colors mb-2 cursor-pointer"
                 >
-                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                    Back to Tests
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                    <span>Back to Tests</span>
                 </button>
                 
-                <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest p-3.5 md:p-lg overflow-hidden border border-outline-variant/60 shadow-xs hover:shadow-md transition-all w-full max-w-full">
+                <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all flex flex-col">
                     <div className="mb-4 border-b border-outline-variant/60 pb-3">
-                        <h2 className="text-base sm:text-xl font-bold text-on-surface mb-1">{activeTest.title} - Submissions Overview</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-on-surface mb-1">{activeTest.title} - Submissions Overview</h2>
                         <p className="text-on-surface-variant text-xs sm:text-sm whitespace-pre-wrap">{activeTest.description}</p>
                     </div>
 
                     <div className="space-y-3">
                     {submissions.length === 0 ? (
-                        <div className="text-center py-8 bg-surface-container-low rounded-2xl border border-outline-variant/60">
-                            <span className="material-symbols-outlined text-[36px] sm:text-[48px] text-on-surface-variant mb-2 opacity-50">inbox</span>
+                        <div className="text-center py-12 bg-surface-container-low/60 rounded-2xl border border-outline-variant/60">
+                            <span className="material-symbols-outlined text-[40px] text-on-surface-variant mb-2 opacity-50">inbox</span>
                             <p className="text-on-surface-variant text-xs sm:text-sm">No submissions yet.</p>
                         </div>
                     ) : (
                         submissions.map(sub => (
-                            <div key={sub.id} className="bg-surface p-3 md:p-md rounded-xl border border-outline-variant/60 shadow-xs">
+                            <div key={sub.id} className="bg-surface-container-low/60 p-4 rounded-2xl border border-outline-variant/60 shadow-xs">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
                                         <h3 className="text-xs sm:text-sm font-bold text-on-surface">{sub.student_name}</h3>
                                         <p className="text-[10px] sm:text-xs text-on-surface-variant">{new Date(sub.submitted_at).toLocaleString()}</p>
                                     </div>
-                                    <span className={`px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold ${sub.status === 'Reviewed' ? 'bg-primary-container text-on-primary-container' : 'bg-tertiary-container text-on-tertiary-container'}`}>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold ${sub.status === 'Reviewed' ? 'bg-primary-container text-on-primary-container' : 'bg-tertiary-container text-on-tertiary-container'}`}>
                                         {sub.status}
                                     </span>
                                 </div>
                                 
-                                <div className="bg-surface-container-lowest p-2.5 sm:p-sm rounded-lg mb-2 border border-outline-variant/60">
+                                <div className="bg-surface-container-lowest p-3 rounded-xl mb-2 border border-outline-variant/60">
                                     <h4 className="text-[10px] sm:text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Student Submission:</h4>
                                     {sub.submission_content.startsWith('http') ? (
                                         <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all text-xs sm:text-sm">
@@ -99,7 +99,7 @@ export default function CEOTests() {
                                 </div>
 
                                 {sub.status === 'Reviewed' && sub.staff_comments && (
-                                    <div className="bg-primary/5 p-2.5 sm:p-sm rounded-lg border border-primary/20">
+                                    <div className="bg-primary/5 p-3 rounded-xl border border-primary/20">
                                         <h4 className="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-wider mb-1">Staff Review:</h4>
                                         <p className="whitespace-pre-wrap text-xs sm:text-sm text-on-surface">{sub.staff_comments}</p>
                                     </div>
@@ -114,20 +114,20 @@ export default function CEOTests() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg min-h-screen w-full max-w-full overflow-x-hidden animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">assignment</span>
-                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Test Analytics Overview</h1>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">assignment</span>
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Test Analytics Overview</h1>
                     </div>
-                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">Monitor all tests and student submissions across the academy.</p>
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">Monitor all tests and student submissions across the academy.</p>
                 </div>
-            </div>
+            </section>
 
-            <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest p-3.5 md:p-lg overflow-hidden border border-outline-variant/60 shadow-xs hover:shadow-md transition-all grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-md w-full max-w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-full">
                 {tests.map(test => (
-                    <div key={test.id} className="bg-surface p-3.5 md:p-lg rounded-2xl border border-outline-variant/60 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between">
+                    <div key={test.id} className="bg-surface-container-lowest p-5 md:p-6 rounded-3xl border border-outline-variant/60 custom-shadow hover:shadow-md hover:border-primary/50 transition-all group flex flex-col justify-between">
                         <div>
                             <h3 className="text-sm sm:text-base font-bold text-on-surface mb-1">{test.title}</h3>
                             <p className="text-on-surface-variant text-xs line-clamp-3 mb-3 flex-1">{test.description}</p>

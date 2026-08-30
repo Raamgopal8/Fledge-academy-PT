@@ -2,95 +2,89 @@
 
 export default function CEOHelp() {
     return (
-        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-sm mb-xs">
+                    <div className="flex items-center gap-2 mb-1">
                         <span className="material-symbols-outlined text-primary text-3xl">
                             help
                         </span>
-                        <h1 className="font-display-sm md:font-display-md text-on-surface">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Executive Support
                         </h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
-                        Priority support for administrative queries
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
+                        Priority support for administrative queries and platform assistance.
                     </p>
                 </div>
-                
-                <div className="flex gap-sm">
-                    <button className="flex items-center gap-xs px-md py-sm rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 font-label-md">
-                        <span className="material-symbols-outlined text-[18px]">filter_list</span>
-                        Filter
-                    </button>
-                    <button className="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 font-label-md shadow-sm">
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        New Action
-                    </button>
-                </div>
-            </div>
+            </section>
 
             {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
                 
                 {/* Main Content Area */}
-                <div className="md:col-span-8 flex flex-col gap-md">
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-lg custom-shadow min-h-[400px] flex flex-col">
-                        <div className="flex justify-between items-center mb-md pb-sm border-b border-outline-variant">
-                            <h2 className="font-headline-sm text-on-surface">Overview Data</h2>
+                <div className="md:col-span-8 flex flex-col gap-5">
+                    <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all min-h-[400px] flex flex-col">
+                        <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/60">
+                            <h2 className="font-bold text-lg text-on-surface">Overview Data</h2>
                             <button className="material-symbols-outlined text-outline hover:text-primary transition-colors">
                                 more_horiz
                             </button>
                         </div>
                         
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-xl bg-surface-container/30 rounded-xl border border-dashed border-outline-variant">
-                            <span className="material-symbols-outlined text-6xl text-outline/50 mb-md">
-                                pending_actions
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-surface-container-low/50 rounded-2xl border border-dashed border-outline-variant/60">
+                            <span className="material-symbols-outlined text-6xl text-outline/50 mb-3">
+                                support_agent
                             </span>
-                            <h3 className="font-headline-sm text-on-surface-variant mb-xs">Data Pending Integration</h3>
-                            <p className="font-body-md text-outline max-w-md">
-                                This section is currently a placeholder. Live data will be populated once the backend integration for Executive Support is complete.
+                            <h3 className="font-bold text-base text-on-surface-variant mb-1">Support & Ticket Portal</h3>
+                            <p className="text-xs sm:text-sm text-outline max-w-md">
+                                For urgent technical support, please contact the administrator team at contact@fledgeacademy.com.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Sidebar Area */}
-                <div className="md:col-span-4 flex flex-col gap-md">
+                <div className="md:col-span-4 flex flex-col gap-5">
                     
                     {/* Stats Card */}
-                    <div className="bg-primary-container text-on-primary-container rounded-2xl p-md shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
-                        <h3 className="font-label-md opacity-80 mb-sm">Quick Statistic</h3>
-                        <div className="flex items-end gap-sm">
-                            <span className="font-display-md leading-none">42</span>
-                            <span className="font-label-sm mb-1 opacity-80">Active Items</span>
+                    <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all relative overflow-hidden group">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[22px]">contact_support</span>
+                            </div>
+                            <h3 className="text-sm font-bold text-on-surface">Direct Line</h3>
                         </div>
+                        <p className="text-xs text-on-surface-variant">Available 24/7 for administrative emergencies.</p>
                     </div>
 
                     {/* Quick Links / Actions */}
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-md custom-shadow flex-1">
-                        <h3 className="font-label-lg text-on-surface mb-md">Related Actions</h3>
-                        <div className="space-y-sm">
-                            {[1, 2, 3].map(i => (
-                                <button key={i} className="w-full flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-colors group">
-                                    <div className="flex items-center gap-sm">
-                                        <div className="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-[16px]">bolt</span>
+                    <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all flex-1">
+                        <h3 className="text-sm font-bold text-on-surface mb-3">Resources & Guides</h3>
+                        <div className="space-y-2">
+                            {[
+                                { title: 'Executive User Guide', icon: 'menu_book' },
+                                { title: 'Security Best Practices', icon: 'security' },
+                                { title: 'Report System Issue', icon: 'bug_report' }
+                            ].map((item, i) => (
+                                <div key={i} className="w-full flex items-center justify-between p-3 rounded-2xl bg-surface-container-low/60 hover:bg-surface-container-high/60 border border-outline-variant/40 transition-colors group cursor-pointer">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-xl bg-surface-container text-primary flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
                                         </div>
-                                        <span className="font-body-md text-on-surface">Quick Action {i}</span>
+                                        <span className="text-xs font-semibold text-on-surface">{item.title}</span>
                                     </div>
-                                    <span className="material-symbols-outlined text-outline group-hover:text-primary group-hover:translate-x-1 transition-all">
+                                    <span className="material-symbols-outlined text-outline group-hover:text-primary group-hover:translate-x-0.5 transition-all text-[18px]">
                                         chevron_right
                                     </span>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
             </div>
-        </section>
+        </div>
     );
 }

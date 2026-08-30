@@ -169,47 +169,47 @@ export default function CEOAttendance() {
     }
 
     return (
-        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">
                             assignment
                         </span>
-                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Attendance Reports
                         </h1>
                     </div>
-                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
                         Live attendance tracking for today ({attendanceOverview?.date || new Date().toISOString().split('T')[0]})
                     </p>
                 </div>
                 
-                <div className="flex gap-2 self-start sm:self-auto">
+                <div className="flex gap-2 self-start md:self-auto">
                     <button 
                         onClick={() => fetchAttendanceData(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 md:px-md md:py-sm rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs"
                     >
-                        <span className="material-symbols-outlined text-[16px] sm:text-[18px]">refresh</span>
+                        <span className="material-symbols-outlined text-[18px]">refresh</span>
                         Refresh
                     </button>
                     <button 
                         onClick={handleExport}
                         disabled={isExporting}
-                        className="flex items-center gap-1 px-3 py-1.5 md:px-md md:py-sm rounded-xl bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
                         title="Export complete attendance history"
                     >
-                        <span className={`material-symbols-outlined text-[16px] sm:text-[18px] ${isExporting ? 'animate-spin' : ''}`}>
+                        <span className={`material-symbols-outlined text-[18px] ${isExporting ? 'animate-spin' : ''}`}>
                             {isExporting ? 'progress_activity' : 'download'}
                         </span>
                         {isExporting ? 'Exporting...' : 'Export'}
                     </button>
                 </div>
-            </div>
+            </section>
 
             {/* Bento Grid Layout */}
-            <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest p-3.5 md:p-lg overflow-hidden border border-outline-variant/60 shadow-xs hover:shadow-md transition-all w-full max-w-full">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all flex flex-col">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-md">
                     
                     {/* Sidebar Area - Stats */}
@@ -330,6 +330,6 @@ export default function CEOAttendance() {
                 </div>
             </div>
         </div>
-    </section>
-  );
+        </div>
+    );
 }
