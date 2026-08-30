@@ -38,9 +38,9 @@ class Token(BaseModel):
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = (datetime.utcnow() + timedelta(hours=5, minutes=30)) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = (datetime.utcnow() + timedelta(hours=5, minutes=30)) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -119,7 +119,7 @@ async def login(request: LoginRequest):
     primary_batch = getattr(user, "batch", None) or (user_batches[0] if user_batches else None)
 
     # Track login timestamp and online status
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     user.last_login_at = now
     user.last_seen_at = now
     user.is_online = True
@@ -220,7 +220,7 @@ async def register(request: RegisterRequest):
     if not getattr(user, "batches", None) or len(user.batches) == 0:
         user.batches = [user.batch]
 
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     user.last_login_at = now
     user.last_seen_at = now
     user.is_online = True
@@ -271,7 +271,7 @@ async def register(request: RegisterRequest):
 
 @router.post("/logout")
 async def logout(current_user: models.User = Depends(get_current_user)):
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     db_user = None
     if getattr(current_user, "id", None):
         try:

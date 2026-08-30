@@ -18,7 +18,7 @@ async def log_activity(
     request: Request,
     current_user: models.User = Depends(get_current_user)
 ):
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     
     # Refresh user active status in database
     db_user = None
@@ -61,7 +61,7 @@ async def log_activity(
 
 @router.post("/heartbeat")
 async def user_heartbeat(current_user: models.User = Depends(get_current_user)):
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     db_user = None
     if getattr(current_user, "id", None):
         try:
@@ -84,7 +84,7 @@ async def get_activity_logs(
     activity_type: Optional[str] = None,
     batch: Optional[str] = None,
     search: Optional[str] = None,
-    limit: int = Query(100, ge=1, le=500),
+    limit: Optional[int] = Query(None),
     current_user: models.User = Depends(get_current_user)
 ):
     if current_user.role != "ceo":
@@ -108,7 +108,10 @@ async def get_activity_logs(
             {"action": {"$regex": s, "$options": "i"}}
         ]
 
-    logs = await models.UserActivityLog.find(query).sort("-timestamp").limit(limit).to_list()
+    db_query = models.UserActivityLog.find(query).sort("-timestamp")
+    if limit and limit > 0:
+        db_query = db_query.limit(limit)
+    logs = await db_query.to_list()
 
     return [
         {
@@ -155,7 +158,7 @@ async def get_user_sessions(
         ]
 
     users = await models.User.find(query).to_list()
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     five_mins_ago = now - timedelta(minutes=5)
 
     # Fetch latest activity for each user
@@ -202,7 +205,7 @@ async def get_activity_summary(current_user: models.User = Depends(get_current_u
     if current_user.role != "ceo":
         raise HTTPException(status_code=403, detail="Only CEO can access activity summary")
 
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     start_of_today = datetime(now.year, now.month, now.day)
     five_mins_ago = now - timedelta(minutes=5)
 

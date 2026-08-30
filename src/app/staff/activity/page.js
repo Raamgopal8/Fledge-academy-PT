@@ -13,7 +13,7 @@ export default function StaffActivity() {
                         </h1>
                     </div>
                     <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
-                        Review your recent instructor actions, graded tests, and institutional updates.
+                        Review your recent instructor actions, reviewed tests, and institutional updates.
                     </p>
                 </div>
             </section>

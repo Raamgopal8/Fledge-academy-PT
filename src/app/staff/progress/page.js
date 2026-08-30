@@ -69,10 +69,7 @@ export default function StudentProgress() {
 
             if (res.ok) {
                 setActiveSubmission(null);
-                setReviewComment('');
-                setSuccessMessage('Submission review saved successfully!');
-                await fetchProgress();
-                setTimeout(() => setSuccessMessage(''), 4000);
+                window.location.reload();
             } else {
                 alert('Failed to save review. Please try again.');
             }
@@ -425,7 +422,7 @@ export default function StudentProgress() {
                 </div>
             </div>
 
-            {/* Quick Grade / Review Modal */}
+            {/* Quick Review Modal */}
             {activeSubmission && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-surface rounded-3xl p-6 max-w-[550px] w-full shadow-2xl border border-outline-variant/60 max-h-[90vh] overflow-y-auto custom-scrollbar relative space-y-4">

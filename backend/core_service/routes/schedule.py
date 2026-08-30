@@ -16,7 +16,7 @@ def calculate_expiration(day_of_week: str) -> Optional[datetime]:
     except ValueError:
         return None
     
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     current_day = now.weekday()
     
     days_ahead = target_day - current_day
@@ -65,7 +65,7 @@ async def get_schedules(level: Optional[str] = None, batch: Optional[str] = None
     if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
         query["batch"] = {"$regex": f"^{batch.strip()}$", "$options": "i"}
     schedules = await models.ClassSchedule.find(query).to_list()
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     valid_schedules = []
     
     for schedule in schedules:

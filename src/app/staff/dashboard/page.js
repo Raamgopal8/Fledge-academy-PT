@@ -131,14 +131,8 @@ export default function StaffDashboard() {
             });
 
             if (res.ok) {
-                setActionMessage(`Reviewed ${selectedSubmission.student_name || 'submission'} successfully!`);
-                setActivities(prev => prev.map(a => 
-                    a.id === selectedSubmission.id ? { ...a, status: quickGradeStatus, staff_comments: feedbackText } : a
-                ));
                 setSelectedSubmission(null);
-                setQuickGradeScore('');
-                setQuickGradeComments('');
-                setTimeout(() => setActionMessage(''), 4000);
+                window.location.reload();
             } else {
                 const err = await res.json().catch(() => ({}));
                 alert(`Failed to save review: ${err.detail || 'Network error'}`);
@@ -471,7 +465,7 @@ export default function StaffDashboard() {
                             <span className="material-symbols-outlined text-primary text-[22px]">assignment_turned_in</span>
                             <div>
                                 <h3 className="font-headline-sm text-on-surface font-bold text-base">Recent Student Submissions</h3>
-                                <p className="text-xs text-on-surface-variant">Review, grade, and approve completed student assessments.</p>
+                                <p className="text-xs text-on-surface-variant">Review and approve completed student assessments.</p>
                             </div>
                             {selectedActivities.length > 0 && (
                                 <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/20 text-xs rounded-full font-bold">
@@ -593,7 +587,7 @@ export default function StaffDashboard() {
                                                     className="px-3 py-1 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-1 cursor-pointer shadow-2xs"
                                                 >
                                                     <span className="material-symbols-outlined text-[14px]">edit_document</span>
-                                                    <span>Grade</span>
+                                                    <span>Review</span>
                                                 </button>
                                             </td>
                                         </tr>
@@ -720,7 +714,7 @@ export default function StaffDashboard() {
                 </section>
             </div>
 
-            {/* Quick Grade Drawer Modal */}
+            {/* Quick Review Drawer Modal */}
             {selectedSubmission && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-surface rounded-3xl p-6 max-w-[540px] w-full shadow-2xl border border-outline-variant/60 max-h-[90vh] overflow-y-auto custom-scrollbar relative space-y-4">

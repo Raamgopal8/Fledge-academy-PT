@@ -197,7 +197,7 @@ async def submit_test(
             # Overwrite existing submission for resubmission
             existing_submission.submission_content = submission_data.submission_content
             existing_submission.student_name = resolved_name
-            existing_submission.submitted_at = datetime.utcnow()
+            existing_submission.submitted_at = (datetime.utcnow() + timedelta(hours=5, minutes=30))
             existing_submission.status = "Pending Review"
             existing_submission.staff_comments = None
             await existing_submission.save()

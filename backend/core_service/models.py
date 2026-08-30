@@ -16,7 +16,7 @@ class User(Document):
     phone: Optional[str] = None
     dob: Optional[str] = None
     terms_accepted: Optional[bool] = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
     last_login_at: Optional[datetime] = None
     last_logout_at: Optional[datetime] = None
     last_seen_at: Optional[datetime] = None
@@ -38,7 +38,7 @@ class UserActivityLog(Document):
     details: Optional[dict] = {}
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "user_activity_logs"
@@ -55,7 +55,7 @@ class ClassSchedule(Document):
     day_of_week: str
     class_link: Optional[str] = None
     expires_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "class_schedules"
@@ -74,8 +74,8 @@ class Announcement(Document):
     batches: Optional[List[str]] = []
     title: str
     content: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
+    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
     author_id: PydanticObjectId
 
     class Settings:
@@ -84,7 +84,7 @@ class Announcement(Document):
 class AnnouncementView(Document):
     user_id: PydanticObjectId
     announcement_id: PydanticObjectId
-    viewed_at: datetime = Field(default_factory=datetime.utcnow)
+    viewed_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "announcement_views"
@@ -97,7 +97,7 @@ class Material(Document):
     description: Optional[str] = None
     file_url: str
     uploaded_by_id: PydanticObjectId
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "materials"
@@ -109,7 +109,7 @@ class Test(Document):
     title: str
     description: Optional[str] = None
     created_by_id: PydanticObjectId
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
     due_date: Optional[datetime] = None
 
     class Settings:
@@ -120,7 +120,7 @@ class TestSubmission(Document):
     student_id: PydanticObjectId
     student_name: Optional[str] = None
     submission_content: str
-    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    submitted_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
     staff_comments: Optional[str] = None
     status: str = "Pending Review"
     score: Optional[int] = None
@@ -132,7 +132,7 @@ class StaffLog(Document):
     staff_id: PydanticObjectId
     action: str
     details: Optional[str] = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "staff_logs"
@@ -152,7 +152,7 @@ class FinancialTransaction(Document):
     category: str
     description: Optional[str] = None
     student_id: Optional[PydanticObjectId] = None
-    date: datetime = Field(default_factory=datetime.utcnow)
+    date: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "financial_transactions"
@@ -168,7 +168,7 @@ class CommunityMessage(Document):
     level: Optional[str] = None
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "community_messages"
@@ -179,7 +179,7 @@ class Video(Document):
     category: str
     video_url: str
     uploaded_by_id: PydanticObjectId
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
     level: Optional[str] = None
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
@@ -195,7 +195,7 @@ class StudentNote(Document):
     uploader_id: Optional[str] = None
     level: Optional[str] = None
     batch: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:
         name = "student_notes"

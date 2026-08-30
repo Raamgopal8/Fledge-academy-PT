@@ -41,7 +41,7 @@ async def create_student_note(
         uploader_id=str(current_user.id),
         level=request.level or getattr(current_user, "level", None),
         batch=request.batch or getattr(current_user, "batch", None),
-        created_at=datetime.utcnow()
+        created_at=(datetime.utcnow() + timedelta(hours=5, minutes=30))
     )
     
     await note.insert()

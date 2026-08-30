@@ -141,7 +141,7 @@ async def update_announcement(
     if announcement_update.batch is not None:
         db_ann.batch = announcement_update.batch
         
-    db_ann.updated_at = datetime.utcnow()
+    db_ann.updated_at = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     await db_ann.save()
     
     return {

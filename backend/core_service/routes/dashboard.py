@@ -61,7 +61,7 @@ async def get_ceo_kpi(batch: Optional[str] = None):
 async def get_ceo_performance_chart():
     submissions = await models.TestSubmission.find(models.TestSubmission.score != None).to_list()
     
-    today = datetime.utcnow()
+    today = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     months_data = {}
     
     # Initialize 6 months starting from August
@@ -167,7 +167,7 @@ async def get_staff_classes(
             query["batch"] = staff_batch
         
     classes = await models.ClassSchedule.find(query).to_list()
-    now = datetime.utcnow()
+    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     valid_classes = []
     
     for cls in classes:

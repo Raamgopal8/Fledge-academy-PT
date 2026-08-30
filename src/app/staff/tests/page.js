@@ -180,9 +180,7 @@ export default function StaffTests() {
 
             if (res.ok) {
                 setIsReviewing(null);
-                setReviewComment('');
-                setReviewStatus('Approved');
-                fetchSubmissions(activeTest);
+                window.location.reload();
             } else {
                 alert("Failed to submit review");
             }
@@ -399,7 +397,7 @@ export default function StaffTests() {
                         </h1>
                     </div>
                     <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
-                        Create coursework, assign tests to specific batches, and grade student submissions.
+                        Create coursework, assign tests to specific batches, and review student submissions.
                     </p>
                 </div>
                 

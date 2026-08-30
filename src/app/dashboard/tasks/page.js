@@ -107,15 +107,9 @@ export default function StudentTasks() {
 
             if (res.ok) {
                 const submissionData = await res.json();
-                setTasks(prevTasks => prevTasks.map(t => 
-                    t.id === activeTaskForSubmission.id 
-                        ? { ...t, submission: submissionData } 
-                        : t
-                ));
-                setSuccessFeedback(`Task "${activeTaskForSubmission.title}" submitted successfully!`);
                 setActiveTaskForSubmission(null);
                 setSubmissionContent('');
-                setTimeout(() => setSuccessFeedback(''), 4000);
+                window.location.reload();
             } else {
                 const errData = await res.json().catch(() => ({}));
                 setError(errData.detail || 'Failed to submit task');

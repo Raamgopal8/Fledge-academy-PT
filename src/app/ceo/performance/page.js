@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useCEOContext } from '@/app/ceo/CEOContext';
 
+import * as XLSX from 'xlsx';
+
 export default function CEOPerformance() {
     const { searchQuery: globalSearch, selectedBatch } = useCEOContext();
     
@@ -12,6 +14,9 @@ export default function CEOPerformance() {
     const [logs, setLogs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     
     // Filters
     const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'student' | 'staff'
@@ -50,6 +55,100 @@ export default function CEOPerformance() {
             setIsRefreshing(false);
         }
     }, [selectedBatch]);
+
+    const handleDownloadAllActivities = async () => {
+        setIsExporting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            // Fetch all activity logs from the database without limit
+            const res = await fetch(`${apiBase}/api/activity/ceo/logs?limit=0`, { headers });
+            if (!res.ok) throw new Error('Failed to fetch activity logs for export');
+            
+            const allLogs = await res.json();
+            
+            if (!allLogs || allLogs.length === 0) {
+                alert('No activity logs found in database to export.');
+                setIsExporting(false);
+                return;
+            }
+
+            const formattedLogs = allLogs.map((item, idx) => ({
+                'S.No': idx + 1,
+                'Timestamp': item.timestamp ? new Date(item.timestamp).toLocaleString('en-IN') : 'N/A',
+                'User Name': item.user_name || 'Unknown',
+                'User Email': item.user_email || 'N/A',
+                'Role': (item.role || 'N/A').toUpperCase(),
+                'Event Type': (item.activity_type || 'N/A').toUpperCase(),
+                'Action Description': item.action || 'N/A',
+                'Batch': item.batch || 'Global',
+                'Level': item.level || 'N/A',
+                'IP Address': item.ip_address || 'N/A'
+            }));
+
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.json_to_sheet(formattedLogs);
+
+            // Column width formatting
+            worksheet['!cols'] = [
+                { wch: 6 },  // S.No
+                { wch: 22 }, // Timestamp
+                { wch: 24 }, // User Name
+                { wch: 28 }, // User Email
+                { wch: 10 }, // Role
+                { wch: 16 }, // Event Type
+                { wch: 45 }, // Action Description
+                { wch: 15 }, // Batch
+                { wch: 12 }, // Level
+                { wch: 16 }  // IP Address
+            ];
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, "All Activity Logs");
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `Fledge_Activities_Complete_Database_Log_${todayStr}.xlsx`);
+        } catch (err) {
+            console.error('Error downloading activities:', err);
+            alert('Failed to download activity logs. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleDeleteAllActivities = async () => {
+        setIsDeleting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            const res = await fetch(`${apiBase}/api/activity/ceo/logs`, {
+                method: 'DELETE',
+                headers
+            });
+
+            if (res.ok) {
+                // Clear from client state
+                setLogs([]);
+                if (summary) {
+                    setSummary(prev => prev ? { ...prev, total_actions_today: 0, logins_today: 0 } : null);
+                }
+                setShowDeleteModal(false);
+                await fetchData(false);
+                alert('All activity logs have been successfully deleted from the database.');
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                alert(`Failed to delete activity logs: ${errData.detail || 'Server error'}`);
+            }
+        } catch (err) {
+            console.error('Error deleting activity logs:', err);
+            alert('Failed to delete activity logs from database.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     useEffect(() => {
         fetchData(true);
@@ -145,11 +244,11 @@ export default function CEOPerformance() {
                     </p>
                 </div>
                 
-                <div className="flex items-center gap-2 self-start md:self-auto">
+                <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
                     <button 
                         onClick={() => fetchData(false)}
                         disabled={isRefreshing}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs cursor-pointer"
+                        className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs cursor-pointer"
                         title="Refresh live activity"
                     >
                         <span className={`material-symbols-outlined text-[18px] ${isRefreshing ? 'animate-spin text-primary' : ''}`}>
@@ -157,8 +256,82 @@ export default function CEOPerformance() {
                         </span>
                         <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
                     </button>
+
+                    <button 
+                        onClick={handleDownloadAllActivities}
+                        disabled={isExporting}
+                        className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-primary text-on-primary hover:opacity-90 transition-all active:scale-95 text-xs sm:text-sm font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                        title="Download all activities from database as Excel"
+                    >
+                        <span className={`material-symbols-outlined text-[18px] ${isExporting ? 'animate-spin' : ''}`}>
+                            {isExporting ? 'progress_activity' : 'download'}
+                        </span>
+                        <span>{isExporting ? 'Downloading...' : 'Download Activities'}</span>
+                    </button>
+
+                    <button 
+                        onClick={() => setShowDeleteModal(true)}
+                        disabled={isDeleting}
+                        className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-2xl bg-error/10 text-error hover:bg-error hover:text-white transition-all active:scale-95 text-xs sm:text-sm font-semibold shadow-xs disabled:opacity-50 cursor-pointer border border-error/20"
+                        title="Delete entire activity log history from database"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">
+                            delete_forever
+                        </span>
+                        <span>Delete All Logs</span>
+                    </button>
                 </div>
             </section>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-surface rounded-3xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/60 relative space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-error/10 text-error flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-[28px]">warning</span>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-lg text-on-surface">Delete Entire Activity Log?</h3>
+                                <p className="text-xs text-on-surface-variant mt-0.5">This action cannot be undone.</p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/40">
+                            Are you sure you want to delete all activity audit logs from the database? All student and staff event history will be completely erased.
+                        </p>
+
+                        <div className="flex items-center justify-end gap-2.5 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={isDeleting}
+                                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteAllActivities}
+                                disabled={isDeleting}
+                                className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold bg-error text-white hover:bg-error/90 transition-all flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                                        <span>Confirm Delete</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* KPI Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
