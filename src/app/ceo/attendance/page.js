@@ -169,83 +169,83 @@ export default function CEOAttendance() {
     }
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
                 <div>
-                    <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-4xl">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">
                             assignment
                         </span>
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Attendance Reports
                         </h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
-                        View live attendance tracking and trends for today ({attendanceOverview?.date || new Date().toISOString().split('T')[0]})
+                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">
+                        Live attendance tracking for today ({attendanceOverview?.date || new Date().toISOString().split('T')[0]})
                     </p>
                 </div>
                 
-                <div className="flex gap-sm">
+                <div className="flex gap-2 self-start sm:self-auto">
                     <button 
                         onClick={() => fetchAttendanceData(true)}
-                        className="flex items-center gap-xs px-md py-sm rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 font-label-md"
+                        className="flex items-center gap-1 px-3 py-1.5 md:px-md md:py-sm rounded-xl bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs"
                     >
-                        <span className="material-symbols-outlined text-[18px]">refresh</span>
+                        <span className="material-symbols-outlined text-[16px] sm:text-[18px]">refresh</span>
                         Refresh
                     </button>
                     <button 
                         onClick={handleExport}
                         disabled={isExporting}
-                        className="flex items-center gap-xs px-md py-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 font-label-md shadow-sm disabled:opacity-50 cursor-pointer"
-                        title="Export complete attendance history from starting date to current date"
+                        className="flex items-center gap-1 px-3 py-1.5 md:px-md md:py-sm rounded-xl bg-primary text-on-primary hover:opacity-90 transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
+                        title="Export complete attendance history"
                     >
-                        <span className={`material-symbols-outlined text-[18px] ${isExporting ? 'animate-spin' : ''}`}>
+                        <span className={`material-symbols-outlined text-[16px] sm:text-[18px] ${isExporting ? 'animate-spin' : ''}`}>
                             {isExporting ? 'progress_activity' : 'download'}
                         </span>
-                        {isExporting ? 'Exporting...' : 'Export (All Dates)'}
+                        {isExporting ? 'Exporting...' : 'Export'}
                     </button>
                 </div>
             </div>
 
             {/* Bento Grid Layout */}
-            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-md">
+            <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest p-3.5 md:p-lg overflow-hidden border border-outline-variant/60 shadow-xs hover:shadow-md transition-all w-full max-w-full">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-md">
                     
                     {/* Sidebar Area - Stats */}
-                <div className="md:col-span-4 flex flex-col gap-md">
+                <div className="md:col-span-4 flex flex-col gap-2.5 md:gap-md">
                     
                     {/* Stats Cards */}
-                    <div className="bg-primary-container text-on-primary-container rounded-2xl p-md shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                        <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
-                        <h3 className="font-label-md opacity-80 mb-sm">Total Students</h3>
-                        <div className="flex items-end gap-sm">
-                            <span className="font-display-md leading-none">{totalCount}</span>
-                            <span className="font-label-sm mb-1 opacity-80">Enrolled</span>
+                    <div className="bg-primary-container text-on-primary-container rounded-2xl p-3 md:p-md shadow-xs relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
+                        <div className="absolute -right-4 -top-4 w-20 h-20 sm:w-24 sm:h-24 bg-primary/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                        <h3 className="text-xs sm:text-sm font-semibold opacity-80 mb-1">Total Students</h3>
+                        <div className="flex items-end gap-2">
+                            <span className="text-2xl sm:text-4xl font-extrabold leading-none">{totalCount}</span>
+                            <span className="text-[10px] sm:text-xs mb-0.5 opacity-80">Enrolled</span>
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-md">
-                        <div className="bg-secondary-container text-on-secondary-container rounded-2xl p-md shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                            <div className="absolute -right-4 -top-4 w-16 h-16 bg-secondary/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
-                            <h3 className="font-label-md opacity-80 mb-sm">Present</h3>
-                            <div className="flex items-end gap-sm">
-                                <span className="font-display-sm leading-none">{presentCount}</span>
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-md">
+                        <div className="bg-secondary-container text-on-secondary-container rounded-2xl p-3 sm:p-md shadow-xs relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
+                            <div className="absolute -right-4 -top-4 w-14 h-14 sm:w-16 sm:h-16 bg-secondary/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                            <h3 className="text-xs sm:text-sm font-semibold opacity-80 mb-1">Present</h3>
+                            <div className="flex items-end gap-2">
+                                <span className="text-xl sm:text-3xl font-extrabold leading-none">{presentCount}</span>
                             </div>
                         </div>
-                        <div className="bg-error-container text-on-error-container rounded-2xl p-md shadow-sm relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                            <div className="absolute -right-4 -top-4 w-16 h-16 bg-error/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
-                            <h3 className="font-label-md opacity-80 mb-sm">Absent</h3>
-                            <div className="flex items-end gap-sm">
-                                <span className="font-display-sm leading-none">{absentCount}</span>
+                        <div className="bg-error-container text-on-error-container rounded-2xl p-3 sm:p-md shadow-xs relative overflow-hidden group cursor-pointer hover:shadow-md transition-all">
+                            <div className="absolute -right-4 -top-4 w-14 h-14 sm:w-16 sm:h-16 bg-error/10 rounded-full group-hover:scale-150 transition-transform duration-500 ease-out"></div>
+                            <h3 className="text-xs sm:text-sm font-semibold opacity-80 mb-1">Absent</h3>
+                            <div className="flex items-end gap-2">
+                                <span className="text-xl sm:text-3xl font-extrabold leading-none">{absentCount}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Quick Filters */}
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-md custom-shadow flex-1">
-                        <h3 className="font-label-lg text-on-surface mb-md">Filter View</h3>
-                        <div className="space-y-sm">
+                    <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-3 sm:p-md custom-shadow flex-1">
+                        <h3 className="text-xs sm:text-base font-bold text-on-surface mb-2 sm:mb-md">Filter View</h3>
+                        <div className="space-y-1 sm:space-y-sm">
                             {[
                                 { id: 'all', label: 'All Students', icon: 'groups' },
                                 { id: 'present', label: 'Present Today', icon: 'check_circle' },

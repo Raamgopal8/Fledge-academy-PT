@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { subscribeToPushNotifications } from '../utils/pushNotifications';
 
 export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, onProfileUpdated }) {
     const [profile, setProfile] = useState({ name: '', profile_image_url: '', preferences: { notifications: true, darkMode: false } });
@@ -39,6 +40,11 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                 if (typeof window !== 'undefined') {
                     if (profile.profile_image_url !== undefined) localStorage.setItem('userProfileImage', profile.profile_image_url);
                     if (profile.name) localStorage.setItem('userName', profile.name);
+                    const notifEnabled = profile.preferences?.notifications !== false;
+                    localStorage.setItem('notifications_enabled', notifEnabled ? 'true' : 'false');
+                    window.dispatchEvent(new CustomEvent('fledge_notification_preference_changed', { 
+                        detail: { enabled: notifEnabled } 
+                    }));
                 }
                 if (onProfileUpdated) {
                     onProfileUpdated(updatedProfile);
@@ -114,10 +120,16 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                                         type="checkbox" 
                                         className="hidden"
                                         checked={profile.preferences?.notifications || false}
-                                        onChange={(e) => setProfile({
-                                            ...profile, 
-                                            preferences: { ...profile.preferences, notifications: e.target.checked }
-                                        })}
+                                        onChange={(e) => {
+                                            const isChecked = e.target.checked;
+                                            setProfile({
+                                                ...profile, 
+                                                preferences: { ...profile.preferences, notifications: isChecked }
+                                            });
+                                            if (isChecked) {
+                                                subscribeToPushNotifications();
+                                            }
+                                        }}
                                     />
                                 </label>
                             </div>

@@ -5,6 +5,7 @@ import { useStaffContext } from '@/app/staff/StaffContext';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import StaffBatchSelectionModal from './StaffBatchSelectionModal';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 export default function StaffTopNav() {
     const [profile, setProfile] = useState(null);
@@ -68,6 +69,7 @@ export default function StaffTopNav() {
                         <span>{selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}</span>
                     </button>
 
+                    <NotificationBell />
                     <ThemeToggle />
 
                     <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-white/10">

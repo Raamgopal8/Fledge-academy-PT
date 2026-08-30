@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { performLogout } from "../utils/activityLogger";
 import { useState, useEffect } from "react";
 import { useStudentContext } from "@/app/student/StudentContext";
 
 export default function StudentNavbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isMobileNavOpen, setIsMobileNavOpen } = useStudentContext();
 
     const navItems = [
@@ -71,14 +73,17 @@ export default function StudentNavbar() {
           })}
         </nav>
         <div className="px-md mt-auto pt-md border-t border-outline-variant flex flex-col gap-xs">
-          <Link
-            href="/"
-            onClick={() => setIsMobileNavOpen(false)}
-            className="flex items-center gap-md px-md py-sm text-on-surface-variant hover:text-error transition-colors active:scale-[0.98]"
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileNavOpen(false);
+              performLogout(router);
+            }}
+            className="flex items-center gap-md px-md py-sm text-on-surface-variant hover:text-error transition-colors active:scale-[0.98] w-full cursor-pointer"
           >
             <span className="material-symbols-outlined">logout</span>
             <span className="font-label-md text-label-md">Logout</span>
-          </Link>
+          </button>
         </div>
       </aside>
     </>

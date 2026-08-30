@@ -1,15 +1,18 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCEOContext } from '@/app/ceo/CEOContext';
+import { performLogout } from '@/app/utils/activityLogger';
 
 export default function CEONavbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { isMobileNavOpen, setIsMobileNavOpen } = useCEOContext();
 
 
     const navItems = [
         { name: 'Overview', path: '/ceo/dashboard', icon: 'dashboard' },
+        { name: 'Activity Monitor', path: '/ceo/performance', icon: 'monitoring' },
         { name: 'Students', path: '/ceo/students', icon: 'groups' },
         { name: 'Staff', path: '/ceo/staff', icon: 'manage_accounts' },
         { name: 'Announcements', path: '/ceo/announcements', icon: 'campaign' },
@@ -52,6 +55,7 @@ export default function CEONavbar() {
                         <Link 
                             key={item.name}
                             href={item.path}
+                            onClick={() => setIsMobileNavOpen(false)}
                             className={`flex items-center gap-sm rounded-lg mx-2 px-md py-sm transition-all relative ${
                                 isActive 
                                     ? 'bg-secondary-container text-on-secondary-container active:scale-[0.98]'
@@ -66,13 +70,17 @@ export default function CEONavbar() {
             </nav>
 
             <div className="mt-auto px-2 space-y-xs pt-base">
-                <Link 
-                    href="/" 
-                    className="flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg px-md py-sm transition-all"
+                <button 
+                    type="button"
+                    onClick={() => {
+                        setIsMobileNavOpen(false);
+                        performLogout(router);
+                    }}
+                    className="w-full flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg px-md py-sm transition-all cursor-pointer"
                 >
                     <span className="material-symbols-outlined">logout</span>
                     <span className="font-label-md text-label-md">Logout</span>
-                </Link>
+                </button>
             </div>
         </aside>
         </>

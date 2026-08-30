@@ -143,6 +143,16 @@ export default function SchedulePage() {
 
             // Refresh schedules list
             await fetchSchedules();
+            if (typeof window !== 'undefined' && !editingSchedule) {
+                window.dispatchEvent(new CustomEvent('fledge_new_class_created', {
+                    detail: {
+                        name: formData.name,
+                        day_of_week: formData.day_of_week,
+                        time: formData.time,
+                        location: formData.location
+                    }
+                }));
+            }
             setIsModalOpen(false);
         } catch (err) {
             console.error('Error saving schedule:', err);
@@ -196,41 +206,41 @@ export default function SchedulePage() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg mt-6">
+        <div className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
                 <div>
-                    <div className="flex items-center gap-xs mb-sm">
-                        <span className="material-symbols-outlined text-primary text-3xl">calendar_month</span>
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Class Schedule Management</h1>
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">calendar_month</span>
+                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Class Schedule</h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">Create, update, and manage weekly class sessions and room allocations.</p>
+                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">Create, update, and manage weekly class sessions and room allocations.</p>
                 </div>
                 <button 
                     onClick={openAddModal}
-                    className="bg-primary text-on-primary px-lg py-sm rounded-full font-label-lg hover:bg-primary/90 transition-colors flex items-center gap-sm"
+                    className="bg-primary text-on-primary px-4 py-2 sm:px-lg sm:py-sm rounded-xl sm:rounded-full font-label-md text-xs sm:text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5 self-start sm:self-auto shadow-xs"
                 >
-                    <span className="material-symbols-outlined">add</span>
+                    <span className="material-symbols-outlined text-[18px]">add</span>
                     Add Class
                 </button>
             </div>
 
             {/* Error Callout */}
             {error && (
-                <div className="p-lg bg-error-container text-on-error-container rounded-xl flex items-center gap-md">
-                    <span className="material-symbols-outlined text-[32px]">error</span>
+                <div className="p-3 md:p-lg bg-error-container text-on-error-container rounded-xl flex items-center gap-2 text-xs sm:text-sm">
+                    <span className="material-symbols-outlined text-[24px]">error</span>
                     <div>
-                        <h3 className="font-headline-md">Error Loading Schedules</h3>
-                        <p className="font-body-md">{error}</p>
+                        <h3 className="font-bold">Error Loading Schedules</h3>
+                        <p>{error}</p>
                     </div>
                 </div>
             )}
 
-            {/* Main Workspace Layout */}
-            <div className="bento-card rounded-3xl bg-white p-lg overflow-hidden border border-outline-variant shadow-sm hover:shadow-md transition-shadow grid grid-cols-1 lg:grid-cols-4 gap-md items-start">
+            {/* Main Schedule Workspace */}
+            <div className="bento-card rounded-2xl sm:rounded-3xl bg-surface-container-lowest p-3.5 md:p-lg overflow-hidden border border-outline-variant/60 shadow-xs hover:shadow-md transition-all grid grid-cols-1 lg:grid-cols-4 gap-3 md:gap-md items-start w-full max-w-full">
                 
                 {/* Left Side: Days Navigation */}
-                <div className="bg-surface-container-lowest p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 scrollbar-none">
+                <div className="bg-surface-container-lowest p-1.5 sm:p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 scrollbar-none w-full max-w-full">
                     {DAYS_OF_WEEK.map((day) => {
                         const count = schedules.filter(s => s.day_of_week === day).length;
                         const isActive = activeTab === day;
@@ -238,14 +248,14 @@ export default function SchedulePage() {
                             <button
                                 key={day}
                                 onClick={() => setActiveTab(day)}
-                                className={`flex items-center justify-between px-4 py-3 rounded-lg font-label-md text-label-md whitespace-nowrap transition-all cursor-pointer min-w-[120px] lg:w-full ${
+                                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer min-w-[100px] lg:w-full ${
                                     isActive
                                         ? 'bg-secondary-container text-on-secondary-container font-bold'
                                         : 'text-on-surface-variant hover:bg-surface-container-low'
                                 }`}
                             >
                                 <span>{day}</span>
-                                <span className={`ml-2 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold ${
                                     isActive 
                                         ? 'bg-on-secondary-container/10 text-on-secondary-container'
                                         : 'bg-surface-container-highest text-outline'

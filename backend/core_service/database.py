@@ -33,6 +33,7 @@ async def init_db():
             models.Activity,
             models.FinancialTransaction,
             models.Attendance,
-            models.StudentNote
+            models.StudentNote,
+            models.UserActivityLog
         ]
     )

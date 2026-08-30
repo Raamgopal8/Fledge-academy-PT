@@ -118,6 +118,29 @@ async def login(request: LoginRequest):
     user_batches = getattr(user, "batches", None) or ([user.batch] if getattr(user, "batch", None) else [])
     primary_batch = getattr(user, "batch", None) or (user_batches[0] if user_batches else None)
 
+    # Track login timestamp and online status
+    now = datetime.utcnow()
+    user.last_login_at = now
+    user.last_seen_at = now
+    user.is_online = True
+    await user.save()
+
+    try:
+        activity = models.UserActivityLog(
+            user_id=user.id,
+            user_name=user.name or user.email.split("@")[0],
+            user_email=user.email,
+            role=user.role,
+            level=user.level,
+            batch=primary_batch,
+            activity_type="login",
+            action=f"Logged into {user.role.capitalize()} Portal",
+            timestamp=now
+        )
+        await activity.insert()
+    except Exception as e:
+        print("Error logging login activity:", e)
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={
@@ -196,10 +219,30 @@ async def register(request: RegisterRequest):
     if not getattr(user, "batches", None) or len(user.batches) == 0:
         user.batches = [user.batch]
 
+    now = datetime.utcnow()
+    user.last_login_at = now
+    user.last_seen_at = now
+    user.is_online = True
     await user.save()
 
     user_batches = getattr(user, "batches", None) or ([user.batch] if getattr(user, "batch", None) else [])
     primary_batch = getattr(user, "batch", None) or (user_batches[0] if user_batches else None)
+
+    try:
+        activity = models.UserActivityLog(
+            user_id=user.id,
+            user_name=user.name or user.email.split("@")[0],
+            user_email=user.email,
+            role=user.role,
+            level=user.level,
+            batch=primary_batch,
+            activity_type="login",
+            action="Completed Account Registration & Logged In",
+            timestamp=now
+        )
+        await activity.insert()
+    except Exception as e:
+        print("Error logging registration activity:", e)
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -224,3 +267,41 @@ async def register(request: RegisterRequest):
         "email": user.email,
         "profile_image_url": user.profile_image_url
     }
+
+@router.post("/logout")
+async def logout(current_user: models.User = Depends(get_current_user)):
+    now = datetime.utcnow()
+    db_user = None
+    if getattr(current_user, "id", None):
+        try:
+            db_user = await models.User.get(current_user.id)
+        except Exception:
+            pass
+    if not db_user and getattr(current_user, "email", None):
+        db_user = await models.User.find_one(models.User.email == current_user.email)
+
+    if db_user:
+        db_user.last_logout_at = now
+        db_user.last_seen_at = now
+        db_user.is_online = False
+        await db_user.save()
+
+    primary_batch = getattr(current_user, "batch", None) or (current_user.batches[0] if getattr(current_user, "batches", None) else None)
+    
+    try:
+        activity = models.UserActivityLog(
+            user_id=getattr(current_user, "id", None),
+            user_name=getattr(current_user, "name", None) or current_user.email.split("@")[0],
+            user_email=current_user.email,
+            role=current_user.role,
+            level=getattr(current_user, "level", None),
+            batch=primary_batch,
+            activity_type="logout",
+            action=f"Logged out of {current_user.role.capitalize()} Portal",
+            timestamp=now
+        )
+        await activity.insert()
+    except Exception as e:
+        print("Error logging logout activity:", e)
+
+    return {"message": "Logged out successfully"}

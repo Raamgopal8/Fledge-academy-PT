@@ -137,51 +137,51 @@ export default function CEOFinancesPage() {
     const expensePercent = (summary.total_expense / maxBarValue) * 100;
 
     return (
-        <div className="max-w-7xl mx-auto space-y-lg animate-fade-in pb-xl">
+        <div className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in pb-12 w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 md:mb-lg">
                 <div>
-                    <h1 className="font-headline-lg text-headline-lg text-on-surface mb-xs">Academy Finances</h1>
-                    <p className="font-body-md text-body-md text-on-surface-variant">
+                    <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-on-surface mb-0.5">Academy Finances</h1>
+                    <p className="text-xs sm:text-base text-on-surface-variant">
                         Track and manage all income, expenses, and student fees.
                     </p>
                 </div>
-                <div className="flex gap-sm">
+                <div className="flex gap-2 self-start sm:self-auto">
                     <button 
                         onClick={() => handleOpenModal('expense')}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium border-2 border-error text-error hover:bg-error/10 transition-colors"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border-2 border-error text-error hover:bg-error/10 transition-colors shadow-xs"
                     >
-                        <span className="material-symbols-outlined text-lg">remove</span>
+                        <span className="material-symbols-outlined text-[18px]">remove</span>
                         Add Expense
                     </button>
                     <button 
                         onClick={() => handleOpenModal('income')}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-md"
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-xs"
                     >
-                        <span className="material-symbols-outlined text-lg">add</span>
+                        <span className="material-symbols-outlined text-[18px]">add</span>
                         Add Income
                     </button>
                 </div>
             </div>
 
             {/* Custom Tabs */}
-            <div className="flex gap-md border-b border-outline-variant mb-lg">
+            <div className="flex gap-4 border-b border-outline-variant mb-4">
                 <button 
                     onClick={() => setActiveTab('overview')}
-                    className={`pb-sm font-label-lg px-2 transition-colors border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
+                    className={`pb-2 text-xs sm:text-sm font-bold px-1 transition-colors border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
                 >
                     Overview & Chart
                 </button>
                 <button 
                     onClick={() => setActiveTab('students')}
-                    className={`pb-sm font-label-lg px-2 transition-colors border-b-2 ${activeTab === 'students' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
+                    className={`pb-2 text-xs sm:text-sm font-bold px-1 transition-colors border-b-2 ${activeTab === 'students' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'}`}
                 >
                     Student Fees
                 </button>
             </div>
 
             {error && (
-                <div className="bg-error-container text-on-error-container p-md rounded-xl font-body-md mb-md">
+                <div className="bg-error-container text-on-error-container p-3 sm:p-md rounded-xl text-xs sm:text-sm font-medium mb-3">
                     {error}
                 </div>
             )}
@@ -189,59 +189,59 @@ export default function CEOFinancesPage() {
             {activeTab === 'overview' && (
                 <>
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
-                        <div className="bg-surface-container rounded-3xl p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
-                            <div className="flex items-center gap-md mb-md relative">
-                                <div className="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
-                                    <span className="material-symbols-outlined">account_balance_wallet</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-md">
+                        <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-primary/5 rounded-bl-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
+                            <div className="flex items-center gap-2.5 mb-2 relative">
+                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">account_balance_wallet</span>
                                 </div>
-                                <h3 className="font-title-md text-title-md text-on-surface">Total Balance</h3>
+                                <h3 className="text-xs sm:text-base font-bold text-on-surface">Total Balance</h3>
                             </div>
-                            <p className={`font-display-sm text-display-sm relative ${summary.balance >= 0 ? 'text-primary' : 'text-error'}`}>
+                            <p className={`text-xl sm:text-3xl font-extrabold relative ${summary.balance >= 0 ? 'text-primary' : 'text-error'}`}>
                                 ₹{summary.balance.toFixed(2)}
                             </p>
                         </div>
 
-                        <div className="bg-surface-container rounded-3xl p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
-                            <div className="flex items-center gap-md mb-md relative">
-                                <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-                                    <span className="material-symbols-outlined">trending_up</span>
+                        <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-emerald-500/5 rounded-bl-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
+                            <div className="flex items-center gap-2.5 mb-2 relative">
+                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">trending_up</span>
                                 </div>
-                                <h3 className="font-title-md text-title-md text-on-surface">Total Income</h3>
+                                <h3 className="text-xs sm:text-base font-bold text-on-surface">Total Income</h3>
                             </div>
-                            <p className="font-display-sm text-display-sm text-emerald-500 relative">
+                            <p className="text-xl sm:text-3xl font-extrabold text-emerald-500 relative">
                                 ₹{summary.total_income.toFixed(2)}
                             </p>
                         </div>
 
-                        <div className="bg-surface-container rounded-3xl p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110"></div>
-                            <div className="flex items-center gap-md mb-md relative">
-                                <div className="w-12 h-12 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
-                                    <span className="material-symbols-outlined">trending_down</span>
+                        <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant hover:border-outline transition-colors relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-error/5 rounded-bl-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
+                            <div className="flex items-center gap-2.5 mb-2 relative">
+                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">trending_down</span>
                                 </div>
-                                <h3 className="font-title-md text-title-md text-on-surface">Total Expenses</h3>
+                                <h3 className="text-xs sm:text-base font-bold text-on-surface">Total Expenses</h3>
                             </div>
-                            <p className="font-display-sm text-display-sm text-error relative">
+                            <p className="text-xl sm:text-3xl font-extrabold text-error relative">
                                 ₹{summary.total_expense.toFixed(2)}
                             </p>
                         </div>
                     </div>
 
                     {/* Visual Charts (CSS Based) */}
-                    <div className="bg-surface-container rounded-3xl p-lg border border-outline-variant">
-                        <h2 className="font-title-lg text-title-lg text-on-surface mb-md">Income vs Expense Chart</h2>
-                        <div className="flex items-end gap-md h-64 border-l border-b border-outline-variant p-4">
+                    <div className="bg-surface-container rounded-2xl sm:rounded-3xl p-4 sm:p-lg border border-outline-variant w-full max-w-full">
+                        <h2 className="text-base sm:text-xl font-bold text-on-surface mb-3 sm:mb-md">Income vs Expense Chart</h2>
+                        <div className="flex items-end gap-md h-48 sm:h-64 border-l border-b border-outline-variant p-3 sm:p-4">
                             {/* Income Bar */}
                             <div className="flex-1 flex flex-col items-center justify-end h-full group">
                                 <div 
                                     className="w-1/2 bg-emerald-500 rounded-t-lg transition-all duration-700 ease-out group-hover:brightness-110"
                                     style={{ height: `${incomePercent}%`, minHeight: '4px' }}
                                 ></div>
-                                <div className="mt-2 font-label-md text-on-surface">Income</div>
-                                <div className="font-body-sm text-on-surface-variant">₹{summary.total_income.toFixed(2)}</div>
+                                <div className="mt-2 text-xs sm:text-sm font-bold text-on-surface">Income</div>
+                                <div className="text-[10px] sm:text-xs text-on-surface-variant">₹{summary.total_income.toFixed(2)}</div>
                             </div>
                             
                             {/* Expense Bar */}
@@ -250,21 +250,21 @@ export default function CEOFinancesPage() {
                                     className="w-1/2 bg-error rounded-t-lg transition-all duration-700 ease-out group-hover:brightness-110"
                                     style={{ height: `${expensePercent}%`, minHeight: '4px' }}
                                 ></div>
-                                <div className="mt-2 font-label-md text-on-surface">Expense</div>
-                                <div className="font-body-sm text-on-surface-variant">₹{summary.total_expense.toFixed(2)}</div>
+                                <div className="mt-2 text-xs sm:text-sm font-bold text-on-surface">Expense</div>
+                                <div className="text-[10px] sm:text-xs text-on-surface-variant">₹{summary.total_expense.toFixed(2)}</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Transactions Table */}
-                    <div className="bg-surface-container rounded-3xl border border-outline-variant overflow-hidden">
-                        <div className="p-lg border-b border-outline-variant">
-                            <h2 className="font-title-lg text-title-lg text-on-surface">Recent Transactions</h2>
+                    <div className="bg-surface-container rounded-2xl sm:rounded-3xl border border-outline-variant overflow-hidden w-full max-w-full">
+                        <div className="p-3 sm:p-lg border-b border-outline-variant">
+                            <h2 className="text-base sm:text-xl font-bold text-on-surface">Recent Transactions</h2>
                         </div>
                         
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-surface-container-high font-label-md text-label-md text-on-surface-variant">
+                        <div className="w-full overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-left min-w-[620px]">
+                                <thead className="bg-surface-container-high text-xs sm:text-sm font-semibold text-on-surface-variant">
                                     <tr>
                                         <th className="px-lg py-md font-medium">Date</th>
                                         <th className="px-lg py-md font-medium">Type</th>
@@ -333,7 +333,7 @@ export default function CEOFinancesPage() {
                 <div className="space-y-md">
                     <h2 className="font-title-lg text-title-lg text-on-surface mb-md">Student Fee Tracking</h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-md">
                         {studentFees.map(student => {
                             const total = student.total_fee || 0;
                             const paid = student.paid_amount || 0;
@@ -341,37 +341,37 @@ export default function CEOFinancesPage() {
                             const percent = total > 0 ? Math.min((paid / total) * 100, 100) : 0;
                             
                             return (
-                                <div key={student.id} className="bg-surface-container rounded-3xl p-lg border border-outline-variant flex flex-col gap-sm">
-                                    <div className="flex justify-between items-start mb-sm">
-                                        <div>
-                                            <h3 className="font-title-md text-on-surface truncate" title={student.name}>{student.name}</h3>
-                                            <p className="font-body-sm text-on-surface-variant truncate" title={student.email}>{student.email}</p>
+                                <div key={student.id} className="bg-surface-container rounded-2xl sm:rounded-3xl p-3.5 sm:p-lg border border-outline-variant flex flex-col gap-2 shadow-xs">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="min-w-0 flex-1 mr-2">
+                                            <h3 className="text-sm sm:text-base font-bold text-on-surface truncate" title={student.name}>{student.name}</h3>
+                                            <p className="text-[10px] sm:text-xs text-on-surface-variant truncate" title={student.email}>{student.email}</p>
                                         </div>
                                         <button 
                                             onClick={() => handleOpenFeeModal(student.id, total)}
-                                            className="flex items-center justify-center w-10 h-10 material-symbols-outlined text-primary hover:bg-primary/10 rounded-full transition-colors"
+                                            className="flex items-center justify-center w-8 h-8 material-symbols-outlined text-primary hover:bg-primary/10 rounded-full transition-colors text-[18px]"
                                             title="Set Total Fee"
                                         >
                                             edit
                                         </button>
                                     </div>
                                     
-                                    <div className="flex justify-between font-label-md text-on-surface">
-                                        <span>Paid: ₹{paid.toFixed(2)}</span>
-                                        <span>Total: ₹{total.toFixed(2)}</span>
+                                    <div className="flex justify-between text-xs font-semibold text-on-surface">
+                                        <span>Paid: ₹{paid.toFixed(0)}</span>
+                                        <span>Total: ₹{total.toFixed(0)}</span>
                                     </div>
                                     
                                     {/* Progress Bar Chart */}
-                                    <div className="w-full bg-surface-container-high h-4 rounded-full overflow-hidden">
+                                    <div className="w-full bg-surface-container-high h-2.5 sm:h-4 rounded-full overflow-hidden">
                                         <div 
                                             className="bg-primary h-full rounded-full transition-all duration-700"
                                             style={{ width: `${percent}%` }}
                                         ></div>
                                     </div>
                                     
-                                    <div className="text-right font-label-sm mt-1">
+                                    <div className="text-right text-[10px] sm:text-xs font-bold mt-0.5">
                                         {pending > 0 ? (
-                                            <span className="text-error">Pending: ₹{pending.toFixed(2)}</span>
+                                            <span className="text-error">Pending: ₹{pending.toFixed(0)}</span>
                                         ) : (
                                             <span className="text-emerald-500">Fully Paid</span>
                                         )}

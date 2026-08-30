@@ -212,44 +212,44 @@ export default function CEOVideos() {
     const uniqueCategories = ['All', ...new Set(videos.map(v => v.category).filter(Boolean))];
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
                 <div>
-                    <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">
                             video_library
                         </span>
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
-                            Video Library Management
+                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                            Video Library
                         </h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
+                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">
                         Upload and manage learning video resources targeted by Japanese level and student batches.
                     </p>
                 </div>
             </div>
 
             {error && (
-                <div className="bg-error/10 text-error p-md rounded-xl flex items-center gap-sm border border-error/30">
-                    <span className="material-symbols-outlined text-[24px]">error</span>
+                <div className="bg-error/10 text-error p-3 sm:p-md rounded-xl flex items-center gap-2 border border-error/30 text-xs sm:text-sm">
+                    <span className="material-symbols-outlined text-[20px]">error</span>
                     <span>{error}</span>
                 </div>
             )}
 
             {successMessage && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-md rounded-xl flex items-center gap-sm border border-green-500/30">
-                    <span className="material-symbols-outlined text-[24px]">check_circle</span>
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-3 sm:p-md rounded-xl flex items-center gap-2 border border-green-500/30 text-xs sm:text-sm">
+                    <span className="material-symbols-outlined text-[20px]">check_circle</span>
                     <span>{successMessage}</span>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-lg items-start w-full max-w-full">
                 {/* Upload Form */}
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 custom-shadow space-y-5">
+                <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 sm:p-6 custom-shadow space-y-4 w-full">
                     <div className="flex items-center gap-2 pb-2 border-b border-outline-variant/60">
-                        <span className="material-symbols-outlined text-primary text-[22px]">upload_file</span>
-                        <h2 className="font-headline-sm text-on-surface text-lg font-bold">Add Video Resource</h2>
+                        <span className="material-symbols-outlined text-primary text-[20px] sm:text-[22px]">upload_file</span>
+                        <h2 className="text-base sm:text-lg font-bold text-on-surface">Add Video Resource</h2>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">

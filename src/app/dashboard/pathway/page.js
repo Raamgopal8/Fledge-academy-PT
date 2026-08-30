@@ -299,7 +299,7 @@ export default function StudentPathway() {
                                 <div 
                                     onClick={() => setActiveNode(activeNode === node.id ? null : node.id)}
                                     className={`
-                                        glass-card shine-overlay rounded-3xl p-6 sm:p-7 w-full max-w-[460px] min-w-[320px] cursor-pointer
+                                        glass-card shine-overlay rounded-3xl p-5 sm:p-7 w-full max-w-[460px] min-w-0 cursor-pointer
                                         ${isCurrent ? 'current-node-pulse ring-2 ring-[#e9c176]/50' : ''}
                                         ${isLocked ? 'opacity-70 hover:opacity-95' : 'opacity-100'}
                                     `}

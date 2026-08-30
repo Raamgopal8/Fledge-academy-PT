@@ -51,6 +51,7 @@ class ScheduleResponse(BaseModel):
     class_link: Optional[str] = None
     level: Optional[str] = None
     batch: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         populate_by_name = True

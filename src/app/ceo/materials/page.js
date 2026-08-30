@@ -173,49 +173,49 @@ export default function CEOMaterials() {
     });
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <section className="max-w-[1440px] mx-auto p-3 md:p-gutter space-y-4 md:space-y-lg animate-fade-in w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-2 md:mb-lg">
                 <div>
-                    <div className="flex items-center gap-sm mb-xs">
-                        <span className="material-symbols-outlined text-primary text-3xl">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className="material-symbols-outlined text-primary text-2xl sm:text-4xl">
                             library_books
                         </span>
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
-                            Course Materials Management
+                        <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                            Course Materials
                         </h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
-                        Upload lecture slides, practice worksheets, and reference resources for students.
+                    <p className="text-xs sm:text-base text-on-surface-variant max-w-2xl">
+                        Upload lecture slides, practice worksheets, and reference resources.
                     </p>
                 </div>
                 
                 <button 
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="bg-primary text-on-primary px-5 py-2.5 rounded-full font-label-lg hover:bg-primary/90 transition-all flex items-center gap-2 shadow-md cursor-pointer active:scale-95"
+                    className="bg-primary text-on-primary px-4 py-2 md:px-5 md:py-2.5 rounded-xl sm:rounded-full font-label-md text-xs sm:text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 self-start sm:self-auto"
                 >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
+                    <span className="material-symbols-outlined text-[18px]">add</span>
                     <span>Upload Material</span>
                 </button>
             </div>
 
             {successMessage && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30">
-                    <span className="material-symbols-outlined text-[22px]">check_circle</span>
-                    <span className="text-sm font-medium">{successMessage}</span>
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-3 sm:p-4 rounded-xl flex items-center gap-2 border border-green-500/30 text-xs sm:text-sm">
+                    <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                    <span className="font-medium">{successMessage}</span>
                 </div>
             )}
 
             {/* Filter Controls Bar */}
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 custom-shadow flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-3">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-3 sm:p-4 custom-shadow flex flex-wrap items-center justify-between gap-2.5 w-full max-w-full">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {/* Level Filter */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                         <span className="text-xs text-on-surface-variant font-medium">Level:</span>
                         <select
                             value={filterLevel}
                             onChange={(e) => setFilterLevel(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
                         >
                             <option value="All">All Levels</option>
                             {LEVELS.map(l => (
@@ -225,12 +225,12 @@ export default function CEOMaterials() {
                     </div>
 
                     {/* Resource Type Filter */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                         <span className="text-xs text-on-surface-variant font-medium">Type:</span>
                         <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
                         >
                             <option value="All">All Formats</option>
                             <option value="file">Files & Docs</option>
@@ -240,7 +240,7 @@ export default function CEOMaterials() {
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative min-w-[220px]">
+                <div className="relative w-full sm:w-auto min-w-0 sm:min-w-[220px]">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">search</span>
                     <input 
                         type="text"
@@ -253,31 +253,31 @@ export default function CEOMaterials() {
             </div>
 
             {/* Main Content Grid */}
-            <div className="min-h-[400px]">
+            <div className="min-h-[300px]">
                 {isLoading ? (
-                    <div className="flex flex-col justify-center items-center h-64 bg-surface-container-lowest border border-outline-variant rounded-2xl gap-3">
-                        <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+                    <div className="flex flex-col justify-center items-center h-48 bg-surface-container-lowest border border-outline-variant rounded-2xl gap-2">
+                        <span className="material-symbols-outlined text-3xl text-primary animate-spin">progress_activity</span>
                         <p className="text-xs text-on-surface-variant">Loading course materials...</p>
                     </div>
                 ) : filteredMaterials.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center p-12 bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant h-64 custom-shadow">
-                        <span className="material-symbols-outlined text-6xl text-outline/40 mb-3">folder_open</span>
-                        <h3 className="font-headline-sm text-on-surface-variant font-bold">No Materials Found</h3>
-                        <p className="font-body-md text-outline text-xs mt-1">
+                    <div className="flex flex-col items-center justify-center text-center p-8 bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant h-48 custom-shadow">
+                        <span className="material-symbols-outlined text-4xl text-outline/40 mb-2">folder_open</span>
+                        <h3 className="text-sm font-bold text-on-surface-variant">No Materials Found</h3>
+                        <p className="text-xs text-outline mt-0.5">
                             Click "Upload Material" to share documents or links with your students.
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                         {filteredMaterials.map((material) => {
                             const isFile = checkIsFile(material.file_url);
                             const isLink = !isFile && material.file_url.startsWith('http');
-                            const fileDownloadUrl = material.file_url.startsWith('http')
+                            const fileDownloadUrl = material.file_url.startsWith('http') 
                                 ? material.file_url 
                                 : `${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}${material.file_url}`;
 
                             return (
-                                <div key={material.id} className="group relative bg-surface-container-lowest rounded-2xl p-5 flex flex-col justify-between border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                                <div key={material.id} className="group relative bg-surface-container-lowest rounded-2xl p-4 sm:p-5 flex flex-col justify-between border border-outline-variant hover:border-primary/50 hover:shadow-md transition-all">
                                     <div>
                                         <div className="flex justify-between items-start mb-3.5">
                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xs ${isLink ? 'bg-amber-500/10 text-amber-600' : 'bg-primary/10 text-primary'}`}>

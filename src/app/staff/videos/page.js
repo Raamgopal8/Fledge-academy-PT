@@ -40,6 +40,7 @@ export default function StaffVideos() {
     const [filterLevel, setFilterLevel] = useState('All');
     const [filterCategory, setFilterCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [mobileFullscreen, setMobileFullscreen] = useState(false);
 
     // Upload Form State
     const [formData, setFormData] = useState({
@@ -51,6 +52,30 @@ export default function StaffVideos() {
             ? selectedBatch 
             : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Batch - 1')
     });
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            if (!isFs) {
+                setMobileFullscreen(false);
+                if (screen?.orientation?.unlock) {
+                    try { screen.orientation.unlock(); } catch (e) {}
+                }
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+        };
+    }, []);
 
     useEffect(() => {
         if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') {
@@ -240,8 +265,85 @@ export default function StaffVideos() {
         return cleanUrl;
     };
 
+    const isMobileDevice = () => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+    };
+
+    const toggleFullscreen = async (containerId) => {
+        const elem = document.getElementById(containerId);
+        if (!elem) return;
+
+        const isMobile = isMobileDevice();
+        const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+
+        if (!isNativeFullscreen && !mobileFullscreen) {
+            try {
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
+                else if (elem.mozRequestFullScreen) await elem.mozRequestFullScreen();
+                else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
+            } catch (e) {}
+
+            if (isMobile) {
+                setMobileFullscreen(true);
+                if (screen?.orientation?.lock) {
+                    try {
+                        await screen.orientation.lock('landscape');
+                    } catch (err) {}
+                }
+            }
+        } else {
+            if (isMobile) {
+                setMobileFullscreen(false);
+                if (screen?.orientation?.unlock) {
+                    try { screen.orientation.unlock(); } catch (err) {}
+                }
+            }
+            if (isNativeFullscreen) {
+                try {
+                    if (document.exitFullscreen) await document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+                    else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+                    else if (document.msExitFullscreen) await document.msExitFullscreen();
+                } catch (err) {}
+            }
+        }
+    };
+
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in pb-32">
+        <>
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    .mobile-landscape-fullscreen {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100vh !important;
+                        height: 100vw !important;
+                        max-width: 100vh !important;
+                        max-height: 100vw !important;
+                        transform: rotate(90deg) translateY(-100%) !important;
+                        transform-origin: top left !important;
+                        z-index: 99999 !important;
+                        background: black !important;
+                        border-radius: 0 !important;
+                    }
+                }
+                :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    background-color: black !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+                :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe {
+                    width: 100% !important;
+                    height: 100% !important;
+                }
+            `}</style>
+            <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in pb-32">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-md mb-md">
                 <div>
@@ -466,13 +568,16 @@ export default function StaffVideos() {
                             </button>
                         </div>
                         
-                        <div className="aspect-video w-full bg-black">
+                        <div 
+                            id={`staff-video-player-${activeVideo.id || activeVideo._id}`}
+                            className={`aspect-video w-full bg-black relative group ${mobileFullscreen ? 'mobile-landscape-fullscreen' : ''}`}
+                        >
                             {getEmbedUrl(activeVideo.video_url)?.includes('http') ? (
                                 <iframe
                                     src={getEmbedUrl(activeVideo.video_url)}
                                     title={activeVideo.title}
                                     className="w-full h-full border-0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                                     allowFullScreen
                                 />
                             ) : (
@@ -483,6 +588,21 @@ export default function StaffVideos() {
                                     className="w-full h-full object-contain"
                                 />
                             )}
+
+                            {/* Fullscreen Button */}
+                            <div className="absolute top-2 right-2 z-30 flex items-center justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleFullscreen(`staff-video-player-${activeVideo.id || activeVideo._id}`)}
+                                    className="w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
+                                    title={mobileFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
+                                    aria-label="Toggle Fullscreen"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                        {mobileFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                                    </span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -707,5 +827,6 @@ export default function StaffVideos() {
                 </div>
             )}
         </section>
+        </>
     );
 }

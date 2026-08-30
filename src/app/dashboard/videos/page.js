@@ -16,6 +16,7 @@ export default function StudentVideos() {
     const [isObscured, setIsObscured] = useState(false);
     const [watermarkText, setWatermarkText] = useState('Protected Content');
     const [studentInfo, setStudentInfo] = useState({ level: 'Level 5', batch: '' });
+    const [mobileFullscreenId, setMobileFullscreenId] = useState(null);
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -98,6 +99,24 @@ export default function StudentVideos() {
             }
         } catch (e) {}
 
+        // 6. Listen to fullscreen exit to restore orientation
+        const handleFullscreenChange = () => {
+            const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            if (!isFs) {
+                setMobileFullscreenId(null);
+                if (screen?.orientation?.unlock) {
+                    try {
+                        screen.orientation.unlock();
+                    } catch (e) {}
+                }
+            }
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -108,6 +127,10 @@ export default function StudentVideos() {
             document.removeEventListener('copy', preventCopy);
             document.removeEventListener('cut', preventCopy);
             document.removeEventListener('dragstart', preventCopy);
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
         };
     }, []);
 
@@ -208,29 +231,81 @@ export default function StudentVideos() {
         return cleanUrl;
     };
 
-    const toggleFullscreen = (containerId) => {
+    const isMobileDevice = () => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+    };
+
+    const toggleFullscreen = async (containerId) => {
         const elem = document.getElementById(containerId);
         if (!elem) return;
 
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen().catch(err => console.error(err));
-            } else if (elem.webkitRequestFullscreen) {
-                elem.webkitRequestFullscreen();
-            } else if (elem.mozRequestFullScreen) {
-                elem.mozRequestFullScreen();
-            } else if (elem.msRequestFullscreen) {
-                elem.msRequestFullscreen();
+        const isMobile = isMobileDevice();
+        const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        const isCustomMobileFs = mobileFullscreenId === containerId;
+
+        if (!isNativeFullscreen && !isCustomMobileFs) {
+            // ENTER FULLSCREEN
+            try {
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    await elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen();
+                }
+            } catch (err) {
+                console.warn("Native fullscreen request warning:", err);
+            }
+
+            // Mobile-only: Rotate to horizontal (landscape)
+            if (isMobile) {
+                setMobileFullscreenId(containerId);
+                if (screen?.orientation?.lock) {
+                    try {
+                        await screen.orientation.lock('landscape');
+                    } catch (e) {
+                        try {
+                            if (screen.lockOrientation) screen.lockOrientation('landscape');
+                            else if (screen.mozLockOrientation) screen.mozLockOrientation('landscape');
+                            else if (screen.msLockOrientation) screen.msLockOrientation('landscape');
+                        } catch (err) {}
+                    }
+                }
             }
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(err => console.error(err));
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
+            // EXIT FULLSCREEN -> Return to normal view
+            if (isMobile) {
+                setMobileFullscreenId(null);
+                if (screen?.orientation?.unlock) {
+                    try {
+                        screen.orientation.unlock();
+                    } catch (e) {
+                        try {
+                            if (screen.unlockOrientation) screen.unlockOrientation();
+                            else if (screen.mozUnlockOrientation) screen.mozUnlockOrientation();
+                            else if (screen.msUnlockOrientation) screen.msUnlockOrientation();
+                        } catch (err) {}
+                    }
+                }
+            }
+
+            if (isNativeFullscreen) {
+                try {
+                    if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) {
+                        await document.webkitExitFullscreen();
+                    } else if (document.mozCancelFullScreen) {
+                        await document.mozCancelFullScreen();
+                    } else if (document.msExitFullscreen) {
+                        await document.msExitFullscreen();
+                    }
+                } catch (err) {
+                    console.warn("Exit fullscreen warning:", err);
+                }
             }
         }
     };
@@ -270,6 +345,34 @@ export default function StudentVideos() {
                     -moz-user-select: none;
                     -ms-user-select: none;
                     user-select: none;
+                }
+                @media (max-width: 768px) {
+                    .mobile-landscape-fullscreen {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100vh !important;
+                        height: 100vw !important;
+                        max-width: 100vh !important;
+                        max-height: 100vw !important;
+                        transform: rotate(90deg) translateY(-100%) !important;
+                        transform-origin: top left !important;
+                        z-index: 99999 !important;
+                        background: black !important;
+                        border-radius: 0 !important;
+                    }
+                }
+                :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    background-color: black !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+                :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe {
+                    width: 100% !important;
+                    height: 100% !important;
                 }
             `}</style>
             <section className={`max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in no-select-mobile ${isObscured ? 'blur-xl select-none pointer-events-none opacity-50' : ''}`}>
@@ -380,7 +483,7 @@ export default function StudentVideos() {
                                         {/* Video Player Container */}
                                         <div 
                                             id={`video-player-${video.id}`} 
-                                            className="aspect-video w-full bg-black relative overflow-hidden group select-none"
+                                            className={`aspect-video w-full bg-black relative overflow-hidden group select-none ${mobileFullscreenId === `video-player-${video.id}` ? 'mobile-landscape-fullscreen' : ''}`}
                                         >
                                             <iframe 
                                                 src={getEmbedUrl(video.video_url)} 
@@ -403,10 +506,12 @@ export default function StudentVideos() {
                                                     type="button"
                                                     onClick={() => toggleFullscreen(`video-player-${video.id}`)}
                                                     className="w-8 h-8 rounded-full bg-black/75 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
-                                                    title="Toggle Fullscreen"
+                                                    title={mobileFullscreenId === `video-player-${video.id}` ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
                                                     aria-label="Toggle Fullscreen"
                                                 >
-                                                    <span className="material-symbols-outlined text-[18px]">fullscreen</span>
+                                                    <span className="material-symbols-outlined text-[18px]">
+                                                        {mobileFullscreenId === `video-player-${video.id}` ? 'fullscreen_exit' : 'fullscreen'}
+                                                    </span>
                                                 </button>
                                             </div>
                                         </div>

@@ -147,6 +147,16 @@ export default function SchedulePage() {
 
             // Refresh schedules list
             await fetchSchedules();
+            if (typeof window !== 'undefined' && !editingSchedule) {
+                window.dispatchEvent(new CustomEvent('fledge_new_class_created', {
+                    detail: {
+                        name: formData.name,
+                        day_of_week: formData.day_of_week,
+                        time: formData.time,
+                        location: formData.location
+                    }
+                }));
+            }
             setIsModalOpen(false);
         } catch (err) {
             console.error('Error saving schedule:', err);

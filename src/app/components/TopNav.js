@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useStudentContext } from '@/app/student/StudentContext';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 export default function TopNav() {
   const [profile, setProfile] = useState(null);
@@ -42,7 +43,8 @@ export default function TopNav() {
                     <img src="/fledgeacad.png" alt="Logo" className="h-18 w-auto object-contain shrink-0 hidden md:block brightness-0 invert" />
                 </div>
         
-                <div className="flex items-center gap-md text-white">
+                <div className="flex items-center gap-1.5 sm:gap-md text-white">
+                    <NotificationBell />
                     <ThemeToggle />
                     <button onClick={() => setIsSettingsOpen(true)} className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30 cursor-pointer hover:scale-105 transition-transform flex items-center justify-center bg-white/10">
                         {profile?.profile_image_url ? (

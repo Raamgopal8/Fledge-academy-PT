@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useStaffContext } from '@/app/staff/StaffContext';
+import { performLogout } from '@/app/utils/activityLogger';
 
 export default function StaffNavbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { 
         isMobileNavOpen, 
         setIsMobileNavOpen, 
@@ -55,7 +57,10 @@ export default function StaffNavbar() {
                 {/* Active Batch Switcher in Sidebar */}
                 <div className="px-3 mb-3">
                     <button
-                        onClick={() => setIsBatchModalOpen(true)}
+                        onClick={() => {
+                            setIsBatchModalOpen(true);
+                            setIsMobileNavOpen(false);
+                        }}
                         className="w-full bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 rounded-xl px-3 py-2 text-left flex items-center justify-between transition-all group shadow-2xs"
                         title="Switch Batch"
                     >
@@ -82,6 +87,7 @@ export default function StaffNavbar() {
                         <Link 
                             key={link.name} 
                             href={link.href}
+                            onClick={() => setIsMobileNavOpen(false)}
                             className={`mx-2 flex items-center px-4 py-3 rounded-lg font-label-md text-label-md transition-all active:scale-[0.98] relative ${
                                 isActive 
                                     ? 'bg-secondary-container text-on-secondary-container' 
@@ -97,13 +103,17 @@ export default function StaffNavbar() {
 
             {/* Footer Actions */}
             <div className="mt-auto px-2 space-y-1">
-                <Link 
-                    href="/"
-                    className="text-error flex items-center px-4 py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-all"
+                <button 
+                    type="button"
+                    onClick={() => {
+                        setIsMobileNavOpen(false);
+                        performLogout(router);
+                    }}
+                    className="w-full text-error flex items-center px-4 py-3 rounded-lg font-label-md text-label-md hover:bg-surface-container-high transition-all cursor-pointer"
                 >
                     <span className="material-symbols-outlined mr-3">logout</span>
                     Logout
-                </Link>
+                </button>
             </div>
         </aside>
         </>

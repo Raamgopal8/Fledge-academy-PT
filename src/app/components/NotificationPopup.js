@@ -1,0 +1,200 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useNotifications } from '../context/NotificationContext';
+
+export default function NotificationPopup() {
+    const router = useRouter();
+    const { 
+        notifications, 
+        unreadCount, 
+        isTrayOpen, 
+        setIsTrayOpen, 
+        markAsDismissed, 
+        markAllAsRead,
+        refreshNotifications
+    } = useNotifications();
+
+    const [activeTab, setActiveTab] = useState('all');
+
+    const handleActionClick = (link, id) => {
+        if (id) markAsDismissed(id);
+        setIsTrayOpen(false);
+        if (link) router.push(link);
+    };
+
+    // Filter notifications by active tab
+    const filteredNotifications = notifications.filter(n => {
+        if (activeTab === 'all') return true;
+        if (activeTab === 'tests') return n.type === 'test_deadline';
+        if (activeTab === 'classes') return n.type === 'class_day' || n.type === 'class_reminder' || n.type === 'class_new';
+        if (activeTab === 'announcements') return n.type === 'announcement';
+        return true;
+    });
+
+    return (
+        <>
+            {/* CENTERED NOTIFICATION CENTER MODAL (Opened on Bell Click) */}
+            {isTrayOpen && (
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+                    onClick={() => setIsTrayOpen(false)}
+                >
+                    <div 
+                        role="dialog"
+                        aria-modal="true"
+                        className="relative w-[94vw] max-w-[520px] max-h-[85vh] bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-scale-up mx-auto"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="p-4 sm:p-5 bg-surface-container-low flex items-center justify-between border-b border-outline-variant/60 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-primary text-on-primary flex items-center justify-center font-bold shadow-xs">
+                                    <span className="material-symbols-outlined text-[22px]">notifications</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-base sm:text-lg text-on-surface">Notifications</h3>
+                                    <p className="text-xs text-on-surface-variant">
+                                        {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                {notifications.length > 0 && unreadCount > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={markAllAsRead}
+                                        className="text-xs font-bold text-primary hover:underline px-2.5 py-1 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
+                                    >
+                                        Mark all read
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTrayOpen(false)}
+                                    className="w-9 h-9 rounded-full hover:bg-surface-container text-on-surface-variant flex items-center justify-center cursor-pointer transition-colors"
+                                    title="Close"
+                                >
+                                    <span className="material-symbols-outlined text-[22px]">close</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div className="flex items-center gap-1.5 p-3 bg-surface-container-lowest border-b border-outline-variant/40 overflow-x-auto custom-scrollbar shrink-0">
+                            {[
+                                { id: 'all', label: 'All', count: notifications.length, icon: 'notifications' },
+                                { id: 'tests', label: 'Tests', count: notifications.filter(n => n.type === 'test_deadline').length, icon: 'assignment_late' },
+                                { id: 'classes', label: 'Classes', count: notifications.filter(n => n.type === 'class_day').length, icon: 'calendar_month' },
+                                { id: 'announcements', label: 'Announcements', count: notifications.filter(n => n.type === 'announcement').length, icon: 'campaign' }
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        activeTab === tab.id
+                                            ? 'bg-primary text-on-primary shadow-xs font-bold'
+                                            : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                                    }`}
+                                >
+                                    <span className="material-symbols-outlined text-[15px]">{tab.icon}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count > 0 && (
+                                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                                            activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-surface-container-high text-on-surface-variant'
+                                        }`}>
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Notification List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                            {filteredNotifications.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center text-center py-20 text-on-surface-variant">
+                                    <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-3">
+                                        <span className="material-symbols-outlined text-4xl text-outline">notifications_off</span>
+                                    </div>
+                                    <h4 className="font-bold text-sm text-on-surface">No notifications</h4>
+                                    <p className="text-xs text-outline mt-1 max-w-[240px]">
+                                        You're all caught up with your deadlines, classes, and announcement updates.
+                                    </p>
+                                </div>
+                            ) : (
+                                filteredNotifications.map(item => (
+                                    <div
+                                        key={item.id}
+                                        className="bg-surface-container-lowest hover:bg-surface-container-low rounded-2xl p-4 border border-outline-variant/60 shadow-xs transition-all flex items-start gap-3.5 group relative cursor-pointer hover:border-primary/40"
+                                        onClick={() => handleActionClick(item.link, item.id)}
+                                    >
+                                        {/* Icon Container */}
+                                        <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center shrink-0 shadow-xs mt-0.5 group-hover:scale-105 transition-transform">
+                                            <span className="material-symbols-outlined text-[22px] text-primary">
+                                                {item.icon || 'notifications'}
+                                            </span>
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="flex-1 min-w-0 pr-2">
+                                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}>
+                                                    {item.type === 'test_deadline' ? 'Deadline' : 
+                                                     item.type === 'class_reminder' ? 'Starting in 30m' :
+                                                     item.type === 'class_new' ? 'New Class' :
+                                                     item.type === 'class_day' ? 'Schedule' : 'Announcement'}
+                                                </span>
+                                                <span className="text-[10px] text-on-surface-variant font-medium">
+                                                    {item.timeAgo}
+                                                </span>
+                                            </div>
+                                            <h4 className="text-xs sm:text-sm font-bold text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
+                                                {item.title}
+                                            </h4>
+                                            <p className="text-xs text-on-surface-variant mt-1 line-clamp-2 leading-relaxed">
+                                                {item.message}
+                                            </p>
+                                        </div>
+
+                                        {/* Individual Dismiss Button */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                markAsDismissed(item.id);
+                                            }}
+                                            className="text-on-surface-variant hover:text-error p-1.5 rounded-lg hover:bg-surface-container-high opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
+                                            title="Dismiss notification"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">close</span>
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-surface-container-low border-t border-outline-variant/60 flex items-center justify-between shrink-0">
+                            <span className="text-xs text-on-surface-variant flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Live Sync Active
+                            </span>
+                            <button
+                                type="button"
+                                onClick={refreshNotifications}
+                                className="flex items-center gap-1 text-xs font-bold text-primary hover:underline cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">sync</span>
+                                Check Updates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}

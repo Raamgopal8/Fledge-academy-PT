@@ -1,6 +1,9 @@
 import { Manrope, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { NotificationProvider } from "./context/NotificationContext";
+import NotificationPopup from "./components/NotificationPopup";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -68,7 +71,11 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning className="font-body-md text-on-surface overflow-x-hidden bg-background text-on-surface">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <NotificationProvider>
+            <ServiceWorkerRegister />
+            {children}
+            <NotificationPopup />
+          </NotificationProvider>
         </ThemeProvider>
       </body>
     </html>

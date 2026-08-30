@@ -17,10 +17,31 @@ class User(Document):
     dob: Optional[str] = None
     terms_accepted: Optional[bool] = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_login_at: Optional[datetime] = None
+    last_logout_at: Optional[datetime] = None
+    last_seen_at: Optional[datetime] = None
+    is_online: Optional[bool] = False
     preferences: dict = {}
 
     class Settings:
         name = "users"
+
+class UserActivityLog(Document):
+    user_id: Optional[PydanticObjectId] = None
+    user_name: str
+    user_email: str
+    role: str = "student" # student, staff, ceo
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    activity_type: str = "page_view" # login, logout, heartbeat, page_view, test_submit, material_view, video_watch, class_schedule, etc.
+    action: str
+    details: Optional[dict] = {}
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    class Settings:
+        name = "user_activity_logs"
 
 class ClassSchedule(Document):
     level: Optional[str] = None
@@ -34,6 +55,7 @@ class ClassSchedule(Document):
     day_of_week: str
     class_link: Optional[str] = None
     expires_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "class_schedules"
