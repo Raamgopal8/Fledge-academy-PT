@@ -207,7 +207,7 @@ export default function StudentProgress() {
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow relative overflow-hidden group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Approved (Pass)</p>
+                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Approved</p>
                             <h2 className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-1">{approvedSubmissions}</h2>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -495,7 +495,7 @@ export default function StudentProgress() {
                                         }`}
                                     >
                                         <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                                        <span>Approved (Pass)</span>
+                                        <span>Approved</span>
                                     </button>
                                     <button
                                         type="button"

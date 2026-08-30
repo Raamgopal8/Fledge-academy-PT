@@ -49,6 +49,7 @@ export default function StaffTests() {
     const [submissions, setSubmissions] = useState([]);
     const [isReviewing, setIsReviewing] = useState(null); // submission ID
     const [reviewComment, setReviewComment] = useState('');
+    const [reviewStatus, setReviewStatus] = useState('Approved');
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
     const fetchTests = async () => {
