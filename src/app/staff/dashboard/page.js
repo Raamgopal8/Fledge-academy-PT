@@ -232,7 +232,7 @@ export default function StaffDashboard() {
                     <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow flex flex-col justify-between group">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Pending Grading</p>
+                                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Pending Reviews</p>
                                 <h2 className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">
                                     {pendingSubmissions.length}
                                 </h2>

@@ -23,7 +23,6 @@ export default function StaffNavbar() {
         { name: 'Materials', href: '/staff/materials', icon: 'library_books' },
         { name: 'Videos', href: '/staff/videos', icon: 'smart_display' },
         { name: 'Tests', href: '/staff/tests', icon: 'quiz' },
-        { name: 'Test Activities', href: '/staff/activities', icon: 'assignment' },
         { name: 'Student Progress', href: '/staff/progress', icon: 'monitoring' },
         { name: 'Members', href: '/staff/members', icon: 'groups' },
         { name: 'Schedule', href: '/staff/schedule', icon: 'schedule' },

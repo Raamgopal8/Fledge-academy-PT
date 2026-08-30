@@ -62,7 +62,7 @@ export default function StaffActivity() {
                         <h3 className="text-sm font-bold text-on-surface mb-3">Related Actions</h3>
                         <div className="space-y-2">
                             {[
-                                { title: 'View Student Submissions', href: '/staff/activities', icon: 'assignment' },
+                                { title: 'Manage Course Tests', href: '/staff/tests', icon: 'quiz' },
                                 { title: 'Manage Course Materials', href: '/staff/materials', icon: 'library_books' },
                                 { title: 'Check Class Schedule', href: '/staff/schedule', icon: 'calendar_month' }
                             ].map((item, i) => (
