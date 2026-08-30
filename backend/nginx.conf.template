@@ -1,3 +1,13 @@
+# Anti-Scraper & Crawler User-Agent Map
+map $http_user_agent $is_bad_crawler {
+    default 0;
+    ~*(?i)(scrapy|bytespider|gptbot|chatgpt|ccbot|claudebot|anthropic|perplexitybot|ahrefsbot|semrushbot|dotbot|mj12bot|petalbot|serpstatbot|blexbot|dataforseobot|headlesschrome|phantomjs|selenium|puppeteer|playwright|zoominfobot|megaindex) 1;
+}
+
+# Rate Limiting Zone against aggressive scrapers / DDoS
+limit_req_zone $binary_remote_addr zone=api_gateway_limit:10m rate=30r/s;
+limit_req_status 429;
+
 server {
     listen ${PORT};
     server_name _;
@@ -6,6 +16,20 @@ server {
     proxy_connect_timeout 30s;
     proxy_read_timeout 60s;
     proxy_send_timeout 60s;
+
+    # Global Security & Anti-Scraping Headers
+    add_header X-Robots-Tag "noindex, nofollow, noarchive, nosnippet" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Rate limiting burst
+    limit_req zone=api_gateway_limit burst=50 nodelay;
+
+    # Block identified bad scrapers and AI crawlers
+    if ($is_bad_crawler) {
+        return 403 '{"detail":"Access denied. Automated web crawlers and scraping bots are prohibited."}\n';
+    }
 
     location /api/announcement {
         proxy_pass http://127.0.0.1:8001;

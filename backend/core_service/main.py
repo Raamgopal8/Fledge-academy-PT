@@ -49,6 +49,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import re
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+BLOCKED_BOT_REGEX = re.compile(
+    r"(scrapy|bytespider|gptbot|chatgpt|ccbot|claudebot|anthropic|perplexitybot|ahrefsbot|semrushbot|dotbot|mj12bot|petalbot|serpstatbot|blexbot|dataforseobot|headlesschrome|phantomjs|selenium|puppeteer|playwright)",
+    re.IGNORECASE
+)
+
+@app.middleware("http")
+async def bot_shield_middleware(request: Request, call_next):
+    user_agent = request.headers.get("user-agent", "")
+    if user_agent and BLOCKED_BOT_REGEX.search(user_agent):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Access denied. Automated crawlers and scraping bots are prohibited."}
+        )
+    response = await call_next(request)
+    response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
 from fastapi.staticfiles import StaticFiles
 import os
 
