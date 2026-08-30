@@ -15,6 +15,22 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Check if user is already authenticated
+    const token = localStorage.getItem("token");
+    const role = (localStorage.getItem("role") || "").toLowerCase();
+    if (token) {
+      if (role === "ceo") {
+        router.replace("/ceo/dashboard");
+        return;
+      } else if (role === "staff") {
+        router.replace("/staff/dashboard");
+        return;
+      } else if (role === "student") {
+        router.replace("/dashboard");
+        return;
+      }
+    }
+
     // Subtle animation on load
     const timer = setTimeout(() => {
       setIsLoaded(true);
@@ -27,7 +43,7 @@ export default function LoginPage() {
     }
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [router]);
 
   const togglePassword = () => {
     setShowPassword(!showPassword);
