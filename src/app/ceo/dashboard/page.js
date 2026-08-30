@@ -551,33 +551,38 @@ export default function CEODashboard() {
                         </thead>
                         <tbody className="divide-y divide-outline-variant/30">
                             {filteredSubmissionsData.length > 0 ? (
-                                filteredSubmissionsData.slice(0, 10).map((sub) => (
-                                    <tr key={sub.id} className="hover:bg-surface-container-low/60 transition-colors">
-                                        <td className="p-3">
-                                            <div className="text-xs font-bold text-on-surface">{sub.student_name}</div>
-                                        </td>
-                                        <td className="p-3">
-                                            <div className="text-xs text-on-surface-variant truncate max-w-[180px]">{sub.test_title}</div>
-                                        </td>
-                                        <td className="p-3 text-xs text-on-surface-variant">
-                                            {new Date(sub.submitted_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-3">
-                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                                sub.status === 'Reviewed' 
-                                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40' :
-                                                sub.status === 'Needs Work' 
-                                                    ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800/40' :
-                                                    'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40'
-                                            }`}>
-                                                {sub.status || 'Pending'}
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-right text-xs text-on-surface font-bold">
-                                            {sub.staff_comments ? (sub.status === 'Reviewed' ? 'Pass' : 'Fail') : '-'}
-                                        </td>
-                                    </tr>
-                                ))
+                                filteredSubmissionsData.slice(0, 10).map((sub) => {
+                                    const isApproved = sub.status === 'Approved' || sub.status === 'Reviewed';
+                                    const isNeedWork = sub.status === 'Need Work' || sub.status === 'Needs Work' || sub.status === 'Failed';
+
+                                    return (
+                                        <tr key={sub.id} className="hover:bg-surface-container-low/60 transition-colors">
+                                            <td className="p-3">
+                                                <div className="text-xs font-bold text-on-surface">{sub.student_name || 'Student'}</div>
+                                            </td>
+                                            <td className="p-3">
+                                                <div className="text-xs text-on-surface-variant truncate max-w-[180px]">{sub.test_title || 'Assessment'}</div>
+                                            </td>
+                                            <td className="p-3 text-xs text-on-surface-variant">
+                                                {sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'Recent'}
+                                            </td>
+                                            <td className="p-3">
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                                    isApproved
+                                                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40' :
+                                                    isNeedWork 
+                                                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40' :
+                                                        'bg-primary/10 text-primary border-primary/20'
+                                                }`}>
+                                                    {isApproved ? 'Approved' : isNeedWork ? 'Need Work' : (sub.status || 'Pending')}
+                                                </span>
+                                            </td>
+                                            <td className="p-3 text-right text-xs text-on-surface font-bold">
+                                                {sub.staff_comments ? (isApproved ? 'Pass' : 'Need Work') : '-'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="p-8 text-center text-xs text-on-surface-variant">

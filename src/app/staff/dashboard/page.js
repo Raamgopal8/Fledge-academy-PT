@@ -24,7 +24,7 @@ export default function StaffDashboard() {
     const [selectedSubmission, setSelectedSubmission] = useState(null);
     const [quickGradeScore, setQuickGradeScore] = useState('');
     const [quickGradeComments, setQuickGradeComments] = useState('');
-    const [quickGradeStatus, setQuickGradeStatus] = useState('Reviewed');
+    const [quickGradeStatus, setQuickGradeStatus] = useState('Approved');
     const [isSavingGrade, setIsSavingGrade] = useState(false);
     const [selectedActivities, setSelectedActivities] = useState([]);
     const [actionMessage, setActionMessage] = useState('');
@@ -89,7 +89,7 @@ export default function StaffDashboard() {
                         'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
-                        staff_comments: status === 'Reviewed' ? 'Approved by instructor' : 'Please review and resubmit',
+                        staff_comments: status === 'Approved' ? 'Approved by instructor' : 'Please review and resubmit',
                         status: status
                     })
                 });
@@ -116,7 +116,7 @@ export default function StaffDashboard() {
             const token = localStorage.getItem('token');
             const feedbackText = quickGradeScore 
                 ? `[Score: ${quickGradeScore}/100] ${quickGradeComments}`
-                : quickGradeComments || 'Graded by instructor';
+                : quickGradeComments || 'Reviewed by instructor';
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/${selectedSubmission.id}/review`, {
                 method: 'PUT',
@@ -131,7 +131,7 @@ export default function StaffDashboard() {
             });
 
             if (res.ok) {
-                setActionMessage(`Graded ${selectedSubmission.student_name || 'submission'} successfully!`);
+                setActionMessage(`Reviewed ${selectedSubmission.student_name || 'submission'} successfully!`);
                 setActivities(prev => prev.map(a => 
                     a.id === selectedSubmission.id ? { ...a, status: quickGradeStatus, staff_comments: feedbackText } : a
                 ));
@@ -141,11 +141,11 @@ export default function StaffDashboard() {
                 setTimeout(() => setActionMessage(''), 4000);
             } else {
                 const err = await res.json().catch(() => ({}));
-                alert(`Failed to save grade: ${err.detail || 'Network error'}`);
+                alert(`Failed to save review: ${err.detail || 'Network error'}`);
             }
         } catch (error) {
             console.error('Grade error:', error);
-            alert('An error occurred while saving grade.');
+            alert('An error occurred while saving review.');
         } finally {
             setIsSavingGrade(false);
         }
@@ -153,7 +153,8 @@ export default function StaffDashboard() {
 
     const openGradingDrawer = (sub) => {
         setSelectedSubmission(sub);
-        setQuickGradeStatus(sub.status === 'Needs Work' ? 'Needs Work' : 'Reviewed');
+        const isNeed = sub.status === 'Need Work' || sub.status === 'Needs Work' || sub.status === 'Failed';
+        setQuickGradeStatus(isNeed ? 'Need Work' : 'Approved');
         setQuickGradeComments(sub.staff_comments || '');
         setQuickGradeScore('');
     };
@@ -165,8 +166,11 @@ export default function StaffDashboard() {
         return name.slice(0, 2).toUpperCase();
     };
 
-    const pendingSubmissions = activities?.filter(a => a.status !== 'Reviewed' && a.status !== 'Needs Work') || [];
-    const reviewedCount = activities?.filter(a => a.status === 'Reviewed')?.length || 0;
+    const isSubApproved = (s) => s === 'Approved' || s === 'Reviewed';
+    const isSubNeedWork = (s) => s === 'Need Work' || s === 'Needs Work' || s === 'Failed';
+
+    const pendingSubmissions = activities?.filter(a => !isSubApproved(a.status) && !isSubNeedWork(a.status)) || [];
+    const approvedCount = activities?.filter(a => isSubApproved(a.status))?.length || 0;
     const totalSubmissions = activities?.length || 0;
 
     if (isLoading && !summary && !activities) {
@@ -195,20 +199,6 @@ export default function StaffDashboard() {
                         <p className="font-body-md text-on-surface-variant">
                             Here is your instructor command center and batch overview for today.
                         </p>
-                    </div>
-
-                    {/* Batch Pill with switch prompt */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsBatchModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-surface-container-lowest border border-outline-variant/70 hover:border-primary/50 text-on-surface text-xs font-bold transition-all shadow-xs cursor-pointer group"
-                        >
-                            <span className="material-symbols-outlined text-primary text-[18px]">groups</span>
-                            <span>{selectedBatch || 'Select Batch'}</span>
-                            <span className="material-symbols-outlined text-outline group-hover:text-primary text-[16px] transition-colors">
-                                swap_horiz
-                            </span>
-                        </button>
                     </div>
                 </section>
 
@@ -278,13 +268,13 @@ export default function StaffDashboard() {
                         </div>
                     </div>
 
-                    {/* Reviewed / Pass Rate */}
+                    {/* Approved / Pass Rate */}
                     <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow flex flex-col justify-between group">
                         <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Reviewed Submissions</p>
+                                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Approved Submissions</p>
                                 <h2 className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-1">
-                                    {reviewedCount}
+                                    {approvedCount}
                                 </h2>
                             </div>
                             <div className="w-12 h-12 rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -293,7 +283,7 @@ export default function StaffDashboard() {
                         </div>
                         <div className="mt-4 pt-3 border-t border-outline-variant/40 flex items-center justify-between">
                             <span className="text-xs text-green-700 dark:text-green-400 font-medium">
-                                {totalSubmissions > 0 ? `${Math.round((reviewedCount / totalSubmissions) * 100)}% graded` : 'All caught up'}
+                                {totalSubmissions > 0 ? `${Math.round((approvedCount / totalSubmissions) * 100)}% approved` : 'All caught up'}
                             </span>
                             <Link href="/staff/progress" className="text-xs font-bold text-primary hover:underline flex items-center gap-0.5">
                                 Progress <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
@@ -493,16 +483,16 @@ export default function StaffDashboard() {
                             {selectedActivities.length > 0 && (
                                 <>
                                     <button 
-                                        onClick={() => handleBulkAction('Reviewed')}
+                                        onClick={() => handleBulkAction('Approved')}
                                         className="px-3.5 py-1.5 bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30 text-xs font-bold rounded-xl hover:bg-green-500/25 transition-colors flex items-center gap-1 cursor-pointer"
                                     >
                                         <span className="material-symbols-outlined text-[16px]">done_all</span> Approve Selected
                                     </button>
                                     <button 
-                                        onClick={() => handleBulkAction('Needs Work')}
-                                        className="px-3.5 py-1.5 bg-error/15 text-error border border-error/30 text-xs font-bold rounded-xl hover:bg-error/25 transition-colors flex items-center gap-1 cursor-pointer"
+                                        onClick={() => handleBulkAction('Need Work')}
+                                        className="px-3.5 py-1.5 bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-bold rounded-xl hover:bg-amber-500/25 transition-colors flex items-center gap-1 cursor-pointer"
                                     >
-                                        <span className="material-symbols-outlined text-[16px]">replay</span> Request Redo
+                                        <span className="material-symbols-outlined text-[16px]">replay</span> Request Need Work
                                     </button>
                                 </>
                             )}
@@ -540,8 +530,8 @@ export default function StaffDashboard() {
                             <tbody className="divide-y divide-outline-variant/30">
                                 {activities && activities.slice(0, 6).map((sub) => {
                                     const isSelected = selectedActivities.includes(sub.id);
-                                    const isReviewed = sub.status === 'Reviewed';
-                                    const isNeedsWork = sub.status === 'Needs Work';
+                                    const isApproved = isSubApproved(sub.status);
+                                    const isNeedWork = isSubNeedWork(sub.status);
 
                                     return (
                                         <tr key={sub.id} className={`transition-colors ${isSelected ? 'bg-primary/5' : 'hover:bg-surface-container-low/60'}`}>
@@ -583,16 +573,16 @@ export default function StaffDashboard() {
                                             </td>
                                             <td className="py-3 px-4 whitespace-nowrap">
                                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${
-                                                    isReviewed 
+                                                    isApproved 
                                                         ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' 
-                                                        : isNeedsWork 
-                                                        ? 'bg-error/15 text-error border-error/30' 
-                                                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                                                        : isNeedWork 
+                                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' 
+                                                        : 'bg-primary/10 text-primary border-primary/20'
                                                 }`}>
                                                     <span className="material-symbols-outlined text-[12px]">
-                                                        {isReviewed ? 'check_circle' : isNeedsWork ? 'cancel' : 'pending'}
+                                                        {isApproved ? 'check_circle' : isNeedWork ? 'cancel' : 'pending'}
                                                     </span>
-                                                    <span>{sub.status || 'Pending'}</span>
+                                                    <span>{isApproved ? 'Approved' : isNeedWork ? 'Need Work' : (sub.status || 'Pending')}</span>
                                                 </span>
                                             </td>
                                             <td className="py-3 px-4 text-right whitespace-nowrap">
@@ -737,7 +727,7 @@ export default function StaffDashboard() {
                             <div>
                                 <div className="flex items-center gap-2">
                                     <span className="material-symbols-outlined text-primary text-[22px]">grading</span>
-                                    <h2 className="font-headline-sm text-on-surface font-bold text-lg">Grade Submission</h2>
+                                    <h2 className="font-headline-sm text-on-surface font-bold text-lg">Review Submission</h2>
                                 </div>
                                 <p className="text-xs text-on-surface-variant mt-0.5">
                                     {selectedSubmission.test_title} • <span className="font-semibold text-primary">{selectedSubmission.student_name}</span>
@@ -788,45 +778,31 @@ export default function StaffDashboard() {
                                 <div className="grid grid-cols-2 gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setQuickGradeStatus('Reviewed')}
+                                        onClick={() => setQuickGradeStatus('Approved')}
                                         className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                            quickGradeStatus === 'Reviewed'
+                                            quickGradeStatus === 'Approved'
                                                 ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500 ring-1 ring-green-500 shadow-2xs'
                                                 : 'border-outline-variant text-on-surface-variant hover:bg-surface-container'
                                         }`}
                                     >
                                         <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                                        <span>Pass / Approved</span>
+                                        <span>Approved</span>
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setQuickGradeStatus('Needs Work')}
+                                        onClick={() => setQuickGradeStatus('Need Work')}
                                         className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                            quickGradeStatus === 'Needs Work'
-                                                ? 'bg-error/15 text-error border-error ring-1 ring-error shadow-2xs'
+                                            quickGradeStatus === 'Need Work'
+                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500 ring-1 ring-amber-500 shadow-2xs'
                                                 : 'border-outline-variant text-on-surface-variant hover:bg-surface-container'
                                         }`}
                                     >
                                         <span className="material-symbols-outlined text-[16px]">cancel</span>
-                                        <span>Needs Work / Redo</span>
+                                        <span>Need Work</span>
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Optional Score */}
-                            <div>
-                                <label className="block text-xs font-bold text-on-surface mb-1">Score (Optional / 100)</label>
-                                <input 
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    placeholder="e.g. 95"
-                                    value={quickGradeScore}
-                                    onChange={(e) => setQuickGradeScore(e.target.value)}
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
-                                />
-                            </div>
-
+                            
                             {/* Feedback Comments */}
                             <div>
                                 <label className="block text-xs font-bold text-on-surface mb-1">Feedback Comments</label>
@@ -862,7 +838,7 @@ export default function StaffDashboard() {
                                     ) : (
                                         <>
                                             <span className="material-symbols-outlined text-[16px]">send</span>
-                                            <span>Submit Grade</span>
+                                            <span>Submit</span>
                                         </>
                                     )}
                                 </button>

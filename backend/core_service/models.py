@@ -118,6 +118,7 @@ class Test(Document):
 class TestSubmission(Document):
     test_id: PydanticObjectId
     student_id: PydanticObjectId
+    student_name: Optional[str] = None
     submission_content: str
     submitted_at: datetime = Field(default_factory=datetime.utcnow)
     staff_comments: Optional[str] = None

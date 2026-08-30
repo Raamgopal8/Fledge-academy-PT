@@ -87,7 +87,8 @@ export default function StudentProgress() {
     const openReviewModal = (sub) => {
         setActiveSubmission(sub);
         setReviewComment(sub.staff_comments || '');
-        setReviewStatus(sub.status === 'Needs Work' ? 'Needs Work' : 'Reviewed');
+        const isNeed = sub.status === 'Need Work' || sub.status === 'Needs Work' || sub.status === 'Failed';
+        setReviewStatus(isNeed ? 'Need Work' : 'Approved');
     };
 
     const getInitials = (name) => {
@@ -97,13 +98,18 @@ export default function StudentProgress() {
         return name.slice(0, 2).toUpperCase();
     };
 
+    const isSubApproved = (s) => s === 'Approved' || s === 'Reviewed';
+    const isSubNeedWork = (s) => s === 'Need Work' || s === 'Needs Work' || s === 'Failed';
+
     // Filter submissions
     const filteredSubmissions = submissions.filter(sub => {
         if (statusFilter !== 'All') {
             if (statusFilter === 'Pending Review') {
-                if (sub.status === 'Reviewed' || sub.status === 'Needs Work') return false;
-            } else if (sub.status !== statusFilter) {
-                return false;
+                if (isSubApproved(sub.status) || isSubNeedWork(sub.status)) return false;
+            } else if (statusFilter === 'Approved') {
+                if (!isSubApproved(sub.status)) return false;
+            } else if (statusFilter === 'Need Work') {
+                if (!isSubNeedWork(sub.status)) return false;
             }
         }
 
@@ -121,10 +127,10 @@ export default function StudentProgress() {
 
     // Aggregated Metrics
     const totalSubmissions = submissions.length;
-    const reviewedSubmissions = submissions.filter(s => s.status === 'Reviewed').length;
-    const needsWorkSubmissions = submissions.filter(s => s.status === 'Needs Work').length;
-    const pendingSubmissions = submissions.filter(s => s.status !== 'Reviewed' && s.status !== 'Needs Work').length;
-    const completionRate = totalSubmissions > 0 ? Math.round((reviewedSubmissions / totalSubmissions) * 100) : 0;
+    const approvedSubmissions = submissions.filter(s => isSubApproved(s.status)).length;
+    const needsWorkSubmissions = submissions.filter(s => isSubNeedWork(s.status)).length;
+    const pendingSubmissions = submissions.filter(s => !isSubApproved(s.status) && !isSubNeedWork(s.status)).length;
+    const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
 
     if (isLoading && submissions.length === 0) {
         return (
@@ -197,12 +203,12 @@ export default function StudentProgress() {
                     </div>
                 </div>
 
-                {/* Reviewed Pass */}
+                {/* Approved Pass */}
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow relative overflow-hidden group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Reviewed (Pass)</p>
-                            <h2 className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-1">{reviewedSubmissions}</h2>
+                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Approved (Pass)</p>
+                            <h2 className="text-3xl font-extrabold text-green-600 dark:text-green-400 mt-1">{approvedSubmissions}</h2>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-green-500/15 text-green-600 dark:text-green-400 flex items-center justify-center group-hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[26px]">check_circle</span>
@@ -213,18 +219,18 @@ export default function StudentProgress() {
                     </div>
                 </div>
 
-                {/* Needs Work */}
+                {/* Need Work */}
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow relative overflow-hidden group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Needs Work</p>
-                            <h2 className="text-3xl font-extrabold text-error mt-1">{needsWorkSubmissions}</h2>
+                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Need Work</p>
+                            <h2 className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{needsWorkSubmissions}</h2>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-error-container text-error flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[26px]">error</span>
                         </div>
                     </div>
-                    <div className="mt-3 text-xs text-error font-medium">
+                    <div className="mt-3 text-xs text-amber-700 dark:text-amber-400 font-medium">
                         Requires revision from student
                     </div>
                 </div>
@@ -234,14 +240,14 @@ export default function StudentProgress() {
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Pending Review</p>
-                            <h2 className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{pendingSubmissions}</h2>
+                            <h2 className="text-3xl font-extrabold text-primary mt-1">{pendingSubmissions}</h2>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
                             <span className="material-symbols-outlined text-[26px]">pending_actions</span>
                         </div>
                     </div>
-                    <div className="mt-3 text-xs text-amber-700 dark:text-amber-400 font-medium">
-                        Awaiting instructor grading
+                    <div className="mt-3 text-xs text-primary font-medium">
+                        Awaiting instructor review
                     </div>
                 </div>
             </div>
@@ -255,8 +261,8 @@ export default function StudentProgress() {
                         {[
                             { key: 'All', label: 'All Submissions', count: totalSubmissions },
                             { key: 'Pending Review', label: 'Pending', count: pendingSubmissions },
-                            { key: 'Reviewed', label: 'Reviewed (Pass)', count: reviewedSubmissions },
-                            { key: 'Needs Work', label: 'Needs Work', count: needsWorkSubmissions },
+                            { key: 'Approved', label: 'Approved (Pass)', count: approvedSubmissions },
+                            { key: 'Need Work', label: 'Need Work', count: needsWorkSubmissions },
                         ].map(tab => (
                             <button
                                 key={tab.key}
@@ -364,16 +370,16 @@ export default function StudentProgress() {
                                             {/* Status Badge */}
                                             <td className="py-3.5 px-4 whitespace-nowrap">
                                                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-flex items-center gap-1 border ${
-                                                    isReviewed 
+                                                    isSubApproved(sub.status) 
                                                         ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' 
-                                                        : isNeedsWork 
-                                                        ? 'bg-error/15 text-error border-error/30' 
-                                                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                                                        : isSubNeedWork(sub.status) 
+                                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' 
+                                                        : 'bg-primary/10 text-primary border-primary/20'
                                                 }`}>
                                                     <span className="material-symbols-outlined text-[13px]">
-                                                        {isReviewed ? 'check_circle' : isNeedsWork ? 'cancel' : 'pending'}
+                                                        {isSubApproved(sub.status) ? 'check_circle' : isSubNeedWork(sub.status) ? 'cancel' : 'pending'}
                                                     </span>
-                                                    <span>{sub.status || 'Pending Review'}</span>
+                                                    <span>{isSubApproved(sub.status) ? 'Approved' : isSubNeedWork(sub.status) ? 'Need Work' : (sub.status || 'Pending Review')}</span>
                                                 </span>
                                             </td>
 
@@ -396,7 +402,7 @@ export default function StudentProgress() {
                                                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all inline-flex items-center gap-1 cursor-pointer shadow-2xs"
                                                 >
                                                     <span className="material-symbols-outlined text-[15px]">rate_review</span>
-                                                    <span>{sub.staff_comments ? 'Edit Grade' : 'Grade / Review'}</span>
+                                                    <span>{sub.staff_comments ? 'Edit Review' : 'Review Assessment'}</span>
                                                 </button>
                                             </td>
                                         </tr>
@@ -449,19 +455,21 @@ export default function StudentProgress() {
                                     <span className="material-symbols-outlined text-[14px] text-primary">description</span>
                                     <span>Student's Answer / Work</span>
                                 </span>
-                                <span className="text-[10px] text-outline">
-                                    {activeSubmission.submitted_at ? new Date(activeSubmission.submitted_at).toLocaleString() : ''}
-                                </span>
+                                {activeSubmission.test_level && (
+                                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                                        {activeSubmission.test_level}
+                                    </span>
+                                )}
                             </div>
 
                             {activeSubmission.submission_content && activeSubmission.submission_content.startsWith('http') ? (
                                 <a 
                                     href={activeSubmission.submission_content} 
                                     target="_blank" 
-                                    rel="noreferrer" 
-                                    className="text-xs font-semibold text-primary hover:underline break-all inline-flex items-center gap-1 pt-1"
+                                    rel="noreferrer"
+                                    className="text-primary hover:underline break-all text-xs font-semibold flex items-center gap-1.5 pt-1"
                                 >
-                                    <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                                     <span>{activeSubmission.submission_content}</span>
                                 </a>
                             ) : (
@@ -479,27 +487,27 @@ export default function StudentProgress() {
                                 <div className="grid grid-cols-2 gap-2">
                                     <button
                                         type="button"
-                                        onClick={() => setReviewStatus('Reviewed')}
+                                        onClick={() => setReviewStatus('Approved')}
                                         className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                            reviewStatus === 'Reviewed'
+                                            reviewStatus === 'Approved'
                                                 ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500 ring-1 ring-green-500 shadow-2xs'
                                                 : 'border-outline-variant text-on-surface-variant hover:bg-surface-container'
                                         }`}
                                     >
                                         <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                                        <span>Pass / Approved</span>
+                                        <span>Approved (Pass)</span>
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setReviewStatus('Needs Work')}
+                                        onClick={() => setReviewStatus('Need Work')}
                                         className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                            reviewStatus === 'Needs Work'
-                                                ? 'bg-error/15 text-error border-error ring-1 ring-error shadow-2xs'
+                                            reviewStatus === 'Need Work'
+                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500 ring-1 ring-amber-500 shadow-2xs'
                                                 : 'border-outline-variant text-on-surface-variant hover:bg-surface-container'
                                         }`}
                                     >
                                         <span className="material-symbols-outlined text-[16px]">cancel</span>
-                                        <span>Needs Work / Redo</span>
+                                        <span>Need Work</span>
                                     </button>
                                 </div>
                             </div>

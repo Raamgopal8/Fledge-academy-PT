@@ -28,8 +28,23 @@ export default function StudentTests() {
             const token = localStorage.getItem('token');
             let level = localStorage.getItem('level') || 'Level 5';
             let batch = localStorage.getItem('batch') || '';
-            let name = localStorage.getItem('name') || '';
-            if (name) setStudentName(name);
+            let name = localStorage.getItem('userName') || localStorage.getItem('name') || '';
+            if (name) {
+                setStudentName(name);
+            } else if (token) {
+                try {
+                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (profRes.ok) {
+                        const prof = await profRes.json();
+                        if (prof.name) {
+                            setStudentName(prof.name);
+                            localStorage.setItem('userName', prof.name);
+                        }
+                    }
+                } catch (e) {}
+            }
 
             setStudentLevel(level);
 
@@ -57,7 +72,8 @@ export default function StudentTests() {
 
     const handleSubmitTest = async (e) => {
         e.preventDefault();
-        if (!submissionContent.trim() || !studentName.trim() || !activeTest) return;
+        const activeName = studentName.trim() || localStorage.getItem('userName') || localStorage.getItem('name') || '';
+        if (!submissionContent.trim() || !activeName || !activeTest) return;
 
         setIsSubmitting(true);
         try {
@@ -68,7 +84,7 @@ export default function StudentTests() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ student_name: studentName, submission_content: submissionContent })
+                body: JSON.stringify({ student_name: activeName, submission_content: submissionContent })
             });
 
             if (res.ok) {
@@ -207,10 +223,16 @@ export default function StudentTests() {
                                     <div className="pt-3 border-t border-outline-variant/40 mt-auto flex items-center justify-between">
                                         <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                             test.submission 
-                                                ? (test.submission.status === 'Reviewed' ? 'bg-green-500/15 text-green-700 dark:text-green-400' : 'bg-primary/10 text-primary') 
+                                                ? ((test.submission.status === 'Approved' || test.submission.status === 'Reviewed')
+                                                    ? 'bg-green-500/15 text-green-700 dark:text-green-400' 
+                                                    : (test.submission.status === 'Need Work' || test.submission.status === 'Needs Work' || test.submission.status === 'Failed')
+                                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                                                        : 'bg-primary/10 text-primary') 
                                                 : 'bg-error-container text-error'
                                         }`}>
-                                            {test.submission ? test.submission.status : 'Pending'}
+                                            {test.submission 
+                                                ? ((test.submission.status === 'Reviewed' ? 'Approved' : (test.submission.status === 'Needs Work' || test.submission.status === 'Failed' ? 'Need Work' : test.submission.status))) 
+                                                : 'Pending'}
                                         </span>
 
                                         <button 
@@ -221,9 +243,9 @@ export default function StudentTests() {
                                             className="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:opacity-90 transition-all flex items-center gap-1 shadow-xs cursor-pointer"
                                         >
                                             <span className="material-symbols-outlined text-[15px]">
-                                                {test.submission ? 'visibility' : 'send'}
-                                            </span>
-                                            <span>{test.submission ? 'View' : 'Start'}</span>
+                                                 {test.submission ? 'visibility' : 'send'}
+                                             </span>
+                                             <span>{test.submission ? 'View' : 'Start'}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -268,11 +290,19 @@ export default function StudentTests() {
                                 <p className="text-on-surface-variant whitespace-pre-wrap leading-relaxed">{activeTest.description || 'No instructions.'}</p>
                             </div>
 
-                            {activeTest.submission && activeTest.submission.status === 'Reviewed' && activeTest.submission.staff_comments && (
-                                <div className="mb-4 p-3.5 rounded-xl bg-primary/5 border border-primary/20 text-xs space-y-1">
-                                    <h4 className="font-bold text-primary flex items-center gap-1.5">
+                            {activeTest.submission && (activeTest.submission.status === 'Approved' || activeTest.submission.status === 'Reviewed' || activeTest.submission.status === 'Need Work' || activeTest.submission.status === 'Needs Work') && activeTest.submission.staff_comments && (
+                                <div className={`mb-4 p-3.5 rounded-xl border text-xs space-y-1 ${
+                                    (activeTest.submission.status === 'Approved' || activeTest.submission.status === 'Reviewed')
+                                        ? 'bg-green-500/10 border-green-500/30'
+                                        : 'bg-amber-500/10 border-amber-500/30'
+                                }`}>
+                                    <h4 className={`font-bold flex items-center gap-1.5 ${
+                                        (activeTest.submission.status === 'Approved' || activeTest.submission.status === 'Reviewed')
+                                            ? 'text-green-700 dark:text-green-400'
+                                            : 'text-amber-700 dark:text-amber-400'
+                                    }`}>
                                         <span className="material-symbols-outlined text-[16px]">reviews</span>
-                                        <span>Instructor Feedback</span>
+                                        <span>Instructor Feedback ({(activeTest.submission.status === 'Approved' || activeTest.submission.status === 'Reviewed') ? 'Approved' : 'Need Work'})</span>
                                     </h4>
                                     <p className="text-on-surface italic">{activeTest.submission.staff_comments}</p>
                                 </div>

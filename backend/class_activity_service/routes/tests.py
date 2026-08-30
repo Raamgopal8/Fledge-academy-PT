@@ -17,11 +17,12 @@ class TestCreate(BaseModel):
     batch: Optional[str] = None
 
 class TestSubmit(BaseModel):
+    student_name: Optional[str] = None
     submission_content: str
 
 class TestReview(BaseModel):
     staff_comments: str
-    status: str = "Reviewed"
+    status: str = "Approved"
 
 @router.get("")
 async def get_tests(
@@ -49,18 +50,20 @@ async def get_tests(
             "batch": test.batch,
         }
         
-        # If student, attach their submission status
+        # If user is student, fetch their submission
         if current_user.role == "student":
             submission = await models.TestSubmission.find_one(
                 models.TestSubmission.test_id == test.id,
                 models.TestSubmission.student_id == current_user.id
             )
-            
             if submission:
+                raw_status = submission.status
+                display_status = "Approved" if raw_status == "Reviewed" else ("Need Work" if raw_status in ["Needs Work", "Failed", "Fail"] else raw_status)
                 test_dict["submission"] = {
                     "id": str(submission.id),
-                    "status": submission.status,
+                    "submission_content": submission.submission_content,
                     "submitted_at": submission.submitted_at,
+                    "status": display_status,
                     "staff_comments": submission.staff_comments
                 }
             else:
@@ -70,7 +73,7 @@ async def get_tests(
         
     return response_data
 
-@router.post("")
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_test(
     test_data: TestCreate,
     current_user: models.User = Depends(get_current_user)
@@ -81,10 +84,10 @@ async def create_test(
     new_test = models.Test(
         title=test_data.title,
         description=test_data.description,
-        created_by_id=current_user.id,
         due_date=test_data.due_date,
         level=test_data.level,
-        batch=test_data.batch
+        batch=test_data.batch,
+        created_by_id=current_user.id
     )
     await new_test.insert()
     
@@ -98,6 +101,21 @@ async def create_test(
         "level": new_test.level,
         "batch": new_test.batch
     }
+
+@router.delete("/{test_id}")
+async def delete_test(
+    test_id: PydanticObjectId,
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "staff":
+        raise HTTPException(status_code=403, detail="Only staff can delete tests")
+        
+    test = await models.Test.get(test_id)
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+        
+    await test.delete()
+    return {"message": "Test deleted successfully"}
 
 @router.post("/{test_id}/submit")
 async def submit_test(
@@ -113,6 +131,14 @@ async def submit_test(
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
         
+    # Determine student name reliably
+    input_name = (submission_data.student_name or "").strip()
+    resolved_name = (
+        input_name 
+        if input_name and input_name.lower() != "unknown" 
+        else (getattr(current_user, "name", None) or (current_user.email.split('@')[0] if getattr(current_user, "email", None) else "Student"))
+    )
+
     # Check if already submitted
     existing_submission = await models.TestSubmission.find_one(
         models.TestSubmission.test_id == test_id,
@@ -120,11 +146,29 @@ async def submit_test(
     )
     
     if existing_submission:
-        raise HTTPException(status_code=400, detail="Test already submitted")
+        if existing_submission.status in ["Need Work", "Needs Work", "Failed", "Fail"]:
+            existing_submission.submission_content = submission_data.submission_content
+            existing_submission.student_name = resolved_name
+            existing_submission.submitted_at = datetime.utcnow()
+            existing_submission.status = "Pending Review"
+            existing_submission.staff_comments = None
+            await existing_submission.save()
+            return {
+                "id": str(existing_submission.id),
+                "test_id": str(existing_submission.test_id),
+                "student_id": str(existing_submission.student_id),
+                "student_name": existing_submission.student_name or resolved_name,
+                "submission_content": existing_submission.submission_content,
+                "submitted_at": existing_submission.submitted_at,
+                "status": existing_submission.status
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Test already submitted")
         
     new_submission = models.TestSubmission(
         test_id=test_id,
         student_id=current_user.id,
+        student_name=resolved_name,
         submission_content=submission_data.submission_content
     )
     await new_submission.insert()
@@ -133,6 +177,7 @@ async def submit_test(
         "id": str(new_submission.id),
         "test_id": str(new_submission.test_id),
         "student_id": str(new_submission.student_id),
+        "student_name": new_submission.student_name,
         "submission_content": new_submission.submission_content,
         "submitted_at": new_submission.submitted_at,
         "status": new_submission.status
@@ -151,17 +196,22 @@ async def get_test_submissions(
     
     response = []
     for sub in submissions:
-        # Get student name
         student = await models.User.get(sub.student_id)
-        
+        sub_name = getattr(sub, "student_name", None)
+        if not sub_name or sub_name.strip().lower() == "unknown":
+            sub_name = student.name if (student and student.name) else (student.email.split('@')[0] if student and student.email else "Student")
+            
+        raw_status = sub.status
+        display_status = "Approved" if raw_status == "Reviewed" else ("Need Work" if raw_status in ["Needs Work", "Failed", "Fail"] else raw_status)
+
         response.append({
             "id": str(sub.id),
             "test_id": str(sub.test_id),
             "student_id": str(sub.student_id),
-            "student_name": student.name if student else "Unknown",
+            "student_name": sub_name,
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,
-            "status": sub.status,
+            "status": display_status,
             "staff_comments": sub.staff_comments
         })
         
@@ -173,7 +223,8 @@ async def review_submission(
     review_data: TestReview,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff can review tests")
         
     submission = await models.TestSubmission.get(submission_id)
@@ -181,8 +232,14 @@ async def review_submission(
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
         
+    normalized_status = review_data.status
+    if normalized_status == "Reviewed":
+        normalized_status = "Approved"
+    elif normalized_status in ["Needs Work", "Failed", "Fail"]:
+        normalized_status = "Need Work"
+
     submission.staff_comments = review_data.staff_comments
-    submission.status = review_data.status
+    submission.status = normalized_status
     
     await submission.save()
     
@@ -207,21 +264,25 @@ async def get_all_submissions(
     
     response = []
     for sub in submissions:
-        # Get student name
         student = await models.User.get(sub.student_id)
-        
-        # Get test title
         test = await models.Test.get(sub.test_id)
         
+        sub_name = getattr(sub, "student_name", None)
+        if not sub_name or sub_name.strip().lower() == "unknown":
+            sub_name = student.name if (student and student.name) else (student.email.split('@')[0] if student and student.email else "Student")
+            
+        raw_status = sub.status
+        display_status = "Approved" if raw_status == "Reviewed" else ("Need Work" if raw_status in ["Needs Work", "Failed", "Fail"] else raw_status)
+
         response.append({
             "id": str(sub.id),
             "test_id": str(sub.test_id),
             "test_title": test.title if test else "Unknown",
             "student_id": str(sub.student_id),
-            "student_name": student.name if student else "Unknown",
+            "student_name": sub_name,
             "submission_content": sub.submission_content,
             "submitted_at": sub.submitted_at,
-            "status": sub.status,
+            "status": display_status,
             "staff_comments": sub.staff_comments
         })
         

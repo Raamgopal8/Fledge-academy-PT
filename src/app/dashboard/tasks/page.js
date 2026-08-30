@@ -35,12 +35,12 @@ export default function StudentTasks() {
             const token = localStorage.getItem('token');
             let level = localStorage.getItem('level');
             let batch = localStorage.getItem('batch');
-            let name = localStorage.getItem('name') || '';
+            let name = localStorage.getItem('userName') || localStorage.getItem('name') || '';
 
             if (name) setStudentName(name);
 
             // If level or batch not in storage, fetch from profile
-            if (!level || !batch) {
+            if (!level || !batch || !name) {
                 try {
                     const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                         headers: { 'Authorization': `Bearer ${token}` }
@@ -49,7 +49,10 @@ export default function StudentTasks() {
                         const prof = await profRes.json();
                         level = prof.level || level || 'Level 5';
                         batch = prof.batch || batch || '';
-                        if (prof.name && !name) setStudentName(prof.name);
+                        if (prof.name) {
+                            setStudentName(prof.name);
+                            localStorage.setItem('userName', prof.name);
+                        }
                         localStorage.setItem('level', level);
                         if (batch) localStorage.setItem('batch', batch);
                     }
@@ -67,16 +70,15 @@ export default function StudentTasks() {
             if (batch) queryParams.append('batch', batch);
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests?${queryParams.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` },
-                cache: 'no-store'
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-            
-            if (res.ok) {
-                const data = await res.json();
-                setTasks(data);
-            } else {
+
+            if (!res.ok) {
                 throw new Error('Failed to fetch tasks');
             }
+
+            const data = await res.json();
+            setTasks(data);
         } catch (err) {
             console.error('Error fetching tasks:', err);
             setError(err.message);
@@ -87,7 +89,8 @@ export default function StudentTasks() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!activeTaskForSubmission || !submissionContent.trim() || !studentName.trim()) return;
+        const activeName = studentName.trim() || localStorage.getItem('userName') || localStorage.getItem('name') || '';
+        if (!activeTaskForSubmission || !submissionContent.trim() || !activeName) return;
 
         setIsSubmitting(true);
         setError(null);
@@ -99,7 +102,7 @@ export default function StudentTasks() {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ student_name: studentName, submission_content: submissionContent })
+                body: JSON.stringify({ student_name: activeName, submission_content: submissionContent })
             });
 
             if (res.ok) {
@@ -114,12 +117,12 @@ export default function StudentTasks() {
                 setSubmissionContent('');
                 setTimeout(() => setSuccessFeedback(''), 4000);
             } else {
-                const errorData = await res.json().catch(() => ({}));
-                alert(`Error: ${errorData.detail || 'Submission failed'}`);
+                const errData = await res.json().catch(() => ({}));
+                setError(errData.detail || 'Failed to submit task');
             }
         } catch (err) {
-            console.error('Error submitting task:', err);
-            alert('Failed to submit task. Please check your connection.');
+            console.error(err);
+            setError('Failed to submit task. Please check your connection.');
         } finally {
             setIsSubmitting(false);
         }
@@ -141,12 +144,12 @@ export default function StudentTasks() {
         return LEVEL_COLORS[lvl] || 'bg-primary/10 text-primary border-primary/20';
     };
 
-    const pendingTasks = tasks.filter(t => !t.submission || t.submission.status === 'Needs Work');
-    const submittedTasks = tasks.filter(t => t.submission && t.submission.status !== 'Needs Work');
+    const pendingTasks = tasks.filter(t => !t.submission || t.submission.status === 'Need Work' || t.submission.status === 'Needs Work' || t.submission.status === 'Failed');
+    const submittedTasks = tasks.filter(t => t.submission && t.submission.status !== 'Need Work' && t.submission.status !== 'Needs Work' && t.submission.status !== 'Failed');
 
     const filteredTasks = tasks.filter(t => {
         // Tab filter
-        const isPending = !t.submission || t.submission.status === 'Needs Work';
+        const isPending = !t.submission || t.submission.status === 'Need Work' || t.submission.status === 'Needs Work' || t.submission.status === 'Failed';
         if (activeTab === 'pending' && !isPending) return false;
         if (activeTab === 'submitted' && isPending) return false;
 
@@ -273,121 +276,124 @@ export default function StudentTasks() {
                             ) : (
                                 filteredTasks.map(task => {
                                     const urgency = getTaskUrgency(task.due_date);
-                                    const isPending = !task.submission || task.submission.status === 'Needs Work';
-                                    const isReviewed = task.submission && task.submission.status === 'Reviewed';
+                                    const isNeedWork = task.submission && (task.submission.status === 'Need Work' || task.submission.status === 'Needs Work' || task.submission.status === 'Failed');
+                                    const isApproved = task.submission && (task.submission.status === 'Approved' || task.submission.status === 'Reviewed');
+                                    const isPending = !task.submission || isNeedWork;
                                     const hasStaffComments = task.submission && task.submission.staff_comments;
 
                                     return (
-                                        <div 
-                                            key={task.id} 
-                                            className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant hover:border-primary/50 hover:shadow-md transition-all custom-shadow"
-                                        >
-                                            {/* Card Top Row */}
-                                            <div className="flex items-start justify-between gap-3 mb-2.5">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                                        <h3 className="font-headline-sm text-on-surface font-bold text-base">
-                                                            {task.title}
-                                                        </h3>
-                                                        {task.level && (
-                                                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getLevelBadgeClass(task.level)}`}>
-                                                                {task.level}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                         <div 
+                                             key={task.id} 
+                                             className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant hover:border-primary/50 hover:shadow-md transition-all custom-shadow"
+                                         >
+                                             {/* Card Top Row */}
+                                             <div className="flex items-start justify-between gap-3 mb-2.5">
+                                                 <div className="flex-1">
+                                                     <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                         <h3 className="font-headline-sm text-on-surface font-bold text-base">
+                                                             {task.title}
+                                                         </h3>
+                                                         {task.level && (
+                                                             <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getLevelBadgeClass(task.level)}`}>
+                                                                 {task.level}
+                                                             </span>
+                                                         )}
+                                                     </div>
+                                                 </div>
 
-                                                {/* Status Badge */}
-                                                <div className="shrink-0">
-                                                    {task.submission ? (
-                                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
-                                                            task.submission.status === 'Reviewed' 
-                                                                ? 'bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30'
-                                                                : task.submission.status === 'Needs Work'
-                                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30'
-                                                                : 'bg-primary/10 text-primary border border-primary/20'
-                                                        }`}>
-                                                            <span className="material-symbols-outlined text-[14px]">
-                                                                {task.submission.status === 'Reviewed' ? 'check_circle' : 'pending'}
-                                                            </span>
-                                                            <span>{task.submission.status}</span>
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-error-container text-error border border-error/20 flex items-center gap-1">
-                                                            <span className="material-symbols-outlined text-[14px]">schedule</span>
-                                                            <span>Pending</span>
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                                 {/* Status Badge */}
+                                                 <div className="shrink-0">
+                                                     {task.submission ? (
+                                                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                                                             isApproved
+                                                                 ? 'bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30'
+                                                                 : isNeedWork
+                                                                 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                                                                 : 'bg-primary/10 text-primary border border-primary/20'
+                                                         }`}>
+                                                             <span className="material-symbols-outlined text-[14px]">
+                                                                 {isApproved ? 'check_circle' : isNeedWork ? 'cancel' : 'pending'}
+                                                             </span>
+                                                             <span>{isApproved ? 'Approved' : isNeedWork ? 'Need Work' : task.submission.status}</span>
+                                                         </span>
+                                                     ) : (
+                                                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-error-container text-error border border-error/20 flex items-center gap-1">
+                                                             <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                                             <span>Pending</span>
+                                                         </span>
+                                                     )}
+                                                 </div>
+                                             </div>
 
-                                            {/* Description */}
-                                            <p className="font-body-md text-on-surface-variant text-xs leading-relaxed mb-3.5 whitespace-pre-wrap">
-                                                {task.description || "No detailed description provided."}
-                                            </p>
+                                             {/* Description */}
+                                             <p className="font-body-md text-on-surface-variant text-xs leading-relaxed mb-3.5 whitespace-pre-wrap">
+                                                 {task.description || "No detailed description provided."}
+                                             </p>
 
-                                            {/* Resubmission alert */}
-                                            {task.submission && task.submission.status === 'Needs Work' && (
-                                                <div className="mb-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs space-y-1">
-                                                    <div className="flex items-center gap-1.5 font-bold">
-                                                        <span className="material-symbols-outlined text-[16px]">assignment_return</span>
-                                                        <span>Resubmission Requested</span>
-                                                    </div>
-                                                    <p className="italic">"{task.submission.staff_comments}"</p>
-                                                </div>
-                                            )}
+                                             {/* Resubmission alert */}
+                                             {isNeedWork && (
+                                                 <div className="mb-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs space-y-1">
+                                                     <div className="flex items-center gap-1.5 font-bold">
+                                                         <span className="material-symbols-outlined text-[16px]">assignment_return</span>
+                                                         <span>Resubmission Requested (Need Work)</span>
+                                                     </div>
+                                                     {task.submission.staff_comments && (
+                                                         <p className="italic">"{task.submission.staff_comments}"</p>
+                                                     )}
+                                                 </div>
+                                             )}
 
-                                            {/* Teacher Feedback for Reviewed Tasks */}
-                                            {isReviewed && hasStaffComments && (
-                                                <div className="mb-3.5 p-3 rounded-xl bg-primary/5 border border-primary/20 text-on-surface text-xs space-y-1">
-                                                    <div className="flex items-center gap-1.5 font-bold text-primary">
-                                                        <span className="material-symbols-outlined text-[16px]">forum</span>
-                                                        <span>Instructor Feedback</span>
-                                                    </div>
-                                                    <p className="italic text-on-surface-variant">"{task.submission.staff_comments}"</p>
-                                                </div>
-                                            )}
+                                             {/* Teacher Feedback for Approved Tasks */}
+                                             {isApproved && hasStaffComments && (
+                                                 <div className="mb-3.5 p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-on-surface text-xs space-y-1">
+                                                     <div className="flex items-center gap-1.5 font-bold text-green-700 dark:text-green-400">
+                                                         <span className="material-symbols-outlined text-[16px]">forum</span>
+                                                         <span>Instructor Feedback (Approved)</span>
+                                                     </div>
+                                                     <p className="italic text-on-surface-variant">"{task.submission.staff_comments}"</p>
+                                                 </div>
+                                             )}
 
-                                            {/* Card Footer: Due Date & Action */}
-                                            <div className="flex items-center justify-between pt-3 border-t border-outline-variant/40 mt-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
-                                                        urgency.color === 'error' ? 'bg-error/10 text-error' :
-                                                        urgency.color === 'warning' ? 'bg-amber-500/10 text-amber-600' :
-                                                        urgency.color === 'primary' ? 'bg-primary/10 text-primary' :
-                                                        'bg-surface-container text-on-surface-variant'
-                                                    }`}>
-                                                        <span className="material-symbols-outlined text-[13px]">{urgency.icon}</span>
-                                                        <span>{urgency.label}</span>
-                                                    </span>
-                                                    {task.due_date && (
-                                                        <span className="text-[11px] text-on-surface-variant/80 hidden sm:inline">
-                                                            Due {new Date(task.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                             {/* Card Footer: Due Date & Action */}
+                                             <div className="flex items-center justify-between pt-3 border-t border-outline-variant/40 mt-2">
+                                                 <div className="flex items-center gap-2">
+                                                     <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
+                                                         urgency.color === 'error' ? 'bg-error/10 text-error' :
+                                                         urgency.color === 'warning' ? 'bg-amber-500/10 text-amber-600' :
+                                                         urgency.color === 'primary' ? 'bg-primary/10 text-primary' :
+                                                         'bg-surface-container text-on-surface-variant'
+                                                     }`}>
+                                                         <span className="material-symbols-outlined text-[13px]">{urgency.icon}</span>
+                                                         <span>{urgency.label}</span>
+                                                     </span>
+                                                     {task.due_date && (
+                                                         <span className="text-[11px] text-on-surface-variant/80 hidden sm:inline">
+                                                             Due {new Date(task.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                                         </span>
+                                                     )}
+                                                 </div>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setActiveTaskForSubmission(task);
-                                                        setSubmissionContent(task.submission?.submission_content || '');
-                                                    }}
-                                                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
-                                                        isPending 
-                                                            ? 'bg-primary text-on-primary hover:bg-primary/90 shadow-xs' 
-                                                            : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
-                                                    }`}
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">
-                                                        {isPending ? 'send' : 'visibility'}
-                                                    </span>
-                                                    <span>{task.submission ? (task.submission.status === 'Needs Work' ? 'Resubmit' : 'View Submission') : 'Submit Work'}</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => {
+                                                         setActiveTaskForSubmission(task);
+                                                         setSubmissionContent(task.submission?.submission_content || '');
+                                                     }}
+                                                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                                                         isPending 
+                                                             ? 'bg-primary text-on-primary hover:bg-primary/90 shadow-xs' 
+                                                             : 'bg-surface-container hover:bg-surface-container-high text-on-surface'
+                                                     }`}
+                                                 >
+                                                     <span className="material-symbols-outlined text-[16px]">
+                                                         {isPending ? 'send' : 'visibility'}
+                                                     </span>
+                                                     <span>{task.submission ? (isNeedWork ? 'Resubmit' : 'View Submission') : 'Submit Work'}</span>
+                                                 </button>
+                                             </div>
+                                         </div>
+                                     );
+                                 })
                             )}
                         </div>
                     </div>

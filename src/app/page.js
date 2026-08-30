@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const router = useRouter();
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function LoginPage() {
       } catch (_) {
         throw new Error("Invalid response from server. Please try again.");
       }
-      
+
       // Store token and role
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("role", data.role);
@@ -104,7 +104,7 @@ export default function LoginPage() {
       } else {
         router.push("/dashboard");
       }
-      
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -152,7 +152,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-        
+
       </section>
 
       {/* Right Side: Login Form */}
@@ -180,7 +180,7 @@ export default function LoginPage() {
             <p className="text-body-md text-on-surface-variant">
               Please enter your credentials to access your portal.
             </p>
-            
+
             {error && (
               <div className="p-3 bg-error-container text-on-error-container rounded-lg text-body-sm flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px]">error</span>
@@ -252,6 +252,19 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="pt-1">
+              <p className="text-xs text-on-surface-variant leading-relaxed select-none">
+                By logging in, you agree to our{" "}
+                <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
+                  Privacy Policy
+                </Link>.
+              </p>
+            </div>
+
             {/* Submit Button */}
             <button
               className="w-full h-[56px] bg-primary text-white text-label-md text-[16px] rounded-xl hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
@@ -286,7 +299,7 @@ export default function LoginPage() {
               <span className="flex-shrink-0 mx-4 text-on-surface-variant text-label-md">Connect with us</span>
               <div className="flex-grow border-t border-outline-variant"></div>
             </div>
-            
+
             <div className="flex justify-center gap-6">
               <a href="https://chat.whatsapp.com/LJCMHmRk4n66iR7smHksxJ" target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:border-[#25D366] hover:bg-[#25D366]/20 hover:shadow-[0_0_25px_rgba(37,211,102,0.6)] shadow-sm group" title="WhatsApp">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" className="w-6 h-6 transition-transform duration-300 group-hover:scale-125" />

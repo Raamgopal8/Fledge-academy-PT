@@ -75,37 +75,50 @@ export default function CEOTests() {
                             <p className="text-on-surface-variant text-xs sm:text-sm">No submissions yet.</p>
                         </div>
                     ) : (
-                        submissions.map(sub => (
-                            <div key={sub.id} className="bg-surface-container-low/60 p-4 rounded-2xl border border-outline-variant/60 shadow-xs">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <h3 className="text-xs sm:text-sm font-bold text-on-surface">{sub.student_name}</h3>
-                                        <p className="text-[10px] sm:text-xs text-on-surface-variant">{new Date(sub.submitted_at).toLocaleString()}</p>
+                        submissions.map(sub => {
+                            const isApproved = sub.status === 'Approved' || sub.status === 'Reviewed';
+                            const isNeedWork = sub.status === 'Need Work' || sub.status === 'Needs Work' || sub.status === 'Failed';
+
+                            return (
+                                <div key={sub.id} className="bg-surface-container-low/60 p-4 rounded-2xl border border-outline-variant/60 shadow-xs">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 className="text-xs sm:text-sm font-bold text-on-surface">{sub.student_name || 'Student'}</h3>
+                                            <p className="text-[10px] sm:text-xs text-on-surface-variant">{new Date(sub.submitted_at).toLocaleString()}</p>
+                                        </div>
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold border ${
+                                            isApproved 
+                                                ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' 
+                                                : isNeedWork 
+                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' 
+                                                : 'bg-primary/10 text-primary border-primary/20'
+                                        }`}>
+                                            {isApproved ? 'Approved' : isNeedWork ? 'Need Work' : (sub.status || 'Pending Review')}
+                                        </span>
                                     </div>
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold ${sub.status === 'Reviewed' ? 'bg-primary-container text-on-primary-container' : 'bg-tertiary-container text-on-tertiary-container'}`}>
-                                        {sub.status}
-                                    </span>
-                                </div>
-                                
-                                <div className="bg-surface-container-lowest p-3 rounded-xl mb-2 border border-outline-variant/60">
-                                    <h4 className="text-[10px] sm:text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Student Submission:</h4>
-                                    {sub.submission_content.startsWith('http') ? (
-                                        <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all text-xs sm:text-sm">
-                                            {sub.submission_content}
-                                        </a>
-                                    ) : (
-                                        <p className="whitespace-pre-wrap text-xs sm:text-sm text-on-surface">{sub.submission_content}</p>
+                                    
+                                    <div className="bg-surface-container-lowest p-3 rounded-xl mb-2 border border-outline-variant/60">
+                                        <h4 className="text-[10px] sm:text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Student Submission:</h4>
+                                        {sub.submission_content && sub.submission_content.startsWith('http') ? (
+                                            <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all text-xs sm:text-sm">
+                                                {sub.submission_content}
+                                            </a>
+                                        ) : (
+                                            <p className="whitespace-pre-wrap text-xs sm:text-sm text-on-surface">{sub.submission_content || 'No text content.'}</p>
+                                        )}
+                                    </div>
+
+                                    {sub.staff_comments && (
+                                        <div className={`p-3 rounded-xl border ${isApproved ? 'bg-green-500/10 border-green-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                                            <h4 className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 ${isApproved ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                                                Staff Review ({isApproved ? 'Approved' : 'Need Work'}):
+                                            </h4>
+                                            <p className="whitespace-pre-wrap text-xs sm:text-sm text-on-surface">{sub.staff_comments}</p>
+                                        </div>
                                     )}
                                 </div>
-
-                                {sub.status === 'Reviewed' && sub.staff_comments && (
-                                    <div className="bg-primary/5 p-3 rounded-xl border border-primary/20">
-                                        <h4 className="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-wider mb-1">Staff Review:</h4>
-                                        <p className="whitespace-pre-wrap text-xs sm:text-sm text-on-surface">{sub.staff_comments}</p>
-                                    </div>
-                                )}
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                     </div>
                 </div>

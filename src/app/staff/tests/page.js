@@ -171,12 +171,16 @@ export default function StaffTests() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ staff_comments: reviewComment, status: "Reviewed" })
+                body: JSON.stringify({ 
+                    staff_comments: reviewComment || (reviewStatus === 'Approved' ? 'Approved by instructor' : 'Please review and resubmit'), 
+                    status: reviewStatus 
+                })
             });
 
             if (res.ok) {
                 setIsReviewing(null);
                 setReviewComment('');
+                setReviewStatus('Approved');
                 fetchSubmissions(activeTest);
             } else {
                 alert("Failed to submit review");
@@ -219,74 +223,101 @@ export default function StaffTests() {
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md space-y-3">
                     <div className="flex items-start justify-between gap-3">
                         <div>
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                                <h2 className="font-headline-md text-on-surface font-bold text-xl">{activeTest.title}</h2>
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h1 className="text-2xl font-bold text-on-surface">{activeTest.title}</h1>
                                 {activeTest.level && (
-                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getLevelBadgeClass(activeTest.level)}`}>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getLevelBadgeClass(activeTest.level)}`}>
                                         {activeTest.level}
                                     </span>
                                 )}
-                                {activeTest.batch && (
-                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-[12px]">groups</span>
-                                        {activeTest.batch}
-                                    </span>
-                                )}
                             </div>
-                            <p className="text-on-surface-variant font-body-md text-xs whitespace-pre-wrap">{activeTest.description}</p>
+                            <p className="text-on-surface-variant text-xs">{activeTest.description}</p>
                         </div>
-                        <span className="px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container text-xs font-bold shrink-0">
-                            {submissions.length} Submissions
-                        </span>
                     </div>
                 </div>
 
+                {/* Submissions list */}
                 <div className="space-y-4">
+                    <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary">group</span>
+                        <span>Student Submissions ({submissions.length})</span>
+                    </h2>
+
                     {submissions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center text-center p-12 bg-surface-container-lowest rounded-2xl border border-dashed border-outline-variant min-h-[250px]">
-                            <span className="material-symbols-outlined text-5xl text-outline/40 mb-2">inbox</span>
-                            <h3 className="font-headline-sm text-on-surface-variant font-bold text-base">No submissions yet</h3>
-                            <p className="font-body-md text-outline text-xs mt-1">Students haven't submitted coursework for this test yet.</p>
+                        <div className="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/60 text-center">
+                            <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-2">assignment_late</span>
+                            <p className="text-on-surface-variant text-sm font-medium">No students have submitted this assignment yet.</p>
                         </div>
                     ) : (
-                        submissions.map(sub => (
-                            <div key={sub.id} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant custom-shadow space-y-3">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-title-md text-on-surface font-bold text-sm">{sub.student_name}</h3>
-                                        <p className="text-xs text-on-surface-variant font-medium mt-0.5">{new Date(sub.submitted_at).toLocaleString()}</p>
-                                    </div>
-                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${sub.status === 'Reviewed' ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'}`}>
-                                        {sub.status}
-                                    </span>
-                                </div>
-                                
-                                <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/60">
-                                    <h4 className="text-xs font-bold text-on-surface-variant mb-1 flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-[15px] text-primary">description</span>
-                                        <span>Student Submission</span>
-                                    </h4>
-                                    {sub.submission_content.startsWith('http') ? (
-                                        <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all inline-flex items-center gap-1 font-semibold text-xs">
-                                            <span className="material-symbols-outlined text-[15px]">open_in_new</span>
-                                            {sub.submission_content}
-                                        </a>
-                                    ) : (
-                                        <p className="whitespace-pre-wrap font-body-md text-on-surface text-xs leading-relaxed">{sub.submission_content}</p>
-                                    )}
-                                </div>
+                        submissions.map(sub => {
+                            const isApproved = sub.status === 'Approved' || sub.status === 'Reviewed';
+                            const isNeedWork = sub.status === 'Need Work' || sub.status === 'Needs Work' || sub.status === 'Failed';
 
-                                {sub.status === 'Reviewed' && sub.staff_comments ? (
-                                    <div className="bg-primary/5 p-3.5 rounded-xl border border-primary/20 text-xs">
-                                        <h4 className="font-bold text-primary mb-1 flex items-center gap-1">
-                                            <span className="material-symbols-outlined text-[16px]">reviews</span>
-                                            <span>Your Instructor Feedback</span>
-                                        </h4>
-                                        <p className="whitespace-pre-wrap text-on-surface leading-relaxed">{sub.staff_comments}</p>
+                            return (
+                                <div key={sub.id} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant custom-shadow space-y-3">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-title-md text-on-surface font-bold text-sm">{sub.student_name || 'Student'}</h3>
+                                            <p className="text-xs text-on-surface-variant font-medium mt-0.5">{new Date(sub.submitted_at).toLocaleString()}</p>
+                                        </div>
+                                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1 ${
+                                            isApproved 
+                                                ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' 
+                                                : isNeedWork 
+                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30' 
+                                                : 'bg-primary/10 text-primary border-primary/20'
+                                        }`}>
+                                            <span className="material-symbols-outlined text-[13px]">
+                                                {isApproved ? 'check_circle' : isNeedWork ? 'cancel' : 'pending'}
+                                            </span>
+                                            <span>{isApproved ? 'Approved' : isNeedWork ? 'Need Work' : (sub.status || 'Pending')}</span>
+                                        </span>
                                     </div>
-                                ) : (
-                                    isReviewing === sub.id ? (
+                                    
+                                    <div className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/60">
+                                        <h4 className="text-xs font-bold text-on-surface-variant mb-1 flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[15px] text-primary">description</span>
+                                            <span>Student Submission</span>
+                                        </h4>
+                                        {sub.submission_content && sub.submission_content.startsWith('http') ? (
+                                            <a href={sub.submission_content} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all inline-flex items-center gap-1 font-semibold text-xs">
+                                                <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                                                {sub.submission_content}
+                                            </a>
+                                        ) : (
+                                            <p className="whitespace-pre-wrap font-body-md text-on-surface text-xs leading-relaxed">{sub.submission_content || 'No submission content.'}</p>
+                                        )}
+                                    </div>
+
+                                    {isReviewing === sub.id ? (
                                         <div className="space-y-3 mt-3 border-t border-outline-variant/40 pt-3">
+                                            <div className="flex items-center gap-2">
+                                                <label className="text-xs font-bold text-on-surface">Outcome:</label>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setReviewStatus('Approved')}
+                                                        className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                                                            reviewStatus === 'Approved' 
+                                                                ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500 ring-1 ring-green-500' 
+                                                                : 'border-outline-variant text-on-surface-variant'
+                                                        }`}
+                                                    >
+                                                        Approved
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setReviewStatus('Need Work')}
+                                                        className={`px-3 py-1 rounded-lg text-xs font-bold border transition-colors ${
+                                                            reviewStatus === 'Need Work' 
+                                                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500 ring-1 ring-amber-500' 
+                                                                : 'border-outline-variant text-on-surface-variant'
+                                                        }`}
+                                                    >
+                                                        Need Work
+                                                    </button>
+                                                </div>
+                                            </div>
                                             <textarea
                                                 className="w-full bg-surface-container-low border border-outline-variant rounded-xl p-3 text-xs focus:outline-none focus:border-primary text-on-surface resize-none min-h-[80px]"
                                                 placeholder="Write feedback and grading notes for the student..."
@@ -297,35 +328,56 @@ export default function StaffTests() {
                                                 <button
                                                     type="button"
                                                     onClick={() => { setIsReviewing(null); setReviewComment(''); }}
-                                                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-outline-variant text-on-surface hover:bg-surface-container"
+                                                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-outline-variant text-on-surface hover:bg-surface-container cursor-pointer"
                                                 >
                                                     Cancel
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    disabled={isSubmittingReview || !reviewComment.trim()}
+                                                    disabled={isSubmittingReview}
                                                     onClick={() => handleReviewSubmit(sub.id)}
-                                                    className="px-4 py-1.5 rounded-xl text-xs font-bold bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-1"
+                                                    className="px-4 py-1.5 rounded-xl text-xs font-bold bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                                                 >
-                                                    {isSubmittingReview ? 'Submitting...' : 'Submit Feedback'}
+                                                    {isSubmittingReview ? 'Submitting...' : 'Save Review'}
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex justify-end pt-2 border-t border-outline-variant/30">
-                                            <button
-                                                type="button"
-                                                onClick={() => { setIsReviewing(sub.id); setReviewComment(sub.staff_comments || ''); }}
-                                                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all flex items-center gap-1 cursor-pointer"
-                                            >
-                                                <span className="material-symbols-outlined text-[15px]">rate_review</span>
-                                                <span>{sub.staff_comments ? 'Edit Review' : 'Add Review'}</span>
-                                            </button>
-                                        </div>
-                                    )
-                                )}
-                            </div>
-                        ))
+                                        <>
+                                            {sub.staff_comments && (
+                                                <div className={`p-3.5 rounded-xl border text-xs ${
+                                                    isApproved 
+                                                        ? 'bg-green-500/10 border-green-500/30' 
+                                                        : 'bg-amber-500/10 border-amber-500/30'
+                                                }`}>
+                                                    <h4 className={`font-bold mb-1 flex items-center gap-1 ${
+                                                        isApproved ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'
+                                                    }`}>
+                                                        <span className="material-symbols-outlined text-[16px]">reviews</span>
+                                                        <span>Instructor Feedback ({isApproved ? 'Approved' : 'Need Work'})</span>
+                                                    </h4>
+                                                    <p className="whitespace-pre-wrap text-on-surface leading-relaxed">{sub.staff_comments}</p>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-end pt-2 border-t border-outline-variant/30">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { 
+                                                        setIsReviewing(sub.id); 
+                                                        setReviewComment(sub.staff_comments || ''); 
+                                                        setReviewStatus(isNeedWork ? 'Need Work' : 'Approved');
+                                                    }}
+                                                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    <span className="material-symbols-outlined text-[15px]">rate_review</span>
+                                                    <span>{sub.staff_comments ? 'Edit Review' : 'Add Review'}</span>
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </div>
