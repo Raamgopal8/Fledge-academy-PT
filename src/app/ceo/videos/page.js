@@ -29,6 +29,8 @@ export default function CEOVideos() {
     const [successMessage, setSuccessMessage] = useState('');
     const [videoToDelete, setVideoToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [activeVideo, setActiveVideo] = useState(null);
+    const [mobileFullscreen, setMobileFullscreen] = useState(false);
 
     // Filtering states
     const [filterLevel, setFilterLevel] = useState('All');
@@ -190,6 +192,91 @@ export default function CEOVideos() {
         return null;
     };
 
+    const getEmbedUrl = (url) => {
+        if (!url) return '';
+        const cleanUrl = url.trim();
+
+        // 1. Google Drive Links
+        if (cleanUrl.includes('drive.google.com')) {
+            const fileMatch = cleanUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileMatch && fileMatch[1]) {
+                return `https://drive.google.com/file/d/${fileMatch[1]}/preview`;
+            }
+            const idMatch = cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+            }
+            return cleanUrl;
+        }
+
+        // 2. YouTube Links
+        if (cleanUrl.includes('youtube.com/watch')) {
+            const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&controls=1`;
+            }
+        }
+        if (cleanUrl.includes('youtu.be/')) {
+            const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&controls=1`;
+            }
+        }
+
+        // 3. Vimeo Links
+        if (cleanUrl.includes('vimeo.com/')) {
+            const match = cleanUrl.match(/vimeo\.com\/([0-9]+)/);
+            if (match && match[1]) {
+                return `https://player.vimeo.com/video/${match[1]}?autoplay=1`;
+            }
+        }
+
+        return cleanUrl;
+    };
+
+    const toggleFullscreen = async (containerId) => {
+        const elem = document.getElementById(containerId);
+        if (!elem) return;
+
+        const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+
+        if (!isNativeFullscreen && !mobileFullscreen) {
+            try {
+                if (elem.requestFullscreen) await elem.requestFullscreen();
+                else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
+                else if (elem.mozRequestFullScreen) await elem.mozRequestFullScreen();
+                else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
+            } catch (e) {}
+
+            setMobileFullscreen(true);
+            try {
+                if (screen?.orientation?.lock) {
+                    await screen.orientation.lock('landscape');
+                } else if (screen?.lockOrientation) {
+                    screen.lockOrientation('landscape');
+                }
+            } catch (err) {}
+        } else {
+            setMobileFullscreen(false);
+            try {
+                if (screen?.orientation?.unlock) {
+                    screen.orientation.unlock();
+                } else if (screen?.unlockOrientation) {
+                    screen.unlockOrientation();
+                }
+            } catch (err) {}
+
+            if (isNativeFullscreen) {
+                try {
+                    if (document.exitFullscreen) await document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+                    else if (document.mozCancelFullScreen) await document.mozCancelFullScreen();
+                    else if (document.msExitFullscreen) await document.msExitFullscreen();
+                } catch (err) {}
+            }
+        }
+    };
+
     const getLevelBadgeClass = (lvl) => {
         const match = LEVELS.find(l => l.value === lvl);
         return match ? match.color : 'bg-primary/10 text-primary border-primary/20';
@@ -212,7 +299,51 @@ export default function CEOVideos() {
     const uniqueCategories = ['All', ...new Set(videos.map(v => v.category).filter(Boolean))];
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
+        <>
+            <style jsx>{`
+                @media (max-width: 768px) {
+                    .mobile-landscape-fullscreen {
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        width: 100dvw !important;
+                        height: 100dvh !important;
+                        max-width: 100vw !important;
+                        max-height: 100vh !important;
+                        max-width: 100dvw !important;
+                        max-height: 100dvh !important;
+                        transform: none !important;
+                        z-index: 999999 !important;
+                        background: black !important;
+                        border-radius: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                }
+                :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    width: 100dvw !important;
+                    height: 100dvh !important;
+                    background-color: black !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
+                }
+                :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe {
+                    width: 100% !important;
+                    height: 100% !important;
+                    border: none !important;
+                }
+            `}</style>
+            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
             {/* Header */}
             <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
@@ -465,29 +596,24 @@ export default function CEOVideos() {
                                 return (
                                     <div key={video.id} className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl overflow-hidden custom-shadow hover:shadow-md flex flex-col hover:border-primary/50 transition-all group">
                                         {/* Thumbnail Area */}
-                                        {thumb ? (
-                                            <div className="relative aspect-video w-full bg-black/10 overflow-hidden">
+                                        <div className="relative aspect-video w-full bg-black/10 overflow-hidden cursor-pointer" onClick={() => setActiveVideo(video)}>
+                                            {thumb ? (
                                                 <img 
                                                     src={thumb} 
                                                     alt={video.title} 
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                 />
-                                                <a 
-                                                    href={video.video_url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="absolute inset-0 bg-black/30 hover:bg-black/40 flex items-center justify-center transition-colors"
-                                                >
-                                                    <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                                        <span className="material-symbols-outlined text-[22px]">play_arrow</span>
-                                                    </div>
-                                                </a>
+                                            ) : (
+                                                <div className="aspect-video w-full bg-primary/10 flex items-center justify-center text-primary">
+                                                    <span className="material-symbols-outlined text-5xl">smart_display</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/30 hover:bg-black/40 flex items-center justify-center transition-colors">
+                                                <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                                    <span className="material-symbols-outlined text-[22px]">play_arrow</span>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <div className="aspect-video w-full bg-primary/10 flex items-center justify-center text-primary">
-                                                <span className="material-symbols-outlined text-5xl">smart_display</span>
-                                            </div>
-                                        )}
+                                        </div>
 
                                         {/* Content */}
                                         <div className="p-4 flex flex-col flex-1">
@@ -600,6 +726,67 @@ export default function CEOVideos() {
                     </div>
                 </div>
             )}
+
+            {/* Video Player Modal */}
+            {activeVideo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-surface rounded-3xl overflow-hidden max-w-[900px] w-full shadow-2xl border border-outline-variant/60 relative">
+                        <div className="p-4 bg-surface-container flex items-center justify-between border-b border-outline-variant/40">
+                            <div>
+                                <h3 className="font-bold text-sm text-on-surface line-clamp-1">{activeVideo.title}</h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    {activeVideo.level && <span className="text-[10px] font-semibold text-primary">{activeVideo.level}</span>}
+                                    {activeVideo.batch && <span className="text-[10px] text-on-surface-variant">• {activeVideo.batch}</span>}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setActiveVideo(null)}
+                                className="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                        
+                        <div 
+                            id={`ceo-video-player-${activeVideo.id || activeVideo._id}`}
+                            className={`aspect-video w-full bg-black relative group ${mobileFullscreen ? 'mobile-landscape-fullscreen' : ''}`}
+                        >
+                            {getEmbedUrl(activeVideo.video_url)?.includes('http') ? (
+                                <iframe
+                                    src={getEmbedUrl(activeVideo.video_url)}
+                                    title={activeVideo.title}
+                                    className="w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                    allowFullScreen
+                                />
+                            ) : (
+                                <video
+                                    src={activeVideo.video_url}
+                                    controls
+                                    autoPlay
+                                    className="w-full h-full object-contain"
+                                />
+                            )}
+
+                            {/* Top-Right Drive Pop-Out / Share Blocker & Fullscreen Button */}
+                            <div className="absolute top-2 right-2 z-40 flex items-center justify-center pointer-events-auto">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleFullscreen(`ceo-video-player-${activeVideo.id || activeVideo._id}`)}
+                                    className="w-8 h-8 rounded-full bg-black/80 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
+                                    title={mobileFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
+                                    aria-label="Toggle Fullscreen"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                        {mobileFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
+        </>
     );
 }

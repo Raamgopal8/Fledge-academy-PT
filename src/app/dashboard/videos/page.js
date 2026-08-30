@@ -240,7 +240,6 @@ export default function StudentVideos() {
         const elem = document.getElementById(containerId);
         if (!elem) return;
 
-        const isMobile = isMobileDevice();
         const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
         const isCustomMobileFs = mobileFullscreenId === containerId;
 
@@ -260,37 +259,24 @@ export default function StudentVideos() {
                 console.warn("Native fullscreen request warning:", err);
             }
 
-            // Mobile-only: Rotate to horizontal (landscape)
-            if (isMobile) {
-                setMobileFullscreenId(containerId);
+            setMobileFullscreenId(containerId);
+            try {
                 if (screen?.orientation?.lock) {
-                    try {
-                        await screen.orientation.lock('landscape');
-                    } catch (e) {
-                        try {
-                            if (screen.lockOrientation) screen.lockOrientation('landscape');
-                            else if (screen.mozLockOrientation) screen.mozLockOrientation('landscape');
-                            else if (screen.msLockOrientation) screen.msLockOrientation('landscape');
-                        } catch (err) {}
-                    }
+                    await screen.orientation.lock('landscape');
+                } else if (screen?.lockOrientation) {
+                    screen.lockOrientation('landscape');
                 }
-            }
+            } catch (err) {}
         } else {
             // EXIT FULLSCREEN -> Return to normal view
-            if (isMobile) {
-                setMobileFullscreenId(null);
+            setMobileFullscreenId(null);
+            try {
                 if (screen?.orientation?.unlock) {
-                    try {
-                        screen.orientation.unlock();
-                    } catch (e) {
-                        try {
-                            if (screen.unlockOrientation) screen.unlockOrientation();
-                            else if (screen.mozUnlockOrientation) screen.mozUnlockOrientation();
-                            else if (screen.msUnlockOrientation) screen.msUnlockOrientation();
-                        } catch (err) {}
-                    }
+                    screen.orientation.unlock();
+                } else if (screen?.unlockOrientation) {
+                    screen.unlockOrientation();
                 }
-            }
+            } catch (err) {}
 
             if (isNativeFullscreen) {
                 try {
@@ -351,28 +337,41 @@ export default function StudentVideos() {
                         position: fixed !important;
                         top: 0 !important;
                         left: 0 !important;
-                        width: 100vh !important;
-                        height: 100vw !important;
-                        max-width: 100vh !important;
-                        max-height: 100vw !important;
-                        transform: rotate(90deg) translateY(-100%) !important;
-                        transform-origin: top left !important;
-                        z-index: 99999 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        width: 100dvw !important;
+                        height: 100dvh !important;
+                        max-width: 100vw !important;
+                        max-height: 100vh !important;
+                        max-width: 100dvw !important;
+                        max-height: 100dvh !important;
+                        transform: none !important;
+                        z-index: 999999 !important;
                         background: black !important;
                         border-radius: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
                 }
                 :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
                     width: 100vw !important;
                     height: 100vh !important;
+                    width: 100dvw !important;
+                    height: 100dvh !important;
                     background-color: black !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
                 }
                 :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe {
                     width: 100% !important;
                     height: 100% !important;
+                    border: none !important;
                 }
             `}</style>
             <section className={`max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in no-select-mobile ${isObscured ? 'blur-xl select-none pointer-events-none opacity-50' : ''}`}>
@@ -500,12 +499,12 @@ export default function StudentVideos() {
                                                 </p>
                                             </div>
 
-                                            {/* Top-Right Drive Pop-Out Blocker & Fullscreen Button */}
-                                            <div className="absolute top-0 right-0 z-30 w-14 h-12 flex items-center justify-center pointer-events-auto">
+                                            {/* Top-Right Drive Pop-Out / Share Blocker & Fullscreen Button */}
+                                            <div className="absolute top-2 right-2 z-40 flex items-center justify-center pointer-events-auto">
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleFullscreen(`video-player-${video.id}`)}
-                                                    className="w-8 h-8 rounded-full bg-black/75 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
+                                                    className="w-8 h-8 rounded-full bg-black/80 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
                                                     title={mobileFullscreenId === `video-player-${video.id}` ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
                                                     aria-label="Toggle Fullscreen"
                                                 >

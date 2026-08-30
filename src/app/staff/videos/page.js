@@ -274,7 +274,6 @@ export default function StaffVideos() {
         const elem = document.getElementById(containerId);
         if (!elem) return;
 
-        const isMobile = isMobileDevice();
         const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
 
         if (!isNativeFullscreen && !mobileFullscreen) {
@@ -285,21 +284,24 @@ export default function StaffVideos() {
                 else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
             } catch (e) {}
 
-            if (isMobile) {
-                setMobileFullscreen(true);
+            setMobileFullscreen(true);
+            try {
                 if (screen?.orientation?.lock) {
-                    try {
-                        await screen.orientation.lock('landscape');
-                    } catch (err) {}
+                    await screen.orientation.lock('landscape');
+                } else if (screen?.lockOrientation) {
+                    screen.lockOrientation('landscape');
                 }
-            }
+            } catch (err) {}
         } else {
-            if (isMobile) {
-                setMobileFullscreen(false);
+            setMobileFullscreen(false);
+            try {
                 if (screen?.orientation?.unlock) {
-                    try { screen.orientation.unlock(); } catch (err) {}
+                    screen.orientation.unlock();
+                } else if (screen?.unlockOrientation) {
+                    screen.unlockOrientation();
                 }
-            }
+            } catch (err) {}
+
             if (isNativeFullscreen) {
                 try {
                     if (document.exitFullscreen) await document.exitFullscreen();
@@ -319,28 +321,41 @@ export default function StaffVideos() {
                         position: fixed !important;
                         top: 0 !important;
                         left: 0 !important;
-                        width: 100vh !important;
-                        height: 100vw !important;
-                        max-width: 100vh !important;
-                        max-height: 100vw !important;
-                        transform: rotate(90deg) translateY(-100%) !important;
-                        transform-origin: top left !important;
-                        z-index: 99999 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        width: 100dvw !important;
+                        height: 100dvh !important;
+                        max-width: 100vw !important;
+                        max-height: 100vh !important;
+                        max-width: 100dvw !important;
+                        max-height: 100dvh !important;
+                        transform: none !important;
+                        z-index: 999999 !important;
                         background: black !important;
                         border-radius: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                     }
                 }
                 :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
                     width: 100vw !important;
                     height: 100vh !important;
+                    width: 100dvw !important;
+                    height: 100dvh !important;
                     background-color: black !important;
                     display: flex !important;
                     align-items: center !important;
                     justify-content: center !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
                 }
                 :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe {
                     width: 100% !important;
                     height: 100% !important;
+                    border: none !important;
                 }
             `}</style>
             <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
@@ -589,12 +604,12 @@ export default function StaffVideos() {
                                 />
                             )}
 
-                            {/* Fullscreen Button */}
-                            <div className="absolute top-2 right-2 z-30 flex items-center justify-center">
+                            {/* Top-Right Drive Pop-Out / Share Blocker & Fullscreen Button */}
+                            <div className="absolute top-2 right-2 z-40 flex items-center justify-center pointer-events-auto">
                                 <button
                                     type="button"
                                     onClick={() => toggleFullscreen(`staff-video-player-${activeVideo.id || activeVideo._id}`)}
-                                    className="w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
+                                    className="w-8 h-8 rounded-full bg-black/80 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
                                     title={mobileFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
                                     aria-label="Toggle Fullscreen"
                                 >
