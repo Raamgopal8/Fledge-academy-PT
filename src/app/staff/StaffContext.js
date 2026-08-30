@@ -6,25 +6,33 @@ const StaffContext = createContext();
 export function StaffProvider({ children }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-    const [selectedBatch, setSelectedBatchState] = useState('');
-    const [staffBatches, setStaffBatches] = useState([]);
+    const [selectedBatch, setSelectedBatchState] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('staffSelectedBatch') || localStorage.getItem('batch') || '';
+        }
+        return '';
+    });
+    const [staffBatches, setStaffBatches] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const storedBatches = localStorage.getItem('staffBatches');
+                if (storedBatches) {
+                    const parsed = JSON.parse(storedBatches);
+                    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                }
+            } catch (e) {
+                console.error("Error parsing stored staff batches:", e);
+            }
+        }
+        return [];
+    });
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const savedBatch = localStorage.getItem('staffSelectedBatch') || localStorage.getItem('batch') || '';
-            setSelectedBatchState(savedBatch);
-            
-            try {
-                const storedBatches = localStorage.getItem('staffBatches');
-                if (storedBatches) {
-                    const parsed = JSON.parse(storedBatches);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        setStaffBatches(parsed);
-                    }
-                }
-            } catch (e) {
-                console.error("Error parsing stored staff batches:", e);
+            if (savedBatch && savedBatch !== selectedBatch) {
+                setSelectedBatchState(savedBatch);
             }
         }
     }, []);
@@ -42,7 +50,9 @@ export function StaffProvider({ children }) {
         setStaffBatches(batchList);
         if (typeof window !== 'undefined') {
             localStorage.setItem('staffBatches', JSON.stringify(batchList));
-            if (!selectedBatch && batchList.length > 0) {
+            const currentSaved = localStorage.getItem('staffSelectedBatch') || localStorage.getItem('batch') || '';
+            // Only set a default if the user has NEVER selected or saved any batch
+            if (!currentSaved && batchList.length > 0) {
                 setSelectedBatch(batchList[0]);
             }
         }

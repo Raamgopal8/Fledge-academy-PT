@@ -34,9 +34,6 @@ export default function StaffTopNav() {
                         ? data.batches 
                         : (data.batch ? [data.batch] : []);
                     setStaffBatches(bList);
-                    if (bList.length > 0 && !selectedBatch) {
-                        setSelectedBatch(bList[0]);
-                    }
                 }
             } catch (err) {
                 console.error(err);
