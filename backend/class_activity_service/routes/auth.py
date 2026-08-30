@@ -16,6 +16,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://localhost:8000/api/login")
 class DummyUser(BaseModel):
     id: str
     email: str
+    name: Optional[str] = None
     role: str
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
@@ -32,9 +33,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         role: str = payload.get("role")
         uid: str = payload.get("uid")
         batch: str = payload.get("batch")
+        name: Optional[str] = payload.get("name")
         if email is None or uid is None:
             raise credentials_exception
         batches = payload.get('batches') or ([batch] if batch else [])
-        return DummyUser(id=uid, email=email, role=role, batch=batch, batches=batches)
+        return DummyUser(id=uid, email=email, name=name, role=role, batch=batch, batches=batches)
     except jwt.PyJWTError:
         raise credentials_exception

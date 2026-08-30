@@ -238,7 +238,7 @@ export default function StaffDashboard() {
                                     onClick={() => openGradingDrawer(pendingSubmissions[0])}
                                     className="text-xs font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
                                 >
-                                    Reviews <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                    Review <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                                 </button>
                             )}
                         </div>
@@ -552,10 +552,12 @@ export default function StaffDashboard() {
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-primary flex items-center justify-center font-bold text-xs ring-1 ring-primary/20 shrink-0">
-                                                        {getInitials(sub.student_name)}
+                                                        {getInitials((sub.student_name && !['unknown', 'unkown', 'null', 'none', ''].includes(sub.student_name.trim().toLowerCase())) ? sub.student_name : (sub.student_email ? sub.student_email.split('@')[0] : 'Student'))}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <div className="font-bold text-xs text-on-surface truncate">{sub.student_name || 'Student'}</div>
+                                                        <div className="font-bold text-xs text-on-surface truncate">
+                                                            {(sub.student_name && !['unknown', 'unkown', 'null', 'none', ''].includes(sub.student_name.trim().toLowerCase())) ? sub.student_name : (sub.student_email ? sub.student_email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Student')}
+                                                        </div>
                                                         <div className="text-[10px] text-on-surface-variant truncate">{sub.student_email || ''}</div>
                                                     </div>
                                                 </div>

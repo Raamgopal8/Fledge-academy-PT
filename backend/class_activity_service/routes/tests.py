@@ -133,11 +133,21 @@ async def submit_test(
         
     # Determine student name reliably
     input_name = (submission_data.student_name or "").strip()
-    resolved_name = (
-        input_name 
-        if input_name and input_name.lower() != "unknown" 
-        else (getattr(current_user, "name", None) or (current_user.email.split('@')[0] if getattr(current_user, "email", None) else "Student"))
-    )
+    db_student = await models.User.get(PydanticObjectId(current_user.id))
+    db_name = getattr(db_student, "name", None) if db_student else None
+    user_jwt_name = getattr(current_user, "name", None)
+
+    invalid_names = ["unknown", "unkown", "none", "null", "undefined", ""]
+    if input_name and input_name.lower() not in invalid_names:
+        resolved_name = input_name
+    elif db_name and db_name.strip().lower() not in invalid_names:
+        resolved_name = db_name.strip()
+    elif user_jwt_name and user_jwt_name.strip().lower() not in invalid_names:
+        resolved_name = user_jwt_name.strip()
+    else:
+        email_str = getattr(current_user, "email", None) or (getattr(db_student, "email", None) if db_student else "")
+        email_part = email_str.split('@')[0] if email_str else "Student"
+        resolved_name = email_part.replace('.', ' ').replace('_', ' ').title()
 
     # Check if already submitted
     existing_submission = await models.TestSubmission.find_one(
@@ -195,11 +205,22 @@ async def get_test_submissions(
     submissions = await models.TestSubmission.find(models.TestSubmission.test_id == test_id).sort("-submitted_at").to_list()
     
     response = []
+    invalid_names = ["unknown", "unkown", "none", "null", "undefined", ""]
     for sub in submissions:
         student = await models.User.get(sub.student_id)
         sub_name = getattr(sub, "student_name", None)
-        if not sub_name or sub_name.strip().lower() == "unknown":
-            sub_name = student.name if (student and student.name) else (student.email.split('@')[0] if student and student.email else "Student")
+        if not sub_name or sub_name.strip().lower() in invalid_names:
+            if student and student.name and student.name.strip().lower() not in invalid_names:
+                sub_name = student.name.strip()
+            elif student and student.email:
+                sub_name = student.email.split('@')[0].replace('.', ' ').replace('_', ' ').title()
+            else:
+                sub_name = "Student"
+            try:
+                sub.student_name = sub_name
+                await sub.save()
+            except Exception:
+                pass
             
         raw_status = sub.status
         display_status = "Approved" if raw_status == "Reviewed" else ("Need Work" if raw_status in ["Needs Work", "Failed", "Fail"] else raw_status)
@@ -263,13 +284,24 @@ async def get_all_submissions(
     submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()
     
     response = []
+    invalid_names = ["unknown", "unkown", "none", "null", "undefined", ""]
     for sub in submissions:
         student = await models.User.get(sub.student_id)
         test = await models.Test.get(sub.test_id)
         
         sub_name = getattr(sub, "student_name", None)
-        if not sub_name or sub_name.strip().lower() == "unknown":
-            sub_name = student.name if (student and student.name) else (student.email.split('@')[0] if student and student.email else "Student")
+        if not sub_name or sub_name.strip().lower() in invalid_names:
+            if student and student.name and student.name.strip().lower() not in invalid_names:
+                sub_name = student.name.strip()
+            elif student and student.email:
+                sub_name = student.email.split('@')[0].replace('.', ' ').replace('_', ' ').title()
+            else:
+                sub_name = "Student"
+            try:
+                sub.student_name = sub_name
+                await sub.save()
+            except Exception:
+                pass
             
         raw_status = sub.status
         display_status = "Approved" if raw_status == "Reviewed" else ("Need Work" if raw_status in ["Needs Work", "Failed", "Fail"] else raw_status)
@@ -277,7 +309,7 @@ async def get_all_submissions(
         response.append({
             "id": str(sub.id),
             "test_id": str(sub.test_id),
-            "test_title": test.title if test else "Unknown",
+            "test_title": test.title if test else "Assessment",
             "student_id": str(sub.student_id),
             "student_name": sub_name,
             "submission_content": sub.submission_content,

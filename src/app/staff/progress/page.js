@@ -151,7 +151,7 @@ export default function StudentProgress() {
                     <div className="flex items-center gap-2 mb-1">
                         <span className="material-symbols-outlined text-primary text-3xl">trending_up</span>
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
-                            Student Progress & Grading
+                            Student Progress & Review
                         </h1>
                     </div>
                     <p className="font-body-md text-on-surface-variant max-w-2xl mt-1">
@@ -322,11 +322,11 @@ export default function StudentProgress() {
                                             <td className="py-3.5 px-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-primary flex items-center justify-center font-bold text-xs ring-2 ring-primary/10 shrink-0">
-                                                        {getInitials(sub.student_name)}
+                                                        {getInitials((sub.student_name && !['unknown', 'unkown', 'null', 'none', ''].includes(sub.student_name.trim().toLowerCase())) ? sub.student_name : (sub.student_email ? sub.student_email.split('@')[0] : 'Student'))}
                                                     </div>
                                                     <div className="min-w-0">
                                                         <div className="font-bold text-xs text-on-surface group-hover:text-primary transition-colors truncate">
-                                                            {sub.student_name || 'Student'}
+                                                            {(sub.student_name && !['unknown', 'unkown', 'null', 'none', ''].includes(sub.student_name.trim().toLowerCase())) ? sub.student_name : (sub.student_email ? sub.student_email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Student')}
                                                         </div>
                                                         {sub.student_email && (
                                                             <div className="text-[10px] text-on-surface-variant/80 truncate">
@@ -547,7 +547,7 @@ export default function StudentProgress() {
                                     ) : (
                                         <>
                                             <span className="material-symbols-outlined text-[16px]">save</span>
-                                            <span>Save Grade & Feedback</span>
+                                            <span>Save Review & Feedback</span>
                                         </>
                                     )}
                                 </button>

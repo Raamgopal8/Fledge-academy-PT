@@ -258,7 +258,9 @@ export default function StaffTests() {
                                 <div key={sub.id} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant custom-shadow space-y-3">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h3 className="font-title-md text-on-surface font-bold text-sm">{sub.student_name || 'Student'}</h3>
+                                            <h3 className="font-title-md text-on-surface font-bold text-sm">
+                                                {(sub.student_name && !['unknown', 'unkown', 'null', 'none', ''].includes(sub.student_name.trim().toLowerCase())) ? sub.student_name : (sub.student_email ? sub.student_email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Student')}
+                                            </h3>
                                             <p className="text-xs text-on-surface-variant font-medium mt-0.5">{new Date(sub.submitted_at).toLocaleString()}</p>
                                         </div>
                                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1 ${

@@ -145,6 +145,7 @@ async def login(request: LoginRequest):
     access_token = create_access_token(
         data={
             "sub": request.username, 
+            "name": user.name or (user.email.split("@")[0].title() if user.email else "Student"),
             "role": user.role, 
             "uid": str(user.id), 
             "batch": primary_batch,
