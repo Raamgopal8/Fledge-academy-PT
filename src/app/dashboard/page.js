@@ -81,7 +81,7 @@ export default function DashboardOverview() {
         });
 
       // Fetch Materials
-      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
+      fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : Promise.reject('Failed to fetch materials'))
         .then(data => { setMaterials(data); setIsLoading(prev => ({ ...prev, materials: false })); })
         .catch(err => { setError(prev => ({ ...prev, materials: err })); setIsLoading(prev => ({ ...prev, materials: false })); });

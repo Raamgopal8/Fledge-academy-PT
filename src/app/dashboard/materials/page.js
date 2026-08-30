@@ -55,7 +55,7 @@ export default function StudentMaterials() {
             if (level) queryParams.append('level', level);
             if (batch) queryParams.append('batch', batch);
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials?${queryParams.toString()}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/?${queryParams.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

@@ -52,7 +52,7 @@ export default function CEOMaterials() {
             const batchParam = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
                 ? `?batch=${encodeURIComponent(selectedBatch)}`
                 : '';
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials${batchParam}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/${batchParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -89,7 +89,7 @@ export default function CEOMaterials() {
         }
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
