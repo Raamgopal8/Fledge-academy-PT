@@ -210,47 +210,46 @@ export default function SchedulePage() {
     }
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-sm mb-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-3xl">calendar_month</span>
                         <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
                             Class Schedule Management
                         </h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl mt-1">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
                         Create, update, and manage weekly class sessions and room allocations.
                     </p>
                 </div>
                 
-                <div className="flex gap-sm">
-                    <button 
-                        onClick={openAddModal}
-                        className="flex items-center justify-center bg-primary text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md gap-2 hover:opacity-90 active:scale-95 transition-all shadow-sm cursor-pointer"
-                    >
-                        <span className="material-symbols-outlined">add</span>
-                        Add Class
-                    </button>
-                </div>
-            </div>
+                <button 
+                    onClick={openAddModal}
+                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95 self-start md:self-auto"
+                >
+                    <span className="material-symbols-outlined text-[20px]">add</span>
+                    <span>Add Class</span>
+                </button>
+            </section>
 
             {/* Error Callout */}
             {error && (
-                <div className="p-lg bg-error-container text-on-error-container rounded-xl flex items-center gap-md">
-                    <span className="material-symbols-outlined text-[32px]">error</span>
+                <div className="p-4 bg-error-container text-on-error-container rounded-2xl flex items-center gap-2 text-xs sm:text-sm">
+                    <span className="material-symbols-outlined text-[24px]">error</span>
                     <div>
-                        <h3 className="font-headline-md">Error Loading Schedules</h3>
-                        <p className="font-body-md">{error}</p>
+                        <h3 className="font-bold">Error Loading Schedules</h3>
+                        <p>{error}</p>
                     </div>
                 </div>
             )}
 
             {/* Main Workspace Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-md items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start w-full max-w-full">
                 
                 {/* Left Side: Days Navigation */}
-                <div className="bg-surface-container-lowest p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 scrollbar-none">
+                <div className="bg-surface-container-lowest p-2 rounded-3xl custom-shadow border border-outline-variant/60 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 custom-scrollbar w-full max-w-full">
                     {DAYS_OF_WEEK.map((day) => {
                         const count = schedules.filter(s => s.day_of_week === day).length;
                         const isActive = activeTab === day;
@@ -278,12 +277,12 @@ export default function SchedulePage() {
                 </div>
 
                 {/* Right Side: Schedule List */}
-                <div className="lg:col-span-3 space-y-md">
-                    <div className="bg-surface-container-lowest p-md rounded-xl custom-shadow border border-surface-container relative overflow-hidden">
+                <div className="lg:col-span-3 space-y-md w-full max-w-full">
+                    <div className="bg-surface-container-lowest p-5 md:p-6 rounded-3xl custom-shadow border border-outline-variant/60 relative overflow-hidden">
                         <div className="h-1 w-full absolute top-0 left-0 bg-primary"></div>
-                        <div className="flex items-center justify-between mb-md">
-                            <h3 className="font-headline-md text-headline-md">{activeTab} Schedule</h3>
-                            <span className="text-body-sm text-on-surface-variant">{filteredSchedules.length} class(es) scheduled</span>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-headline-sm text-on-surface font-bold text-base">{activeTab} Schedule</h3>
+                            <span className="text-xs text-on-surface-variant font-medium">{filteredSchedules.length} class(es) scheduled</span>
                         </div>
 
                         {filteredSchedules.length === 0 ? (
@@ -573,6 +572,6 @@ export default function SchedulePage() {
                     </div>
                 </div>
             )}
-        </section>
+        </div>
     );
 }

@@ -138,42 +138,42 @@ export default function StudentProgress() {
     }
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in pb-32">
+        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <section className="flex flex-col md:flex-row md:items-center justify-between gap-md mb-lg">
                 <div>
-                    <div className="flex items-center gap-sm mb-xs">
+                    <div className="flex items-center gap-2 mb-1">
                         <span className="material-symbols-outlined text-primary text-3xl">trending_up</span>
                         <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Student Progress & Grading
                         </h1>
                     </div>
-                    <p className="font-body-lg text-on-surface-variant max-w-2xl">
+                    <p className="font-body-md text-on-surface-variant max-w-2xl">
                         Track assessment submissions, monitor completion rates, and provide grading feedback.
                     </p>
                 </div>
 
                 {selectedBatch && selectedBatch !== 'All Assigned Batches' && (
-                    <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                    <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs self-start md:self-auto">
                         <span className="material-symbols-outlined text-[16px]">groups</span>
                         <span>{selectedBatch}</span>
                     </div>
                 )}
-            </div>
+            </section>
 
             {successMessage && (
-                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30">
+                <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30 text-xs sm:text-sm">
                     <span className="material-symbols-outlined text-[22px]">check_circle</span>
-                    <span className="text-sm font-medium">{successMessage}</span>
+                    <span className="font-medium">{successMessage}</span>
                 </div>
             )}
 
             {error && (
-                <div className="p-lg bg-error-container text-on-error-container rounded-2xl flex items-center gap-md">
-                    <span className="material-symbols-outlined text-[32px]">error</span>
+                <div className="p-4 bg-error-container text-on-error-container rounded-2xl flex items-center gap-2 text-xs sm:text-sm">
+                    <span className="material-symbols-outlined text-[24px]">error</span>
                     <div>
-                        <h3 className="font-headline-md font-bold">Error Loading Data</h3>
-                        <p className="font-body-md text-xs">{error}</p>
+                        <h3 className="font-bold">Error Loading Data</h3>
+                        <p className="text-xs">{error}</p>
                     </div>
                 </div>
             )}
@@ -220,16 +220,16 @@ export default function StudentProgress() {
                             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Needs Work</p>
                             <h2 className="text-3xl font-extrabold text-error mt-1">{needsWorkSubmissions}</h2>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-error-container text-error flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <span className="material-symbols-outlined text-[26px]">error</span>
+                        <div className="w-12 h-12 rounded-2xl bg-error/10 text-error flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <span className="material-symbols-outlined text-[26px]">replay</span>
                         </div>
                     </div>
                     <div className="mt-3 text-xs text-error font-medium">
-                        Requires revision from student
+                        Redo requested from student
                     </div>
                 </div>
 
-                {/* Pending Review */}
+                {/* Pending */}
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow relative overflow-hidden group">
                     <div className="flex justify-between items-start">
                         <div>
@@ -247,7 +247,7 @@ export default function StudentProgress() {
             </div>
 
             {/* Main Progress Log Card */}
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 custom-shadow space-y-5">
+            <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow space-y-5 w-full max-w-full">
                 {/* Search & Filter Controls */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-outline-variant/50">
                     {/* Status Filter Tabs */}
@@ -261,7 +261,7 @@ export default function StudentProgress() {
                             <button
                                 key={tab.key}
                                 onClick={() => setStatusFilter(tab.key)}
-                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                                     statusFilter === tab.key
                                         ? 'bg-primary text-on-primary shadow-xs font-bold'
                                         : 'bg-surface-container-low border border-outline-variant/60 text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
@@ -278,21 +278,21 @@ export default function StudentProgress() {
                     </div>
 
                     {/* Search Bar */}
-                    <div className="relative min-w-[260px]">
+                    <div className="relative w-full lg:w-72 min-w-[180px]">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
                         <input 
                             type="text" 
                             placeholder="Search student, test, or feedback..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
+                            className="w-full pl-9 pr-4 py-1.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
                         />
                     </div>
                 </div>
 
                 {/* Submissions Table */}
-                <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full text-left border-collapse min-w-[700px]">
+                <div className="overflow-x-auto custom-scrollbar border border-outline-variant/40 rounded-2xl w-full max-w-full">
+                    <table className="w-full text-left border-collapse min-w-[620px]">
                         <thead>
                             <tr className="border-b border-outline-variant/60 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                                 <th className="py-3 px-4">Student</th>
@@ -548,6 +548,6 @@ export default function StudentProgress() {
                     </div>
                 </div>
             )}
-        </section>
+        </div>
     );
 }

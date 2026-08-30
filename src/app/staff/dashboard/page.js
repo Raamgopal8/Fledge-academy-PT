@@ -182,7 +182,7 @@ export default function StaffDashboard() {
 
     return (
         <>
-            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
+            <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in w-full max-w-full overflow-x-hidden">
                 {/* Welcome Header */}
                 <section className="flex flex-col md:flex-row md:items-center justify-between gap-md">
                     <div>
@@ -512,8 +512,8 @@ export default function StaffDashboard() {
                         </div>
                     </div>
                     
-                    <div className="overflow-x-auto custom-scrollbar">
-                        <table className="w-full text-left border-collapse min-w-[800px]">
+                    <div className="overflow-x-auto custom-scrollbar border border-outline-variant/40 rounded-2xl w-full max-w-full">
+                        <table className="w-full text-left border-collapse min-w-[620px]">
                             <thead>
                                 <tr className="border-b border-outline-variant/60 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                                     <th className="py-3 px-3 w-10">
