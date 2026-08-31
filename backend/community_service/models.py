@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from beanie import Document, PydanticObjectId
 from pydantic import Field
@@ -141,6 +141,8 @@ class CommunityMessage(Document):
     level: Optional[str] = None
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
+    is_edited: Optional[bool] = False
+    edited_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
     class Settings:

@@ -61,37 +61,50 @@ def format_schedule_response(schedule: models.ClassSchedule) -> dict:
     return {
         "id": str(schedule.id),
         "_id": str(schedule.id),
-        "name": schedule.name,
-        "time": schedule.time,
-        "location": schedule.location,
-        "students": schedule.students,
-        "color": schedule.color,
-        "day_of_week": schedule.day_of_week,
-        "class_link": schedule.class_link,
-        "level": schedule.level,
-        "batch": schedule.batch,
+        "name": getattr(schedule, "name", "") or "",
+        "time": getattr(schedule, "time", "") or "",
+        "location": getattr(schedule, "location", "") or "",
+        "students": getattr(schedule, "students", 0) or 0,
+        "color": getattr(schedule, "color", "primary") or "primary",
+        "day_of_week": getattr(schedule, "day_of_week", "") or "",
+        "class_link": getattr(schedule, "class_link", None),
+        "level": getattr(schedule, "level", None),
+        "batch": getattr(schedule, "batch", None),
         "created_at": schedule.created_at.isoformat() if getattr(schedule, "created_at", None) else None
     }
 
 @router.get("", response_model=List[dict])
 async def get_schedules(level: Optional[str] = None, batch: Optional[str] = None):
-    query = {}
-    if level and level.strip().lower() not in ["all", "all levels"]:
-        query["level"] = {"$regex": f"^{level.strip()}$", "$options": "i"}
-    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
-        query["batch"] = {"$regex": f"^{batch.strip()}$", "$options": "i"}
-    schedules = await models.ClassSchedule.find(query).to_list()
-    now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
-    valid_schedules = []
-    
-    for schedule in schedules:
-        if "online" in schedule.location.lower():
-            if schedule.expires_at and schedule.expires_at < now:
-                await schedule.delete()
-                continue
-        valid_schedules.append(format_schedule_response(schedule))
+    try:
+        query = {}
+        if level and level.strip().lower() not in ["all", "all levels"]:
+            query["level"] = {"$regex": f"^{level.strip()}$", "$options": "i"}
+        if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+            query["batch"] = {"$regex": f"^{batch.strip()}$", "$options": "i"}
+        schedules = await models.ClassSchedule.find(query).to_list()
+        now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
+        valid_schedules = []
         
-    return valid_schedules
+        for schedule in schedules:
+            loc = (getattr(schedule, "location", "") or "").lower()
+            if "online" in loc:
+                exp = getattr(schedule, "expires_at", None)
+                if exp:
+                    try:
+                        # Make naive if needed
+                        exp_naive = exp.replace(tzinfo=None) if hasattr(exp, "tzinfo") and exp.tzinfo else exp
+                        now_naive = now.replace(tzinfo=None)
+                        if exp_naive < now_naive:
+                            await schedule.delete()
+                            continue
+                    except Exception as ex:
+                        print(f"Expiration check warning: {ex}")
+            valid_schedules.append(format_schedule_response(schedule))
+            
+        return valid_schedules
+    except Exception as e:
+        print(f"Error in get_schedules: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch schedules: {str(e)}")
 
 @router.post("", response_model=dict)
 async def create_schedule(
