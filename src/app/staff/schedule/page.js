@@ -185,13 +185,15 @@ export default function SchedulePage() {
 
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.detail || 'Failed to delete schedule item');
+                const msg = typeof errData.detail === 'string' ? errData.detail : (errData.detail ? JSON.stringify(errData.detail) : 'Failed to delete schedule item');
+                throw new Error(msg);
             }
 
             await fetchSchedules();
         } catch (err) {
             console.error('Error deleting schedule:', err);
-            alert(err.message || 'Failed to delete schedule');
+            const displayMsg = (err && typeof err.message === 'string') ? err.message : 'Failed to delete schedule';
+            alert(displayMsg);
         }
     };
 
@@ -350,7 +352,7 @@ export default function SchedulePage() {
                                                     <span className="material-symbols-outlined">edit</span>
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(item.id)}
+                                                    onClick={() => handleDelete(item)}
                                                     className="p-2 text-outline hover:text-error hover:bg-surface-container rounded-lg transition-colors cursor-pointer"
                                                     title="Delete Class"
                                                 >
