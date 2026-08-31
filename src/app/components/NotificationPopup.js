@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -11,6 +11,7 @@ export default function NotificationPopup() {
         unreadCount, 
         isTrayOpen, 
         setIsTrayOpen, 
+        userRole,
         markAsDismissed, 
         clearSingleNotification,
         clearAllNotifications,
@@ -27,14 +28,61 @@ export default function NotificationPopup() {
         if (link) router.push(link);
     };
 
+    // Build role-specific tabs
+    const getTabsForRole = () => {
+        if (userRole === 'ceo' || userRole === 'admin') {
+            return [
+                { id: 'all', label: 'All', count: notifications.length, icon: 'notifications' },
+                { id: 'test_report', label: 'Test Reports', count: notifications.filter(n => n.type === 'test_report').length, icon: 'assessment' },
+                { id: 'community_message', label: 'Community', count: notifications.filter(n => n.type === 'community_message').length, icon: 'forum' }
+            ];
+        }
+
+        if (userRole === 'staff') {
+            return [
+                { id: 'all', label: 'All', count: notifications.length, icon: 'notifications' },
+                { id: 'announcement', label: 'Announcements', count: notifications.filter(n => n.type === 'announcement').length, icon: 'campaign' },
+                { id: 'test_submission', label: 'Test Submissions', count: notifications.filter(n => n.type === 'test_submission').length, icon: 'rate_review' },
+                { id: 'class_schedule', label: 'Classes', count: notifications.filter(n => n.type === 'class_schedule').length, icon: 'calendar_month' },
+                { id: 'student_note_new', label: 'Student Notes', count: notifications.filter(n => n.type === 'student_note_new').length, icon: 'edit_note' },
+                { id: 'community_message', label: 'Community', count: notifications.filter(n => n.type === 'community_message').length, icon: 'forum' }
+            ];
+        }
+
+        // Default: Student
+        return [
+            { id: 'all', label: 'All', count: notifications.length, icon: 'notifications' },
+            { id: 'class_schedule', label: 'Classes', count: notifications.filter(n => n.type === 'class_schedule').length, icon: 'calendar_month' },
+            { id: 'test_created', label: 'Tests', count: notifications.filter(n => n.type === 'test_created').length, icon: 'assignment' },
+            { id: 'material_new', label: 'Materials', count: notifications.filter(n => n.type === 'material_new').length, icon: 'menu_book' },
+            { id: 'announcement', label: 'Announcements', count: notifications.filter(n => n.type === 'announcement').length, icon: 'campaign' },
+            { id: 'video_new', label: 'Videos', count: notifications.filter(n => n.type === 'video_new').length, icon: 'smart_display' },
+            { id: 'community_message', label: 'Community', count: notifications.filter(n => n.type === 'community_message').length, icon: 'forum' }
+        ];
+    };
+
+    const tabs = getTabsForRole();
+
     // Filter notifications by active tab
     const filteredNotifications = notifications.filter(n => {
         if (activeTab === 'all') return true;
-        if (activeTab === 'tests') return n.type === 'test_deadline';
-        if (activeTab === 'classes') return n.type === 'class_day' || n.type === 'class_reminder' || n.type === 'class_new';
-        if (activeTab === 'announcements') return n.type === 'announcement';
-        return true;
+        return n.type === activeTab;
     });
+
+    const getBadgeLabel = (type) => {
+        switch (type) {
+            case 'test_report': return 'Test Report';
+            case 'community_message': return 'Community';
+            case 'class_schedule': return 'Class Schedule';
+            case 'test_created': return 'Test';
+            case 'material_new': return 'Material';
+            case 'announcement': return 'Announcement';
+            case 'video_new': return 'Video Lesson';
+            case 'test_submission': return 'Test Completed';
+            case 'student_note_new': return 'Student Notes';
+            default: return 'Notification';
+        }
+    };
 
     return (
         <>
@@ -47,7 +95,7 @@ export default function NotificationPopup() {
                     <div 
                         role="dialog"
                         aria-modal="true"
-                        className="relative w-[94vw] max-w-[520px] max-h-[85vh] bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-scale-up mx-auto"
+                        className="relative w-[94vw] max-w-[560px] max-h-[85vh] bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 shadow-2xl rounded-3xl flex flex-col overflow-hidden animate-scale-up mx-auto"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -57,7 +105,12 @@ export default function NotificationPopup() {
                                     <span className="material-symbols-outlined text-[22px]">notifications</span>
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-base sm:text-lg text-on-surface">Notifications</h3>
+                                    <h3 className="font-bold text-base sm:text-lg text-on-surface flex items-center gap-2">
+                                        <span>Notifications</span>
+                                        <span className="text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                                            {userRole}
+                                        </span>
+                                    </h3>
                                     <p className="text-xs text-on-surface-variant">
                                         {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
                                     </p>
@@ -100,12 +153,7 @@ export default function NotificationPopup() {
 
                         {/* Filter Tabs */}
                         <div className="flex items-center gap-1.5 p-3 bg-surface-container-lowest border-b border-outline-variant/40 overflow-x-auto custom-scrollbar shrink-0">
-                            {[
-                                { id: 'all', label: 'All', count: notifications.length, icon: 'notifications' },
-                                { id: 'tests', label: 'Tests', count: notifications.filter(n => n.type === 'test_deadline').length, icon: 'assignment_late' },
-                                { id: 'classes', label: 'Classes', count: notifications.filter(n => n.type === 'class_day').length, icon: 'calendar_month' },
-                                { id: 'announcements', label: 'Announcements', count: notifications.filter(n => n.type === 'announcement').length, icon: 'campaign' }
-                            ].map(tab => (
+                            {tabs.map(tab => (
                                 <button
                                     key={tab.id}
                                     type="button"
@@ -137,8 +185,8 @@ export default function NotificationPopup() {
                                         <span className="material-symbols-outlined text-4xl text-outline">notifications_off</span>
                                     </div>
                                     <h4 className="font-bold text-sm text-on-surface">No notifications</h4>
-                                    <p className="text-xs text-outline mt-1 max-w-[240px]">
-                                        You're all caught up with your deadlines, classes, and announcement updates.
+                                    <p className="text-xs text-outline mt-1 max-w-[260px]">
+                                        You're all caught up with your updates and activities.
                                     </p>
                                 </div>
                             ) : (
@@ -158,11 +206,8 @@ export default function NotificationPopup() {
                                         {/* Content */}
                                         <div className="flex-1 min-w-0 pr-2">
                                             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${item.badgeColor}`}>
-                                                    {item.type === 'test_deadline' ? 'Deadline' : 
-                                                     item.type === 'class_reminder' ? 'Starting in 30m' :
-                                                     item.type === 'class_new' ? 'New Class' :
-                                                     item.type === 'class_day' ? 'Schedule' : 'Announcement'}
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${item.badgeColor || 'bg-primary/10 text-primary border-primary/20'}`}>
+                                                    {getBadgeLabel(item.type)}
                                                 </span>
                                                 <span className="text-[10px] text-on-surface-variant font-medium">
                                                     {item.timeAgo}

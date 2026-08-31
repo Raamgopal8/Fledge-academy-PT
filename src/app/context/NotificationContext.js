@@ -33,6 +33,8 @@ export function NotificationProvider({ children }) {
     const [isTrayOpen, setIsTrayOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [userRole, setUserRole] = useState('student');
 
     // Audio chime using standard Web Audio API
     const playNotificationChime = useCallback(() => {
@@ -60,9 +62,7 @@ export function NotificationProvider({ children }) {
             
             osc.start();
             osc.stop(ctx.currentTime + 0.35);
-        } catch (e) {
-            // Audio context policy might require user gesture first
-        }
+        } catch (e) {}
     }, []);
 
     // Sync notification preference with profile settings
@@ -89,6 +89,9 @@ export function NotificationProvider({ children }) {
                 const enabled = profileData.preferences?.notifications !== false;
                 setNotificationsEnabled(enabled);
                 localStorage.setItem('notifications_enabled', enabled ? 'true' : 'false');
+                if (profileData.role) {
+                    setUserRole(profileData.role.toLowerCase());
+                }
                 if (!enabled) {
                     setActivePopup(null);
                 }
@@ -110,243 +113,576 @@ export function NotificationProvider({ children }) {
         }
 
         let role = 'student';
+        let currentUserId = '';
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             role = (payload.role || '').toLowerCase();
+            currentUserId = payload.user_id || payload.id || payload.sub || '';
         } catch (e) {}
+
+        setUserRole(role);
 
         const userLevel = localStorage.getItem('level') || 'Level 5';
         const userBatch = localStorage.getItem('batch') || '';
-        const dismissedKey = 'fledge_dismissed_notifications_v1';
+        const dismissedKey = `fledge_dismissed_${role}_v2`;
+        const clearedKey = `fledge_cleared_${role}_v2`;
+        
         let dismissed = [];
+        let cleared = [];
         try {
             dismissed = JSON.parse(localStorage.getItem(dismissedKey) || '[]');
+            cleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
         } catch (e) {}
 
         const collected = [];
         const now = new Date();
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-        // 1. Fetch Announcements
-        try {
-            const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
-            const res = await fetch(`${annApiBase}/api/announcement?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const announcements = await res.json();
-                announcements.slice(0, 3).forEach(ann => {
-                    const annDate = new Date(ann.created_at || now);
-                    const diffHours = (now - annDate) / (1000 * 60 * 60);
-                    if (diffHours <= 168) { // 7 days
-                        const id = `ann-${ann.id || ann._id || annDate.getTime()}`;
-                        collected.push({
-                            id,
-                            type: 'announcement',
-                            title: ann.title || 'New Announcement',
-                            message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New update posted in the announcement channel.',
-                            timestamp: annDate,
-                            timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                            link: role === 'ceo' ? '/ceo/announcements' : (role === 'staff' ? '/staff/announcements' : '/dashboard/announcements'),
-                            icon: 'campaign',
-                            badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
-                            accentColor: 'from-purple-500 to-indigo-600',
-                            priority: 'normal'
-                        });
-                    }
-                });
-            }
-        } catch (err) {}
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+        const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
+        const testApiBase = process.env.NEXT_PUBLIC_TEST_API_URL || '';
+        const materialsApiBase = process.env.NEXT_PUBLIC_MATERIALS_API_URL || '';
+        const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
+        const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
 
-        // 2. Fetch Tests & Deadlines
-        try {
-            const testApiBase = process.env.NEXT_PUBLIC_TEST_API_URL || '';
-            const queryParams = new URLSearchParams();
-            if (userLevel) queryParams.append('level', userLevel);
-            if (userBatch) queryParams.append('batch', userBatch);
-
-            const res = await fetch(`${testApiBase}/api/tests?${queryParams.toString()}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const tests = await res.json();
-                tests.forEach(test => {
-                    if (test.due_date) {
-                        const dueDate = new Date(test.due_date);
-                        const diffHours = (dueDate - now) / (1000 * 60 * 60);
-                        const id = `test-${test.id || test._id}`;
-
-                        if (diffHours > 0 && diffHours <= 48) {
+        // ==========================================
+        // 1. CEO NOTIFICATION PIPELINE
+        // Requirements: New test reports, New community chat messages
+        // ==========================================
+        if (role === 'ceo' || role === 'admin') {
+            // A. New Test Reports (Completed student submissions)
+            try {
+                const res = await fetch(`${testApiBase}/api/tests/submissions/all`, { headers });
+                if (res.ok) {
+                    const submissions = await res.json();
+                    submissions.slice(0, 15).forEach(sub => {
+                        const subDate = new Date(sub.submitted_at || now);
+                        const diffHours = (now - subDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) { // last 7 days
+                            const id = `ceo-test-rep-${sub.id || sub._id || subDate.getTime()}`;
+                            const studentName = sub.student_name || 'Student';
+                            const scoreText = sub.score !== undefined ? `${sub.score}/${sub.total_points || 100}` : 'Submitted';
                             collected.push({
                                 id,
-                                type: 'test_deadline',
-                                title: diffHours <= 12 ? '🚨 Urgent Test Deadline!' : '⏰ Upcoming Test Deadline',
-                                message: `"${test.title}" is due ${diffHours < 24 ? `in ${Math.max(1, Math.round(diffHours))} hours` : 'tomorrow'} (${dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
-                                timestamp: dueDate,
-                                timeAgo: `Due ${dueDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}`,
-                                link: role === 'ceo' ? '/ceo/tests' : (role === 'staff' ? '/staff/tests' : '/dashboard/tests'),
-                                icon: 'assignment_late',
-                                badgeColor: diffHours <= 12 ? 'bg-red-100 text-red-800 border-red-200' : 'bg-amber-100 text-amber-800 border-amber-200',
-                                accentColor: diffHours <= 12 ? 'from-red-500 to-rose-600' : 'from-amber-500 to-orange-600',
-                                priority: diffHours <= 12 ? 'high' : 'normal'
-                            });
-                        } else if (diffHours < 0 && diffHours >= -48) {
-                            collected.push({
-                                id,
-                                type: 'test_deadline',
-                                title: '⚠️ Test Overdue',
-                                message: `"${test.title}" deadline has passed. Submit your answers if submissions are still open.`,
-                                timestamp: dueDate,
-                                timeAgo: 'Past due',
-                                link: role === 'ceo' ? '/ceo/tests' : (role === 'staff' ? '/staff/tests' : '/dashboard/tests'),
-                                icon: 'error',
-                                badgeColor: 'bg-red-100 text-red-800 border-red-200',
-                                accentColor: 'from-red-600 to-rose-700',
-                                priority: 'high'
-                            });
-                        }
-                    }
-                });
-            }
-        } catch (err) {}
-
-        // 3. Fetch Schedule (New Class Creation & 30-Minute Upcoming Class Reminder)
-        try {
-            const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
-            const res = await fetch(`${apiBase}/api/schedule?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const schedules = await res.json();
-                const todayDayName = DAYS_MAP[now.getDay()];
-                const tomorrowDayName = DAYS_MAP[(now.getDay() + 1) % 7];
-
-                schedules.forEach(item => {
-                    const schedId = item.id || item._id;
-
-                    // A. Newly Created Class Alert (created in last 48 hours)
-                    if (item.created_at) {
-                        const createdDate = new Date(item.created_at);
-                        const createdDiffHours = (now - createdDate) / (1000 * 60 * 60);
-                        if (createdDiffHours <= 48) {
-                            collected.push({
-                                id: `sched-new-${schedId}`,
-                                type: 'class_new',
-                                title: '✨ New Class Scheduled!',
-                                message: `"${item.name}" has been added for ${item.day_of_week} (${item.time}) by your instructor.`,
-                                timestamp: createdDate,
-                                timeAgo: createdDiffHours < 1 ? 'Just added' : `${Math.floor(createdDiffHours)}h ago`,
-                                link: role === 'ceo' ? '/ceo/schedule' : (role === 'staff' ? '/staff/schedule' : '/dashboard/schedule'),
-                                icon: 'add_circle',
-                                badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
+                                type: 'test_report',
+                                title: `📊 Test Report: ${studentName}`,
+                                message: `${studentName} completed "${sub.test_title || 'Class Test'}" with score ${scoreText}.`,
+                                timestamp: subDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/ceo/tests',
+                                icon: 'assessment',
+                                badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
                                 accentColor: 'from-emerald-500 to-teal-600',
-                                priority: 'high'
+                                priority: 'normal'
                             });
                         }
-                    }
+                    });
+                }
+            } catch (err) {}
 
-                    // B. Today's Classes: 30-Minute Countdown Reminder & Starting Now
-                    if (item.day_of_week === todayDayName) {
-                        const classStartTime = parseClassStartTime(item.time);
-                        if (classStartTime) {
-                            const diffMinutes = (classStartTime - now) / (1000 * 60);
-
-                            if (diffMinutes > 0 && diffMinutes <= 30) {
-                                // ⏰ 30-MINUTE REMINDER
-                                const minsLeft = Math.max(1, Math.round(diffMinutes));
+            // B. New Community Chat Messages
+            try {
+                const res = await fetch(`${communityApiBase}/api/community/messages`, { headers });
+                if (res.ok) {
+                    const messages = await res.json();
+                    messages.slice(-15).reverse().forEach(msg => {
+                        // Exclude CEO's own messages
+                        const isSelf = msg.author_id === currentUserId || (msg.role || '').toLowerCase() === 'ceo';
+                        if (!isSelf) {
+                            const msgDate = new Date(msg.created_at || now);
+                            const diffHours = (now - msgDate) / (1000 * 60 * 60);
+                            if (diffHours <= 72) { // last 3 days
+                                const id = `ceo-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
                                 collected.push({
-                                    id: `sched-30min-${schedId}-${now.toDateString()}-${Math.floor(diffMinutes / 10)}`,
-                                    type: 'class_reminder',
-                                    title: `⏰ Class in ${minsLeft} minute${minsLeft > 1 ? 's' : ''}!`,
-                                    message: `"${item.name}" starts at ${item.time}${item.location ? ` • ${item.location}` : ''}. Get ready to join!`,
-                                    timestamp: classStartTime,
-                                    timeAgo: `In ${minsLeft}m`,
-                                    link: item.class_link || (role === 'ceo' ? '/ceo/schedule' : (role === 'staff' ? '/staff/schedule' : '/dashboard/schedule')),
-                                    icon: 'alarm',
-                                    badgeColor: 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
-                                    accentColor: 'from-amber-500 to-rose-600',
-                                    priority: 'urgent'
+                                    id,
+                                    type: 'community_message',
+                                    title: `💬 ${msg.author_name || 'Community Member'}`,
+                                    message: msg.content ? (msg.content.length > 90 ? msg.content.substring(0, 90) + '...' : msg.content) : 'Sent an audio voice message in Community.',
+                                    timestamp: msgDate,
+                                    timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                    link: '/ceo/community',
+                                    icon: 'forum',
+                                    badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+                                    accentColor: 'from-blue-500 to-indigo-600',
+                                    priority: 'normal'
                                 });
-                            } else if (diffMinutes <= 0 && diffMinutes >= -30) {
-                                // 🟢 CLASS STARTING NOW / IN PROGRESS
+                            }
+                        }
+                    });
+                }
+            } catch (err) {}
+        }
+
+        // ==========================================
+        // 2. STUDENT NOTIFICATION PIPELINE
+        // Requirements:
+        // - Class schedule created & upcoming
+        // - New test created
+        // - New materials posted
+        // - New CEO announcement chat posted
+        // - New community chat messages
+        // - New video posted
+        // ==========================================
+        else if (role === 'student') {
+            // A. Class Schedule Created & Upcoming
+            try {
+                const res = await fetch(`${apiBase}/api/schedule?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, { headers });
+                if (res.ok) {
+                    const schedules = await res.json();
+                    const todayDayName = DAYS_MAP[now.getDay()];
+                    const tomorrowDayName = DAYS_MAP[(now.getDay() + 1) % 7];
+
+                    schedules.forEach(item => {
+                        const schedId = item.id || item._id;
+
+                        // 1. Newly created class alert (last 48h)
+                        if (item.created_at) {
+                            const createdDate = new Date(item.created_at);
+                            const createdDiffHours = (now - createdDate) / (1000 * 60 * 60);
+                            if (createdDiffHours <= 48) {
                                 collected.push({
-                                    id: `sched-live-${schedId}-${now.toDateString()}`,
-                                    type: 'class_day',
-                                    title: '🟢 Class Starting Now!',
-                                    message: `"${item.name}" is starting now (${item.time}). Click to join or view session details.`,
-                                    timestamp: now,
-                                    timeAgo: 'Now',
-                                    link: item.class_link || (role === 'ceo' ? '/ceo/schedule' : (role === 'staff' ? '/staff/schedule' : '/dashboard/schedule')),
-                                    icon: 'play_circle',
-                                    badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold',
+                                    id: `stud-sched-new-${schedId}`,
+                                    type: 'class_schedule',
+                                    title: '✨ New Class Scheduled!',
+                                    message: `"${item.name}" has been scheduled for ${item.day_of_week} (${item.time}) by your instructor.`,
+                                    timestamp: createdDate,
+                                    timeAgo: createdDiffHours < 1 ? 'Just added' : `${Math.floor(createdDiffHours)}h ago`,
+                                    link: '/dashboard/schedule',
+                                    icon: 'add_circle',
+                                    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
                                     accentColor: 'from-emerald-500 to-teal-600',
                                     priority: 'high'
                                 });
-                            } else if (diffMinutes > 30) {
-                                // Later today
+                            }
+                        }
+
+                        // 2. Upcoming class countdown (≤30 minutes) & Today's classes
+                        if (item.day_of_week === todayDayName) {
+                            const classStartTime = parseClassStartTime(item.time);
+                            if (classStartTime) {
+                                const diffMinutes = Math.round((classStartTime - now) / (1000 * 60));
+                                if (diffMinutes >= 0 && diffMinutes <= 30) {
+                                    collected.push({
+                                        id: `stud-class-reminder-${schedId}-${todayDayName}`,
+                                        type: 'class_schedule',
+                                        title: diffMinutes === 0 ? '🔴 Class Starting Right Now!' : `🔔 Class Starting in ${diffMinutes} Mins!`,
+                                        message: `"${item.name}" begins at ${item.time}. Join via link or report to ${item.location || 'classroom'}.`,
+                                        timestamp: now,
+                                        timeAgo: diffMinutes === 0 ? 'Now' : `In ${diffMinutes}m`,
+                                        link: item.class_link || '/dashboard/schedule',
+                                        icon: 'alarm',
+                                        badgeColor: 'bg-rose-100 text-rose-800 border-rose-300 font-bold animate-pulse',
+                                        accentColor: 'from-rose-500 to-red-600',
+                                        priority: 'urgent',
+                                        actionText: item.class_link ? 'Join Class Now' : 'View Schedule'
+                                    });
+                                } else {
+                                    collected.push({
+                                        id: `stud-sched-today-${schedId}-${todayDayName}`,
+                                        type: 'class_schedule',
+                                        title: '🎓 Class Scheduled Today',
+                                        message: `${item.name} at ${item.time || 'Today'} ${item.location ? `• ${item.location}` : ''}`,
+                                        timestamp: now,
+                                        timeAgo: 'Today',
+                                        link: '/dashboard/schedule',
+                                        icon: 'calendar_month',
+                                        badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+                                        accentColor: 'from-blue-500 to-indigo-600',
+                                        priority: 'high'
+                                    });
+                                }
+                            } else {
                                 collected.push({
-                                    id: `sched-today-${schedId}-${todayDayName}`,
-                                    type: 'class_day',
+                                    id: `stud-sched-today-${schedId}-${todayDayName}`,
+                                    type: 'class_schedule',
                                     title: '🎓 Class Scheduled Today',
                                     message: `${item.name} (${item.time || 'Today'}) ${item.location ? `• ${item.location}` : ''}`,
                                     timestamp: now,
                                     timeAgo: 'Today',
-                                    link: role === 'ceo' ? '/ceo/schedule' : (role === 'staff' ? '/staff/schedule' : '/dashboard/schedule'),
+                                    link: '/dashboard/schedule',
                                     icon: 'calendar_month',
                                     badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
                                     accentColor: 'from-blue-500 to-indigo-600',
                                     priority: 'high'
                                 });
                             }
-                        } else {
-                            // Fallback if time couldn't be parsed
-                            collected.push({
-                                id: `sched-today-${schedId}-${todayDayName}`,
-                                type: 'class_day',
-                                title: '🎓 Class Scheduled Today',
-                                message: `${item.name} (${item.time || 'Today'}) ${item.location ? `• ${item.location}` : ''}`,
-                                timestamp: now,
-                                timeAgo: 'Today',
-                                link: role === 'ceo' ? '/ceo/schedule' : (role === 'staff' ? '/staff/schedule' : '/dashboard/schedule'),
-                                icon: 'calendar_month',
-                                badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
-                                accentColor: 'from-blue-500 to-indigo-600',
-                                priority: 'high'
-                            });
                         }
-                    }
 
-                    // C. Classes Scheduled Tomorrow (if no classes today)
-                    if (item.day_of_week === tomorrowDayName) {
-                        const hasToday = schedules.some(s => s.day_of_week === todayDayName);
-                        if (!hasToday) {
+                        // 3. Classes tomorrow (if no class today)
+                        if (item.day_of_week === tomorrowDayName) {
+                            const hasToday = schedules.some(s => s.day_of_week === todayDayName);
+                            if (!hasToday) {
+                                collected.push({
+                                    id: `stud-sched-tmrw-${schedId}-${tomorrowDayName}`,
+                                    type: 'class_schedule',
+                                    title: '📅 Class Scheduled Tomorrow',
+                                    message: `${item.name} (${item.time || tomorrowDayName}) ${item.location ? `• ${item.location}` : ''}`,
+                                    timestamp: now,
+                                    timeAgo: 'Tomorrow',
+                                    link: '/dashboard/schedule',
+                                    icon: 'event',
+                                    badgeColor: 'bg-sky-100 text-sky-800 border-sky-200',
+                                    accentColor: 'from-sky-500 to-blue-600',
+                                    priority: 'normal'
+                                });
+                            }
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // B. New Test Created & Deadlines
+            try {
+                const queryParams = new URLSearchParams();
+                if (userLevel) queryParams.append('level', userLevel);
+                if (userBatch) queryParams.append('batch', userBatch);
+
+                const res = await fetch(`${testApiBase}/api/tests?${queryParams.toString()}`, { headers });
+                if (res.ok) {
+                    const tests = await res.json();
+                    tests.forEach(test => {
+                        const testId = test.id || test._id;
+                        if (test.created_at) {
+                            const createdDate = new Date(test.created_at);
+                            const diffHours = (now - createdDate) / (1000 * 60 * 60);
+                            if (diffHours <= 72) {
+                                collected.push({
+                                    id: `stud-test-new-${testId}`,
+                                    type: 'test_created',
+                                    title: '📝 New Test Assigned!',
+                                    message: `"${test.title}" has been published. Due: ${test.due_date ? new Date(test.due_date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Soon'}.`,
+                                    timestamp: createdDate,
+                                    timeAgo: diffHours < 1 ? 'Just now' : `${Math.floor(diffHours)}h ago`,
+                                    link: '/dashboard/tests',
+                                    icon: 'assignment',
+                                    badgeColor: 'bg-amber-100 text-amber-800 border-amber-300 font-bold',
+                                    accentColor: 'from-amber-500 to-orange-600',
+                                    priority: 'high'
+                                });
+                            }
+                        }
+
+                        if (test.due_date) {
+                            const dueDate = new Date(test.due_date);
+                            const diffHours = (dueDate - now) / (1000 * 60 * 60);
+                            if (diffHours > 0 && diffHours <= 48) {
+                                collected.push({
+                                    id: `stud-test-due-${testId}`,
+                                    type: 'test_created',
+                                    title: diffHours <= 12 ? '🚨 Urgent Test Deadline!' : '⏰ Upcoming Test Deadline',
+                                    message: `"${test.title}" is due ${diffHours < 24 ? `in ${Math.max(1, Math.round(diffHours))} hours` : 'tomorrow'} (${dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+                                    timestamp: dueDate,
+                                    timeAgo: `Due ${dueDate.toLocaleDateString([], { month: 'short', day: 'numeric' })}`,
+                                    link: '/dashboard/tests',
+                                    icon: 'assignment_late',
+                                    badgeColor: diffHours <= 12 ? 'bg-red-100 text-red-800 border-red-200' : 'bg-amber-100 text-amber-800 border-amber-200',
+                                    accentColor: diffHours <= 12 ? 'from-red-500 to-rose-600' : 'from-amber-500 to-orange-600',
+                                    priority: diffHours <= 12 ? 'high' : 'normal'
+                                });
+                            }
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // C. New Materials Posted
+            try {
+                const queryParams = new URLSearchParams();
+                if (userLevel) queryParams.append('level', userLevel);
+                if (userBatch) queryParams.append('batch', userBatch);
+
+                const res = await fetch(`${materialsApiBase}/api/materials/?${queryParams.toString()}`, { headers });
+                if (res.ok) {
+                    const materials = await res.json();
+                    materials.slice(0, 10).forEach(mat => {
+                        const matDate = new Date(mat.created_at || now);
+                        const diffHours = (now - matDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) { // last 7 days
+                            const id = `stud-mat-${mat.id || mat._id || matDate.getTime()}`;
                             collected.push({
-                                id: `sched-tmrw-${schedId}-${tomorrowDayName}`,
-                                type: 'class_day',
-                                title: '📅 Class Scheduled Tomorrow',
-                                message: `${item.name} (${item.time || tomorrowDayName}) ${item.location ? `• ${item.location}` : ''}`,
-                                timestamp: now,
-                                timeAgo: 'Tomorrow',
-                                link: role === 'ceo' ? '/ceo/schedule' : (role === 'staff' ? '/staff/schedule' : '/dashboard/schedule'),
-                                icon: 'event',
-                                badgeColor: 'bg-sky-100 text-sky-800 border-sky-200',
-                                accentColor: 'from-sky-500 to-blue-600',
+                                id,
+                                type: 'material_new',
+                                title: '📚 New Study Material Posted',
+                                message: `"${mat.title}" (${mat.category || mat.file_type || 'Study Notes'}) is available for download.`,
+                                timestamp: matDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/dashboard/materials',
+                                icon: 'menu_book',
+                                badgeColor: 'bg-teal-100 text-teal-800 border-teal-300 font-bold',
+                                accentColor: 'from-teal-500 to-emerald-600',
                                 priority: 'normal'
                             });
                         }
-                    }
-                });
-            }
-        } catch (err) {}
+                    });
+                }
+            } catch (err) {}
 
-        // Calculate unread count and filter out explicitly cleared items
-        const clearedKey = 'fledge_cleared_notifications_v1';
-        let cleared = [];
-        try {
-            cleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
-        } catch (e) {}
+            // D. New CEO Announcement Chat Posted
+            try {
+                const res = await fetch(`${annApiBase}/api/announcement?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, { headers });
+                if (res.ok) {
+                    const announcements = await res.json();
+                    announcements.slice(0, 5).forEach(ann => {
+                        const annDate = new Date(ann.created_at || now);
+                        const diffHours = (now - annDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) {
+                            const id = `stud-ann-${ann.id || ann._id || annDate.getTime()}`;
+                            collected.push({
+                                id,
+                                type: 'announcement',
+                                title: `📢 ${ann.title || 'Official Announcement'}`,
+                                message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New announcement posted by CEO/Administration.',
+                                timestamp: annDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/dashboard/announcements',
+                                icon: 'campaign',
+                                badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
+                                accentColor: 'from-purple-500 to-indigo-600',
+                                priority: 'normal'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {}
 
+            // E. New Community Chat Messages
+            try {
+                const res = await fetch(`${communityApiBase}/api/community/messages?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, { headers });
+                if (res.ok) {
+                    const messages = await res.json();
+                    messages.slice(-15).reverse().forEach(msg => {
+                        if (msg.author_id !== currentUserId) {
+                            const msgDate = new Date(msg.created_at || now);
+                            const diffHours = (now - msgDate) / (1000 * 60 * 60);
+                            if (diffHours <= 72) {
+                                const id = `stud-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
+                                collected.push({
+                                    id,
+                                    type: 'community_message',
+                                    title: `💬 ${msg.author_name || 'Classmate'}`,
+                                    message: msg.content ? (msg.content.length > 90 ? msg.content.substring(0, 90) + '...' : msg.content) : 'Sent a voice/audio message in Community.',
+                                    timestamp: msgDate,
+                                    timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                    link: '/community',
+                                    icon: 'forum',
+                                    badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+                                    accentColor: 'from-blue-500 to-indigo-600',
+                                    priority: 'normal'
+                                });
+                            }
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // F. New Video Posted
+            try {
+                const res = await fetch(`${videoApiBase}/api/videos?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, { headers });
+                if (res.ok) {
+                    const videos = await res.json();
+                    videos.slice(0, 10).forEach(vid => {
+                        const vidDate = new Date(vid.created_at || now);
+                        const diffHours = (now - vidDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) {
+                            const id = `stud-vid-${vid.id || vid._id || vidDate.getTime()}`;
+                            collected.push({
+                                id,
+                                type: 'video_new',
+                                title: '🎥 New Video Lesson Posted',
+                                message: `"${vid.title}" (${vid.category || 'Lecture'}) has been added to your Video Library.`,
+                                timestamp: vidDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/dashboard/videos',
+                                icon: 'smart_display',
+                                badgeColor: 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+                                accentColor: 'from-rose-500 to-pink-600',
+                                priority: 'normal'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {}
+        }
+
+        // ==========================================
+        // 3. STAFF NOTIFICATION PIPELINE
+        // Requirements:
+        // - New CEO announcement chat
+        // - New students test completed
+        // - Upcoming class schedule
+        // - New community chat message
+        // - New student notes posted
+        // ==========================================
+        else if (role === 'staff') {
+            // A. New CEO Announcement Chat
+            try {
+                const res = await fetch(`${annApiBase}/api/announcement`, { headers });
+                if (res.ok) {
+                    const announcements = await res.json();
+                    announcements.slice(0, 5).forEach(ann => {
+                        const annDate = new Date(ann.created_at || now);
+                        const diffHours = (now - annDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) {
+                            const id = `staff-ann-${ann.id || ann._id || annDate.getTime()}`;
+                            collected.push({
+                                id,
+                                type: 'announcement',
+                                title: `📢 CEO Announcement: ${ann.title || 'Official Update'}`,
+                                message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New announcement posted by CEO.',
+                                timestamp: annDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/staff/announcements',
+                                icon: 'campaign',
+                                badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
+                                accentColor: 'from-purple-500 to-indigo-600',
+                                priority: 'normal'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // B. New Students Test Completed
+            try {
+                const res = await fetch(`${testApiBase}/api/tests/submissions/all`, { headers });
+                if (res.ok) {
+                    const submissions = await res.json();
+                    submissions.slice(0, 15).forEach(sub => {
+                        const subDate = new Date(sub.submitted_at || now);
+                        const diffHours = (now - subDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) {
+                            const id = `staff-test-sub-${sub.id || sub._id || subDate.getTime()}`;
+                            const studentName = sub.student_name || 'Student';
+                            collected.push({
+                                id,
+                                type: 'test_submission',
+                                title: `✍️ Student Test Completed: ${studentName}`,
+                                message: `${studentName} finished "${sub.test_title || 'Assessment'}". Review or grade their answers.`,
+                                timestamp: subDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/staff/tests',
+                                icon: 'rate_review',
+                                badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300 font-bold',
+                                accentColor: 'from-indigo-500 to-blue-600',
+                                priority: 'high'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // C. Upcoming Class Schedule
+            try {
+                const res = await fetch(`${apiBase}/api/schedule`, { headers });
+                if (res.ok) {
+                    const schedules = await res.json();
+                    const todayDayName = DAYS_MAP[now.getDay()];
+
+                    schedules.forEach(item => {
+                        const schedId = item.id || item._id;
+                        if (item.day_of_week === todayDayName) {
+                            const classStartTime = parseClassStartTime(item.time);
+                            if (classStartTime) {
+                                const diffMinutes = Math.round((classStartTime - now) / (1000 * 60));
+                                if (diffMinutes >= 0 && diffMinutes <= 30) {
+                                    collected.push({
+                                        id: `staff-class-reminder-${schedId}-${todayDayName}`,
+                                        type: 'class_schedule',
+                                        title: diffMinutes === 0 ? '🔴 Teaching Class Starting Now!' : `🔔 Class Starts in ${diffMinutes} Mins!`,
+                                        message: `"${item.name}" begins at ${item.time}. Classroom: ${item.location || 'Online'}.`,
+                                        timestamp: now,
+                                        timeAgo: diffMinutes === 0 ? 'Now' : `In ${diffMinutes}m`,
+                                        link: item.class_link || '/staff/schedule',
+                                        icon: 'alarm',
+                                        badgeColor: 'bg-rose-100 text-rose-800 border-rose-300 font-bold animate-pulse',
+                                        accentColor: 'from-rose-500 to-red-600',
+                                        priority: 'urgent'
+                                    });
+                                } else {
+                                    collected.push({
+                                        id: `staff-sched-today-${schedId}-${todayDayName}`,
+                                        type: 'class_schedule',
+                                        title: '🎓 Class Scheduled Today',
+                                        message: `${item.name} at ${item.time || 'Today'} ${item.location ? `• ${item.location}` : ''}`,
+                                        timestamp: now,
+                                        timeAgo: 'Today',
+                                        link: '/staff/schedule',
+                                        icon: 'calendar_month',
+                                        badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+                                        accentColor: 'from-blue-500 to-indigo-600',
+                                        priority: 'normal'
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // D. New Community Chat Messages
+            try {
+                const res = await fetch(`${communityApiBase}/api/community/messages`, { headers });
+                if (res.ok) {
+                    const messages = await res.json();
+                    messages.slice(-15).reverse().forEach(msg => {
+                        if (msg.author_id !== currentUserId) {
+                            const msgDate = new Date(msg.created_at || now);
+                            const diffHours = (now - msgDate) / (1000 * 60 * 60);
+                            if (diffHours <= 72) {
+                                const id = `staff-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
+                                collected.push({
+                                    id,
+                                    type: 'community_message',
+                                    title: `💬 Community: ${msg.author_name || 'Student'}`,
+                                    message: msg.content ? (msg.content.length > 90 ? msg.content.substring(0, 90) + '...' : msg.content) : 'Sent a voice/audio message in Community.',
+                                    timestamp: msgDate,
+                                    timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                    link: '/staff/community',
+                                    icon: 'forum',
+                                    badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+                                    accentColor: 'from-blue-500 to-indigo-600',
+                                    priority: 'normal'
+                                });
+                            }
+                        }
+                    });
+                }
+            } catch (err) {}
+
+            // E. New Student Notes Posted
+            try {
+                const res = await fetch(`${apiBase}/api/student-notes`, { headers });
+                if (res.ok) {
+                    const notes = await res.json();
+                    notes.slice(0, 10).forEach(note => {
+                        const noteDate = new Date(note.created_at || now);
+                        const diffHours = (now - noteDate) / (1000 * 60 * 60);
+                        if (diffHours <= 168) {
+                            const id = `staff-note-${note.id || note._id || noteDate.getTime()}`;
+                            const studentName = note.uploader_name || 'Student';
+                            collected.push({
+                                id,
+                                type: 'student_note_new',
+                                title: `📝 Student Notes Uploaded: ${studentName}`,
+                                message: `${studentName} uploaded "${note.title || 'Study Notes'}" for ${note.level || ''} ${note.batch || ''}.`,
+                                timestamp: noteDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/staff/dashboard',
+                                icon: 'edit_note',
+                                badgeColor: 'bg-teal-100 text-teal-800 border-teal-300 font-bold',
+                                accentColor: 'from-teal-500 to-emerald-600',
+                                priority: 'normal'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {}
+        }
+
+        // Filter out cleared and dismissed
         const activeItems = collected.filter(item => !cleared.includes(item.id));
         const unreadItems = activeItems.filter(item => !dismissed.includes(item.id));
+        
         setNotifications(activeItems);
         setUnreadCount(unreadItems.length);
     }, []);
@@ -367,14 +703,14 @@ export function NotificationProvider({ children }) {
             }
         };
 
-        const handleNewClassCreated = (e) => {
+        const handleNewClassCreated = () => {
             fetchAllNotifications();
         };
 
         window.addEventListener('fledge_notification_preference_changed', handlePrefChange);
         window.addEventListener('fledge_new_class_created', handleNewClassCreated);
 
-        // Check for 30-minute reminders and notifications every 60 seconds
+        // Auto-refresh interval every 60s
         const interval = setInterval(fetchAllNotifications, 60000);
         return () => {
             clearInterval(interval);
@@ -382,8 +718,6 @@ export function NotificationProvider({ children }) {
             window.removeEventListener('fledge_new_class_created', handleNewClassCreated);
         };
     }, [checkNotificationPreference, fetchAllNotifications]);
-
-    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const dismissPopup = () => {
         if (activePopup) {
@@ -394,7 +728,7 @@ export function NotificationProvider({ children }) {
 
     const markAsDismissed = (id) => {
         try {
-            const dismissedKey = 'fledge_dismissed_notifications_v1';
+            const dismissedKey = `fledge_dismissed_${userRole}_v2`;
             const dismissed = JSON.parse(localStorage.getItem(dismissedKey) || '[]');
             if (!dismissed.includes(id)) {
                 dismissed.push(id);
@@ -406,7 +740,7 @@ export function NotificationProvider({ children }) {
 
     const clearSingleNotification = (id) => {
         try {
-            const clearedKey = 'fledge_cleared_notifications_v1';
+            const clearedKey = `fledge_cleared_${userRole}_v2`;
             const cleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
             if (!cleared.includes(id)) {
                 cleared.push(id);
@@ -422,7 +756,7 @@ export function NotificationProvider({ children }) {
 
     const clearAllNotifications = () => {
         try {
-            const clearedKey = 'fledge_cleared_notifications_v1';
+            const clearedKey = `fledge_cleared_${userRole}_v2`;
             const allCurrentIds = notifications.map(n => n.id);
             const existingCleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
             const updatedCleared = Array.from(new Set([...existingCleared, ...allCurrentIds]));
@@ -436,7 +770,7 @@ export function NotificationProvider({ children }) {
 
     const markAllAsRead = () => {
         try {
-            const dismissedKey = 'fledge_dismissed_notifications_v1';
+            const dismissedKey = `fledge_dismissed_${userRole}_v2`;
             const allIds = notifications.map(n => n.id);
             localStorage.setItem(dismissedKey, JSON.stringify(allIds));
             setUnreadCount(0);
@@ -446,10 +780,9 @@ export function NotificationProvider({ children }) {
 
     const resyncAndRefresh = async () => {
         setIsRefreshing(true);
-        // Clear the cleared list on manual user resync so any fresh or existing active alerts reappear
         try {
-            localStorage.removeItem('fledge_cleared_notifications_v1');
-            localStorage.removeItem('fledge_dismissed_notifications_v1');
+            localStorage.removeItem(`fledge_cleared_${userRole}_v2`);
+            localStorage.removeItem(`fledge_dismissed_${userRole}_v2`);
         } catch (e) {}
         await fetchAllNotifications();
         setTimeout(() => setIsRefreshing(false), 500);
@@ -463,6 +796,7 @@ export function NotificationProvider({ children }) {
             isTrayOpen,
             setIsTrayOpen,
             isRefreshing,
+            userRole,
             dismissPopup,
             markAsDismissed,
             clearSingleNotification,
@@ -488,6 +822,7 @@ export function useNotifications() {
             isTrayOpen: false,
             setIsTrayOpen: () => {},
             isRefreshing: false,
+            userRole: 'student',
             dismissPopup: () => {},
             markAsDismissed: () => {},
             clearSingleNotification: () => {},
