@@ -326,10 +326,8 @@ export default function CommunityChat({ role, overrideBatch }) {
                         <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
                             Community Discussion
                         </h2>
-                        <p className="font-body-xs text-on-surface-variant flex items-center gap-2">
-                           
-                            <span>•</span>
-                            <span>Level: <strong className="text-on-surface">{userLevel}</strong></span>
+                        <p className="font-body-xs text-on-surface-variant">
+                            Live discussion and collaboration with peers
                         </p>
                     </div>
                 </div>
