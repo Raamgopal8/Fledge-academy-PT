@@ -338,9 +338,16 @@ export function NotificationProvider({ children }) {
             }
         } catch (err) {}
 
-        // Calculate unread count
-        const unreadItems = collected.filter(item => !dismissed.includes(item.id));
-        setNotifications(collected);
+        // Calculate unread count and filter out explicitly cleared items
+        const clearedKey = 'fledge_cleared_notifications_v1';
+        let cleared = [];
+        try {
+            cleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
+        } catch (e) {}
+
+        const activeItems = collected.filter(item => !cleared.includes(item.id));
+        const unreadItems = activeItems.filter(item => !dismissed.includes(item.id));
+        setNotifications(activeItems);
         setUnreadCount(unreadItems.length);
     }, []);
 
@@ -376,6 +383,8 @@ export function NotificationProvider({ children }) {
         };
     }, [checkNotificationPreference, fetchAllNotifications]);
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
     const dismissPopup = () => {
         if (activePopup) {
             markAsDismissed(activePopup.id);
@@ -395,6 +404,36 @@ export function NotificationProvider({ children }) {
         } catch (e) {}
     };
 
+    const clearSingleNotification = (id) => {
+        try {
+            const clearedKey = 'fledge_cleared_notifications_v1';
+            const cleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
+            if (!cleared.includes(id)) {
+                cleared.push(id);
+                localStorage.setItem(clearedKey, JSON.stringify(cleared));
+            }
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+            if (activePopup?.id === id) {
+                setActivePopup(null);
+            }
+        } catch (e) {}
+    };
+
+    const clearAllNotifications = () => {
+        try {
+            const clearedKey = 'fledge_cleared_notifications_v1';
+            const allCurrentIds = notifications.map(n => n.id);
+            const existingCleared = JSON.parse(localStorage.getItem(clearedKey) || '[]');
+            const updatedCleared = Array.from(new Set([...existingCleared, ...allCurrentIds]));
+            
+            localStorage.setItem(clearedKey, JSON.stringify(updatedCleared));
+            setNotifications([]);
+            setUnreadCount(0);
+            setActivePopup(null);
+        } catch (e) {}
+    };
+
     const markAllAsRead = () => {
         try {
             const dismissedKey = 'fledge_dismissed_notifications_v1';
@@ -405,6 +444,17 @@ export function NotificationProvider({ children }) {
         } catch (e) {}
     };
 
+    const resyncAndRefresh = async () => {
+        setIsRefreshing(true);
+        // Clear the cleared list on manual user resync so any fresh or existing active alerts reappear
+        try {
+            localStorage.removeItem('fledge_cleared_notifications_v1');
+            localStorage.removeItem('fledge_dismissed_notifications_v1');
+        } catch (e) {}
+        await fetchAllNotifications();
+        setTimeout(() => setIsRefreshing(false), 500);
+    };
+
     return (
         <NotificationContext.Provider value={{
             notifications,
@@ -412,10 +462,13 @@ export function NotificationProvider({ children }) {
             activePopup,
             isTrayOpen,
             setIsTrayOpen,
+            isRefreshing,
             dismissPopup,
             markAsDismissed,
+            clearSingleNotification,
+            clearAllNotifications,
             markAllAsRead,
-            refreshNotifications: fetchAllNotifications,
+            refreshNotifications: resyncAndRefresh,
             setActivePopup,
             notificationsEnabled,
             setNotificationsEnabled
@@ -434,8 +487,11 @@ export function useNotifications() {
             activePopup: null,
             isTrayOpen: false,
             setIsTrayOpen: () => {},
+            isRefreshing: false,
             dismissPopup: () => {},
             markAsDismissed: () => {},
+            clearSingleNotification: () => {},
+            clearAllNotifications: () => {},
             markAllAsRead: () => {},
             refreshNotifications: () => {},
             setActivePopup: () => {},

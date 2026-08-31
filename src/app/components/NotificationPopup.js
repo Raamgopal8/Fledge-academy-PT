@@ -12,8 +12,11 @@ export default function NotificationPopup() {
         isTrayOpen, 
         setIsTrayOpen, 
         markAsDismissed, 
+        clearSingleNotification,
+        clearAllNotifications,
         markAllAsRead,
-        refreshNotifications
+        refreshNotifications,
+        isRefreshing
     } = useNotifications();
 
     const [activeTab, setActiveTab] = useState('all');
@@ -62,14 +65,27 @@ export default function NotificationPopup() {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                                {notifications.length > 0 && unreadCount > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={markAllAsRead}
-                                        className="text-xs font-bold text-primary hover:underline px-2.5 py-1 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
-                                    >
-                                        Mark all read
-                                    </button>
+                                {notifications.length > 0 && (
+                                    <>
+                                        {unreadCount > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={markAllAsRead}
+                                                className="text-xs font-bold text-primary hover:underline px-2 py-1 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
+                                            >
+                                                Mark read
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={clearAllNotifications}
+                                            className="text-xs font-bold text-error hover:underline px-2 py-1 rounded-lg hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1"
+                                            title="Clear all notifications"
+                                        >
+                                            <span className="material-symbols-outlined text-[14px]">delete_sweep</span>
+                                            <span>Clear all</span>
+                                        </button>
+                                    </>
                                 )}
                                 <button
                                     type="button"
@@ -160,36 +176,37 @@ export default function NotificationPopup() {
                                             </p>
                                         </div>
 
-                                        {/* Individual Dismiss Button */}
+                                        {/* Individual Clear/Delete Button */}
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                markAsDismissed(item.id);
+                                                clearSingleNotification(item.id);
                                             }}
-                                            className="text-on-surface-variant hover:text-error p-1.5 rounded-lg hover:bg-surface-container-high opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
-                                            title="Dismiss notification"
+                                            className="text-on-surface-variant hover:text-error p-1.5 rounded-lg hover:bg-surface-container-high opacity-70 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
+                                            title="Clear notification"
                                         >
-                                            <span className="material-symbols-outlined text-[16px]">close</span>
+                                            <span className="material-symbols-outlined text-[18px]">close</span>
                                         </button>
                                     </div>
                                 ))
                             )}
                         </div>
 
-                        {/* Footer */}
+                        {/* Footer with Resync Button */}
                         <div className="p-4 bg-surface-container-low border-t border-outline-variant/60 flex items-center justify-between shrink-0">
                             <span className="text-xs text-on-surface-variant flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                Live Sync Active
+                                <span className={`w-2 h-2 rounded-full ${isRefreshing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500 animate-pulse'}`}></span>
+                                {isRefreshing ? 'Syncing...' : 'Live Sync Active'}
                             </span>
                             <button
                                 type="button"
                                 onClick={refreshNotifications}
-                                className="flex items-center gap-1 text-xs font-bold text-primary hover:underline cursor-pointer"
+                                disabled={isRefreshing}
+                                className="flex items-center gap-1 text-xs font-bold text-primary hover:underline cursor-pointer disabled:opacity-50 active:scale-95 transition-all"
                             >
-                                <span className="material-symbols-outlined text-[16px]">sync</span>
-                                Check Updates
+                                <span className={`material-symbols-outlined text-[16px] ${isRefreshing ? 'animate-spin' : ''}`}>sync</span>
+                                <span>{isRefreshing ? 'Updating...' : 'Resync Notifications'}</span>
                             </button>
                         </div>
                     </div>
