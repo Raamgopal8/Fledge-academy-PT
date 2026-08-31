@@ -48,8 +48,11 @@ export default function StudentVideos() {
         window.addEventListener('blur', handleBlur);
         window.addEventListener('focus', handleFocus);
 
-        // 4. Block common screen capture and dev tools shortcuts
+        // 5. Block Ctrl+S / Cmd+S save shortcuts
         const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+            }
             if (
                 e.key === 'PrintScreen' || 
                 (e.ctrlKey && e.key.toLowerCase() === 'p') || // Print
@@ -77,7 +80,7 @@ export default function StudentVideos() {
         document.addEventListener('keydown', handleKeyDown);
         document.addEventListener('keyup', handleKeyUp);
 
-        // 5. Prevent copying and dragging
+        // 6. Prevent copying and dragging
         const preventCopy = (e) => {
             e.preventDefault();
             try {
@@ -99,12 +102,16 @@ export default function StudentVideos() {
             }
         } catch (e) {}
 
-        // 6. Listen to fullscreen exit to restore orientation
+        // 7. Listen to fullscreen change and handle orientation locking
         const handleFullscreenChange = () => {
             const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-            if (!isFs) {
+            if (isFs) {
+                if ('orientation' in screen && screen?.orientation?.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+            } else {
                 setMobileFullscreenId(null);
-                if (screen?.orientation?.unlock) {
+                if ('orientation' in screen && screen?.orientation?.unlock) {
                     try {
                         screen.orientation.unlock();
                     } catch (e) {}
@@ -112,10 +119,30 @@ export default function StudentVideos() {
             }
         };
 
+        // 8. Mobile Auto-Rotate listener
+        const handleOrientationChange = () => {
+            if (typeof window === 'undefined' || !('orientation' in screen)) return;
+            const isLandscape = screen.orientation.type.startsWith('landscape');
+            const fsElem = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+
+            if (isLandscape && !fsElem) {
+                const firstPlayer = document.querySelector('[id^="video-player-"]');
+                if (firstPlayer) {
+                    firstPlayer.requestFullscreen?.().catch(() => {});
+                }
+            } else if (!isLandscape && fsElem) {
+                document.exitFullscreen?.().catch(() => {});
+            }
+        };
+
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        if (typeof window !== 'undefined' && 'orientation' in screen && screen.orientation.addEventListener) {
+            screen.orientation.addEventListener('change', handleOrientationChange);
+        }
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
@@ -131,6 +158,9 @@ export default function StudentVideos() {
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+            if (typeof window !== 'undefined' && 'orientation' in screen && screen.orientation.removeEventListener) {
+                screen.orientation.removeEventListener('change', handleOrientationChange);
+            }
         };
     }, []);
 
@@ -482,15 +512,28 @@ export default function StudentVideos() {
                                         {/* Video Player Container */}
                                         <div 
                                             id={`video-player-${video.id}`} 
-                                            className={`aspect-video w-full bg-black relative overflow-hidden group select-none ${mobileFullscreenId === `video-player-${video.id}` ? 'mobile-landscape-fullscreen' : ''}`}
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            className={`aspect-video w-full bg-black relative overflow-hidden group select-none flex items-center justify-center ${mobileFullscreenId === `video-player-${video.id}` ? 'mobile-landscape-fullscreen' : ''}`}
                                         >
-                                            <iframe 
-                                                src={getEmbedUrl(video.video_url)} 
-                                                className="absolute top-0 left-0 w-full h-full border-0 z-10"
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                                                allowFullScreen
-                                                title={video.title}
-                                            ></iframe>
+                                            {video.video_url && (video.video_url.endsWith('.mp4') || video.video_url.endsWith('.webm') || video.video_url.endsWith('.ogg') || video.video_url.includes('/raw/') || (!video.video_url.includes('drive.google.com') && !video.video_url.includes('youtube') && !video.video_url.includes('youtu.be') && !video.video_url.includes('vimeo') && !video.video_url.includes('embed'))) ? (
+                                                <video
+                                                    src={video.video_url}
+                                                    poster={video.thumbnail_url}
+                                                    controls
+                                                    playsInline
+                                                    controlsList="nodownload nofullscreen" 
+                                                    disablePictureInPicture
+                                                    className="w-full h-full object-contain select-none z-10"
+                                                />
+                                            ) : (
+                                                <iframe 
+                                                    src={getEmbedUrl(video.video_url)} 
+                                                    className="absolute top-0 left-0 w-full h-full border-0 z-10"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                                                    allowFullScreen
+                                                    title={video.title}
+                                                ></iframe>
+                                            )}
 
                                             {/* Video-specific floating watermark */}
                                             <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.15] mix-blend-overlay animate-pulse select-none z-20">
@@ -499,7 +542,7 @@ export default function StudentVideos() {
                                                 </p>
                                             </div>
 
-                                            {/* Top-Right Drive Pop-Out / Share Blocker & Fullscreen Button */}
+                                            {/* Top-Right Fullscreen Enable Button */}
                                             <div className="absolute top-1.5 right-1.5 z-40 flex items-center justify-center pointer-events-auto">
                                                 <button
                                                     type="button"
