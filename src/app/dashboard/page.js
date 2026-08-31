@@ -106,6 +106,17 @@ export default function DashboardOverview() {
     };
 
     fetchData();
+
+    const handleProfileUpdate = (e) => {
+      if (e.detail) {
+        setProfile(prev => ({ ...(prev || {}), ...e.detail }));
+      }
+    };
+
+    window.addEventListener('fledge_profile_updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('fledge_profile_updated', handleProfileUpdate);
+    };
   }, []);
 
   const handleUploadNote = async (e) => {

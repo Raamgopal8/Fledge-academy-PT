@@ -44,13 +44,25 @@ async def update_profile(
 
     await current_user.save()
     
+    user_batches = getattr(current_user, "batches", None) or ([current_user.batch] if getattr(current_user, "batch", None) else [])
     return {
         "message": "Profile updated successfully",
+        "email": current_user.email,
+        "name": current_user.name,
+        "role": current_user.role,
+        "profile_image_url": current_user.profile_image_url,
+        "level": current_user.level,
+        "batch": current_user.batch or (user_batches[0] if user_batches else None),
+        "batches": user_batches,
+        "preferences": current_user.preferences,
         "user": {
             "email": current_user.email,
             "name": current_user.name,
             "role": current_user.role,
             "profile_image_url": current_user.profile_image_url,
+            "level": current_user.level,
+            "batch": current_user.batch or (user_batches[0] if user_batches else None),
+            "batches": user_batches,
             "preferences": current_user.preferences
         }
     }

@@ -36,22 +36,40 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
             });
             if (res.ok) {
                 setMessage('Profile updated successfully!');
-                const updatedProfile = await res.json();
+                const resData = await res.json().catch(() => ({}));
+                
+                const cleanProfile = {
+                    ...currentProfile,
+                    ...profile,
+                    ...(resData.user || {}),
+                    ...(resData.name ? resData : {})
+                };
+
+                setProfile({
+                    name: cleanProfile.name || '',
+                    profile_image_url: cleanProfile.profile_image_url || '',
+                    preferences: cleanProfile.preferences || { notifications: true, darkMode: false }
+                });
+
                 if (typeof window !== 'undefined') {
-                    if (profile.profile_image_url !== undefined) localStorage.setItem('userProfileImage', profile.profile_image_url);
-                    if (profile.name) localStorage.setItem('userName', profile.name);
-                    const notifEnabled = profile.preferences?.notifications !== false;
+                    if (cleanProfile.profile_image_url !== undefined) localStorage.setItem('userProfileImage', cleanProfile.profile_image_url);
+                    if (cleanProfile.name) localStorage.setItem('userName', cleanProfile.name);
+                    const notifEnabled = cleanProfile.preferences?.notifications !== false;
                     localStorage.setItem('notifications_enabled', notifEnabled ? 'true' : 'false');
+                    
                     window.dispatchEvent(new CustomEvent('fledge_notification_preference_changed', { 
                         detail: { enabled: notifEnabled } 
                     }));
+                    window.dispatchEvent(new CustomEvent('fledge_profile_updated', { 
+                        detail: cleanProfile 
+                    }));
                 }
                 if (onProfileUpdated) {
-                    onProfileUpdated(updatedProfile);
+                    onProfileUpdated(cleanProfile);
                 }
                 setTimeout(() => {
                     onClose();
-                }, 1000);
+                }, 800);
             } else {
                 setMessage('Failed to update profile.');
             }
