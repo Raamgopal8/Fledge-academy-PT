@@ -95,17 +95,27 @@ async def notify_student_fee(
     if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     
+    student = None
     try:
         obj_id = PydanticObjectId(student_id)
+        student = await models.User.get(obj_id)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid student ID")
+        pass
 
-    student = await models.User.get(obj_id)
-    if not student or (student.role or "").lower() != "student":
+    if not student:
+        student = await models.User.find_one({
+            "$or": [
+                {"_id": student_id},
+                {"email": student_id},
+                {"email": {"$regex": f"^{student_id}$", "$options": "i"}}
+            ]
+        })
+
+    if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
     transactions = await models.FinancialTransaction.find_all().to_list()
-    paid_amount = sum(t.amount for t in transactions if t.type == "income" and t.student_id == student.id)
+    paid_amount = sum(t.amount for t in transactions if t.type == "income" and (t.student_id == student.id or str(t.student_id) == str(student.id)))
     total_fee = student.total_fee or 0.0
     pending_amount = max(0.0, total_fee - paid_amount)
 

@@ -285,19 +285,27 @@ export default function CEOPerformance() {
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-surface rounded-3xl p-6 max-w-md w-full shadow-2xl border border-outline-variant/60 relative space-y-4">
-                        <div className="flex items-center gap-3">
+                <div 
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm w-screen h-screen animate-fade-in"
+                    onClick={() => setShowDeleteModal(false)}
+                >
+                    <div 
+                        role="dialog"
+                        aria-modal="true"
+                        className="bg-surface-container-lowest dark:bg-slate-900 rounded-3xl p-6 sm:p-7 w-[92vw] max-w-[480px] shadow-2xl border border-outline-variant/80 relative space-y-4 mx-auto shrink-0 animate-scale-up"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3.5">
                             <div className="w-12 h-12 rounded-2xl bg-error/10 text-error flex items-center justify-center shrink-0">
                                 <span className="material-symbols-outlined text-[28px]">warning</span>
                             </div>
-                            <div>
-                                <h3 className="font-bold text-lg text-on-surface">Delete Entire Activity Log?</h3>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="font-bold text-base sm:text-lg text-on-surface">Delete Entire Activity Log?</h3>
                                 <p className="text-xs text-on-surface-variant mt-0.5">This action cannot be undone.</p>
                             </div>
                         </div>
 
-                        <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/40">
+                        <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed bg-surface-container-low dark:bg-slate-800/60 p-4 rounded-2xl border border-outline-variant/40">
                             Are you sure you want to delete all activity audit logs from the database? All student and staff event history will be completely erased.
                         </p>
 

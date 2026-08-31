@@ -69,7 +69,10 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                 }
                 setTimeout(() => {
                     onClose();
-                }, 800);
+                    if (typeof window !== 'undefined') {
+                        window.location.reload();
+                    }
+                }, 600);
             } else {
                 setMessage('Failed to update profile.');
             }
