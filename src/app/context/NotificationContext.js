@@ -502,6 +502,34 @@ export function NotificationProvider({ children }) {
                     });
                 }
             } catch (err) {}
+
+            // G. Pending Fee Reminders from CEO
+            try {
+                const res = await fetch(`${apiBase}/api/finance/student/reminders`, { headers });
+                if (res.ok) {
+                    const reminders = await res.json();
+                    reminders.slice(0, 10).forEach(rem => {
+                        const remDate = new Date(rem.created_at || now);
+                        const diffHours = (now - remDate) / (1000 * 60 * 60);
+                        if (diffHours <= 336) { // last 14 days
+                            const id = `stud-fee-rem-${rem.id || rem._id || remDate.getTime()}`;
+                            collected.push({
+                                id,
+                                type: 'fee_pending',
+                                title: '💰 Pending Fee Reminder from CEO',
+                                message: rem.message || `Pending Fee Balance: ₹${rem.pending_amount || 0}. Total Fee: ₹${rem.total_fee || 0}, Paid: ₹${rem.paid_amount || 0}. Please clear the remaining balance.`,
+                                timestamp: remDate,
+                                timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                                link: '/dashboard',
+                                icon: 'payments',
+                                badgeColor: 'bg-rose-100 text-rose-800 border-rose-300 font-bold animate-pulse',
+                                accentColor: 'from-rose-500 to-red-600',
+                                priority: 'urgent'
+                            });
+                        }
+                    });
+                }
+            } catch (err) {}
         }
 
         // ==========================================

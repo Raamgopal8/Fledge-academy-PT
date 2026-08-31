@@ -52,6 +52,7 @@ export default function NotificationPopup() {
         // Default: Student
         return [
             { id: 'all', label: 'All', count: notifications.length, icon: 'notifications' },
+            { id: 'fee_pending', label: 'Fees Due', count: notifications.filter(n => n.type === 'fee_pending').length, icon: 'payments' },
             { id: 'class_schedule', label: 'Classes', count: notifications.filter(n => n.type === 'class_schedule').length, icon: 'calendar_month' },
             { id: 'test_created', label: 'Tests', count: notifications.filter(n => n.type === 'test_created').length, icon: 'assignment' },
             { id: 'material_new', label: 'Materials', count: notifications.filter(n => n.type === 'material_new').length, icon: 'menu_book' },
@@ -71,6 +72,7 @@ export default function NotificationPopup() {
 
     const getBadgeLabel = (type) => {
         switch (type) {
+            case 'fee_pending': return 'Fee Reminder';
             case 'test_report': return 'Test Report';
             case 'community_message': return 'Community';
             case 'class_schedule': return 'Class Schedule';

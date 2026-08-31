@@ -23,6 +23,8 @@ export default function CEOFinancesPage() {
 
     // Tab state
     const [activeTab, setActiveTab] = useState('overview'); // overview, students
+    const [notifyingId, setNotifyingId] = useState(null);
+    const [toastMessage, setToastMessage] = useState({ type: '', text: '' });
 
     useEffect(() => {
         const storedToken = localStorage.getItem('token');
@@ -103,10 +105,34 @@ export default function CEOFinancesPage() {
                 headers: { Authorization: `Bearer ${token}` }
             });
             handleCloseFeeModal();
-            fetchFinances();
+            fetchFinances(token);
         } catch (err) {
             console.error('Error updating fee:', err);
             alert('Failed to update student fee');
+        }
+    };
+
+    const handleNotifyStudent = async (student) => {
+        if (!token) return;
+        setNotifyingId(student.id);
+        try {
+            const res = await axios.post(`${API_BASE_URL}/api/finance/student/${student.id}/notify`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setToastMessage({
+                type: 'success',
+                text: `Fee notification sent to ${student.name} (Pending: ₹${student.pending_amount.toFixed(0)})`
+            });
+            setTimeout(() => setToastMessage({ type: '', text: '' }), 4000);
+        } catch (err) {
+            console.error('Error notifying student:', err);
+            setToastMessage({
+                type: 'error',
+                text: err.response?.data?.detail || 'Failed to send fee notification'
+            });
+            setTimeout(() => setToastMessage({ type: '', text: '' }), 4000);
+        } finally {
+            setNotifyingId(null);
         }
     };
 
@@ -336,25 +362,43 @@ export default function CEOFinancesPage() {
 
             {activeTab === 'students' && (
                 <div className="space-y-md">
-                    <h2 className="font-title-lg text-title-lg text-on-surface mb-md">Student Fee Tracking</h2>
+                    <div className="flex justify-between items-center mb-md flex-wrap gap-2">
+                        <div>
+                            <h2 className="font-title-lg text-title-lg text-on-surface">Student Fee Tracking</h2>
+                            <p className="text-xs text-on-surface-variant">Manage total tuition fees and send pending balance alerts to students.</p>
+                        </div>
+                    </div>
+
+                    {/* Feedback Toast */}
+                    {toastMessage.text && (
+                        <div className={`p-3.5 rounded-2xl flex items-center gap-2.5 text-xs sm:text-sm font-bold shadow-md animate-fade-in ${
+                            toastMessage.type === 'success' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                        }`}>
+                            <span className="material-symbols-outlined text-[20px]">
+                                {toastMessage.type === 'success' ? 'check_circle' : 'error'}
+                            </span>
+                            <span>{toastMessage.text}</span>
+                        </div>
+                    )}
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-md">
                         {studentFees.map(student => {
                             const total = student.total_fee || 0;
                             const paid = student.paid_amount || 0;
                             const pending = student.pending_amount || 0;
                             const percent = total > 0 ? Math.min((paid / total) * 100, 100) : 0;
+                            const isNotifyingThis = notifyingId === student.id;
                             
                             return (
-                                <div key={student.id} className="bg-surface-container rounded-2xl sm:rounded-3xl p-3.5 sm:p-lg border border-outline-variant flex flex-col gap-2 shadow-xs">
-                                    <div className="flex justify-between items-start mb-1">
+                                <div key={student.id} className="bg-surface-container-lowest dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-outline-variant/80 flex flex-col gap-3 shadow-xs hover:shadow-md transition-all">
+                                    <div className="flex justify-between items-start">
                                         <div className="min-w-0 flex-1 mr-2">
                                             <h3 className="text-sm sm:text-base font-bold text-on-surface truncate" title={student.name}>{student.name}</h3>
                                             <p className="text-[10px] sm:text-xs text-on-surface-variant truncate" title={student.email}>{student.email}</p>
                                         </div>
                                         <button 
                                             onClick={() => handleOpenFeeModal(student.id, total)}
-                                            className="flex items-center justify-center w-8 h-8 material-symbols-outlined text-primary hover:bg-primary/10 rounded-full transition-colors text-[18px]"
+                                            className="flex items-center justify-center w-8 h-8 material-symbols-outlined text-primary hover:bg-primary/10 rounded-full transition-colors text-[18px] shrink-0"
                                             title="Set Total Fee"
                                         >
                                             edit
@@ -362,24 +406,49 @@ export default function CEOFinancesPage() {
                                     </div>
                                     
                                     <div className="flex justify-between text-xs font-semibold text-on-surface">
-                                        <span>Paid: ₹{paid.toFixed(0)}</span>
-                                        <span>Total: ₹{total.toFixed(0)}</span>
+                                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">Paid: ₹{paid.toFixed(0)}</span>
+                                        <span className="text-on-surface-variant">Total: ₹{total.toFixed(0)}</span>
                                     </div>
                                     
                                     {/* Progress Bar Chart */}
-                                    <div className="w-full bg-surface-container-high h-2.5 sm:h-4 rounded-full overflow-hidden">
+                                    <div className="w-full bg-surface-container-high dark:bg-slate-800 h-2.5 sm:h-3.5 rounded-full overflow-hidden">
                                         <div 
-                                            className="bg-primary h-full rounded-full transition-all duration-700"
+                                            className="bg-gradient-to-r from-primary to-blue-500 h-full rounded-full transition-all duration-700"
                                             style={{ width: `${percent}%` }}
                                         ></div>
                                     </div>
                                     
-                                    <div className="text-right text-[10px] sm:text-xs font-bold mt-0.5">
-                                        {pending > 0 ? (
-                                            <span className="text-error">Pending: ₹{pending.toFixed(0)}</span>
-                                        ) : (
-                                            <span className="text-emerald-500">Fully Paid</span>
-                                        )}
+                                    {/* Footer with Pending Status and Notify Button */}
+                                    <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40 mt-1">
+                                        <div className="text-[11px] sm:text-xs font-bold">
+                                            {pending > 0 ? (
+                                                <span className="text-rose-600 dark:text-rose-400">Due: ₹{pending.toFixed(0)}</span>
+                                            ) : (
+                                                <span className="text-emerald-500 flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                    <span>Paid in Full</span>
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleNotifyStudent(student)}
+                                            disabled={isNotifyingThis || pending <= 0}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                                pending <= 0 
+                                                    ? 'bg-surface-container-high text-on-surface-variant/50 opacity-40 cursor-not-allowed'
+                                                    : isNotifyingThis
+                                                    ? 'bg-primary text-on-primary animate-pulse'
+                                                    : 'bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 shadow-xs active:scale-95'
+                                            }`}
+                                            title={pending <= 0 ? 'No pending balance' : `Send pending fee alert (₹${pending.toFixed(0)}) to ${student.name}`}
+                                        >
+                                            <span className={`material-symbols-outlined text-[15px] ${isNotifyingThis ? 'animate-spin' : ''}`}>
+                                                {isNotifyingThis ? 'sync' : 'notification_add'}
+                                            </span>
+                                            <span>{isNotifyingThis ? 'Sending...' : 'Notify'}</span>
+                                        </button>
                                     </div>
                                 </div>
                             );

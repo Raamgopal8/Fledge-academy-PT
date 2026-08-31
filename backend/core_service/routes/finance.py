@@ -87,6 +87,82 @@ async def add_transaction(
     await transaction.insert()
     return transaction
 
+@router.post("/student/{student_id}/notify")
+async def notify_student_fee(
+    student_id: str,
+    current_user: models.User = Depends(get_current_user)
+):
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    
+    try:
+        obj_id = PydanticObjectId(student_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid student ID")
+
+    student = await models.User.get(obj_id)
+    if not student or (student.role or "").lower() != "student":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
+
+    transactions = await models.FinancialTransaction.find_all().to_list()
+    paid_amount = sum(t.amount for t in transactions if t.type == "income" and t.student_id == student.id)
+    total_fee = student.total_fee or 0.0
+    pending_amount = max(0.0, total_fee - paid_amount)
+
+    reminder_msg = (
+        f"Reminder from CEO: You have a pending fee balance of ₹{pending_amount:,.0f} "
+        f"(Total Fee: ₹{total_fee:,.0f}, Paid: ₹{paid_amount:,.0f}). Please clear the dues soon."
+    )
+
+    reminder = models.StudentFeeReminder(
+        student_id=str(student.id),
+        student_name=student.name or student.email,
+        student_email=student.email,
+        total_fee=total_fee,
+        paid_amount=paid_amount,
+        pending_amount=pending_amount,
+        message=reminder_msg,
+        created_by="CEO"
+    )
+    await reminder.insert()
+
+    return {
+        "message": f"Fee reminder sent to {student.name or student.email}",
+        "reminder_id": str(reminder.id),
+        "pending_amount": pending_amount
+    }
+
+@router.get("/student/reminders")
+async def get_student_fee_reminders(
+    current_user: models.User = Depends(get_current_user)
+):
+    user_id_str = str(current_user.id)
+    user_email = current_user.email
+
+    reminders = await models.StudentFeeReminder.find({
+        "$or": [
+            {"student_id": user_id_str},
+            {"student_email": user_email}
+        ]
+    }).sort("-created_at").to_list()
+
+    return [
+        {
+            "id": str(r.id),
+            "student_id": r.student_id,
+            "student_name": r.student_name,
+            "student_email": r.student_email,
+            "total_fee": r.total_fee,
+            "paid_amount": r.paid_amount,
+            "pending_amount": r.pending_amount,
+            "message": r.message,
+            "created_by": r.created_by,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "is_read": r.is_read
+        }
+        for r in reminders
+    ]
+
 @router.delete("/{transaction_id}")
 async def delete_transaction(
     transaction_id: PydanticObjectId,

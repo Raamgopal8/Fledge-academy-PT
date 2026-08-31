@@ -200,3 +200,19 @@ class StudentNote(Document):
     class Settings:
         name = "student_notes"
 
+
+class StudentFeeReminder(Document):
+    student_id: str
+    student_name: str
+    student_email: str
+    total_fee: float
+    paid_amount: float
+    pending_amount: float
+    message: Optional[str] = None
+    created_by: str = "CEO"
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
+    is_read: bool = False
+
+    class Settings:
+        name = "student_fee_reminders"
+
