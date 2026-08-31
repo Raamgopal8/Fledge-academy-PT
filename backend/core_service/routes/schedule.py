@@ -57,7 +57,23 @@ class ScheduleResponse(BaseModel):
         populate_by_name = True
         from_attributes = True
 
-@router.get("", response_model=List[ScheduleResponse])
+def format_schedule_response(schedule: models.ClassSchedule) -> dict:
+    return {
+        "id": str(schedule.id),
+        "_id": str(schedule.id),
+        "name": schedule.name,
+        "time": schedule.time,
+        "location": schedule.location,
+        "students": schedule.students,
+        "color": schedule.color,
+        "day_of_week": schedule.day_of_week,
+        "class_link": schedule.class_link,
+        "level": schedule.level,
+        "batch": schedule.batch,
+        "created_at": schedule.created_at.isoformat() if getattr(schedule, "created_at", None) else None
+    }
+
+@router.get("", response_model=List[dict])
 async def get_schedules(level: Optional[str] = None, batch: Optional[str] = None):
     query = {}
     if level and level.strip().lower() not in ["all", "all levels"]:
@@ -73,16 +89,17 @@ async def get_schedules(level: Optional[str] = None, batch: Optional[str] = None
             if schedule.expires_at and schedule.expires_at < now:
                 await schedule.delete()
                 continue
-        valid_schedules.append(schedule)
+        valid_schedules.append(format_schedule_response(schedule))
         
     return valid_schedules
 
-@router.post("", response_model=ScheduleResponse)
+@router.post("", response_model=dict)
 async def create_schedule(
     schema: ScheduleSchema,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action"
@@ -103,21 +120,27 @@ async def create_schedule(
         expires_at=expires_at
     )
     await new_schedule.insert()
-    return new_schedule
+    return format_schedule_response(new_schedule)
 
-@router.put("/{schedule_id}", response_model=ScheduleResponse)
+@router.put("/{schedule_id}", response_model=dict)
 async def update_schedule(
-    schedule_id: PydanticObjectId,
+    schedule_id: str,
     schema: ScheduleSchema,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action"
         )
     
-    schedule = await models.ClassSchedule.get(schedule_id)
+    try:
+        obj_id = PydanticObjectId(schedule_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid schedule ID format")
+
+    schedule = await models.ClassSchedule.get(obj_id)
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
@@ -133,20 +156,26 @@ async def update_schedule(
     schedule.expires_at = calculate_expiration(schema.day_of_week)
     
     await schedule.save()
-    return schedule
+    return format_schedule_response(schedule)
 
 @router.delete("/{schedule_id}")
 async def delete_schedule(
-    schedule_id: PydanticObjectId,
+    schedule_id: str,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action"
         )
     
-    schedule = await models.ClassSchedule.get(schedule_id)
+    try:
+        obj_id = PydanticObjectId(schedule_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid schedule ID format")
+
+    schedule = await models.ClassSchedule.get(obj_id)
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         

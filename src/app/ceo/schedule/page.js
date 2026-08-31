@@ -118,8 +118,9 @@ export default function SchedulePage() {
             'Authorization': `Bearer ${token}`
         };
 
+        const scheduleId = editingSchedule?.id || editingSchedule?._id;
         const url = editingSchedule 
-            ? `${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule/${editingSchedule.id}`
+            ? `${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule/${scheduleId}`
             : `${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule`;
         
         const method = editingSchedule ? 'PUT' : 'POST';
@@ -137,7 +138,7 @@ export default function SchedulePage() {
             });
 
             if (!res.ok) {
-                const errorData = await res.json();
+                const errorData = await res.json().catch(() => ({}));
                 throw new Error(errorData.detail || 'Failed to save schedule');
             }
 
@@ -156,13 +157,13 @@ export default function SchedulePage() {
             setIsModalOpen(false);
         } catch (err) {
             console.error('Error saving schedule:', err);
-            setFormError(err.message);
+            setFormError(err.message || 'Failed to save schedule');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (scheduleItem) => {
         if (!confirm('Are you sure you want to delete this class schedule?')) return;
 
         const token = localStorage.getItem('token');
@@ -170,20 +171,23 @@ export default function SchedulePage() {
             'Authorization': `Bearer ${token}`
         };
 
+        const targetId = typeof scheduleItem === 'object' ? (scheduleItem.id || scheduleItem._id) : scheduleItem;
+
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule/${targetId}`, {
                 method: 'DELETE',
                 headers
             });
 
             if (!res.ok) {
-                throw new Error('Failed to delete schedule item');
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || 'Failed to delete schedule item');
             }
 
             await fetchSchedules();
         } catch (err) {
             console.error('Error deleting schedule:', err);
-            alert(err.message);
+            alert(err.message || 'Failed to delete schedule');
         }
     };
 
