@@ -500,15 +500,15 @@ export default function StudentVideos() {
                                             </div>
 
                                             {/* Top-Right Drive Pop-Out / Share Blocker & Fullscreen Button */}
-                                            <div className="absolute top-2 right-2 z-40 flex items-center justify-center pointer-events-auto">
+                                            <div className="absolute top-1.5 right-1.5 z-40 flex items-center justify-center pointer-events-auto">
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleFullscreen(`video-player-${video.id}`)}
-                                                    className="w-8 h-8 rounded-full bg-black/80 hover:bg-black hover:scale-110 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-125 cursor-pointer border border-white/20"
+                                                    className="w-10 h-10 rounded-full bg-black/90 hover:bg-black hover:scale-105 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-lg active:scale-95 cursor-pointer border border-white/20"
                                                     title={mobileFullscreenId === `video-player-${video.id}` ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
                                                     aria-label="Toggle Fullscreen"
                                                 >
-                                                    <span className="material-symbols-outlined text-[18px]">
+                                                    <span className="material-symbols-outlined text-[20px]">
                                                         {mobileFullscreenId === `video-player-${video.id}` ? 'fullscreen_exit' : 'fullscreen'}
                                                     </span>
                                                 </button>
