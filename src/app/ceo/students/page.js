@@ -51,8 +51,17 @@ export default function CEOStudents() {
                 body: JSON.stringify({ email: formData.email.trim() })
             });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.detail || 'Failed to add student');
+                let errText = 'Failed to add student';
+                try {
+                    const data = await res.json();
+                    errText = data.detail || errText;
+                } catch {
+                    try {
+                        const raw = await res.text();
+                        if (raw) errText = raw;
+                    } catch {}
+                }
+                throw new Error(errText);
             }
             await fetchStudents();
             setIsAddModalOpen(false);
@@ -82,8 +91,17 @@ export default function CEOStudents() {
                 })
             });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.detail || 'Failed to update student');
+                let errText = 'Failed to update student';
+                try {
+                    const data = await res.json();
+                    errText = data.detail || errText;
+                } catch {
+                    try {
+                        const raw = await res.text();
+                        if (raw) errText = raw;
+                    } catch {}
+                }
+                throw new Error(errText);
             }
             await fetchStudents();
             setIsEditModalOpen(false);

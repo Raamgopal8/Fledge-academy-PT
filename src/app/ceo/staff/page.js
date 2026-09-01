@@ -81,8 +81,17 @@ export default function CEOStaff() {
                 })
             });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.detail || 'Failed to add staff member');
+                let errText = 'Failed to add staff member';
+                try {
+                    const data = await res.json();
+                    errText = data.detail || errText;
+                } catch {
+                    try {
+                        const raw = await res.text();
+                        if (raw) errText = raw;
+                    } catch {}
+                }
+                throw new Error(errText);
             }
             await fetchStaff();
             setIsAddModalOpen(false);
@@ -114,8 +123,17 @@ export default function CEOStaff() {
                 })
             });
             if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.detail || 'Failed to update staff member');
+                let errText = 'Failed to update staff member';
+                try {
+                    const data = await res.json();
+                    errText = data.detail || errText;
+                } catch {
+                    try {
+                        const raw = await res.text();
+                        if (raw) errText = raw;
+                    } catch {}
+                }
+                throw new Error(errText);
             }
             await fetchStaff();
             setIsEditModalOpen(false);
