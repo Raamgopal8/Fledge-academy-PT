@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useCEOContext } from '../CEOContext';
+import CategoryColorPicker, { CategoryBadge } from '../../components/CategoryColorPicker';
 
 const LEVELS = [
     { value: 'Level 5', label: 'Level 5 (Beginner)', color: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' },
@@ -11,12 +12,11 @@ const LEVELS = [
 ];
 
 const SUGGESTED_CATEGORIES = [
-    'General Japanese',
-    'Kanji Mastery',
-    'Grammar & Patterns',
+    'Grammar Lesson',
+    'Vocabulary & Kanji',
     'Listening Practice',
     'JLPT Preparation',
-    'Vocabulary & Phrases',
+    'Culture & Expressions',
     'Conversation Practice'
 ];
 
@@ -41,6 +41,7 @@ export default function CEOVideos() {
     const [formData, setFormData] = useState({
         title: '',
         category: '',
+        category_color: '#4F46E5',
         video_url: '',
         level: 'Level 5',
         batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1'
@@ -99,6 +100,7 @@ export default function CEOVideos() {
             const payload = {
                 title: formData.title,
                 category: formData.category || 'General',
+                category_color: formData.category_color,
                 video_url: formData.video_url,
                 level: formData.level,
                 batch: formData.batch.trim()
@@ -123,6 +125,7 @@ export default function CEOVideos() {
             setFormData({
                 title: '',
                 category: '',
+                category_color: '#4F46E5',
                 video_url: '',
                 level: 'Level 5',
                 batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1'
@@ -398,9 +401,9 @@ export default function CEOVideos() {
                             />
                         </div>
 
-                        {/* Category with Suggestions */}
+                        {/* Category with Suggestions & Custom Color Picker */}
                         <div>
-                            <label className="block font-label-md text-on-surface mb-1 font-semibold text-sm">Category</label>
+                            <label className="block font-label-md text-on-surface mb-1 font-semibold text-sm">Category / Custom Label</label>
                             <input 
                                 type="text"
                                 name="category"
@@ -408,20 +411,31 @@ export default function CEOVideos() {
                                 onChange={handleInputChange}
                                 required
                                 className="w-full px-3.5 py-2.5 bg-surface-container border border-outline-variant rounded-xl focus:border-primary focus:outline-none transition-colors text-sm text-on-surface mb-2"
-                                placeholder="e.g. Grammar, Kanji, JLPT"
+                                placeholder="e.g. Grammar Lesson, Kanji Mastery, JLPT"
                             />
-                            <div className="flex flex-wrap gap-1">
-                                {SUGGESTED_CATEGORIES.slice(0, 4).map(cat => (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                                {SUGGESTED_CATEGORIES.map(cat => (
                                     <button
                                         key={cat}
                                         type="button"
                                         onClick={() => setFormData(prev => ({ ...prev, category: cat }))}
-                                        className="text-[10px] px-2 py-0.5 rounded-full border border-outline-variant/70 text-on-surface-variant hover:bg-surface-container-high transition-colors"
+                                        className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                            formData.category === cat
+                                                ? 'bg-primary text-on-primary border-primary font-bold'
+                                                : 'border-outline-variant/70 text-on-surface-variant hover:bg-surface-container-high'
+                                        }`}
                                     >
                                         + {cat}
                                     </button>
                                 ))}
                             </div>
+
+                            {/* Interactive Color Selector */}
+                            <CategoryColorPicker 
+                                categoryName={formData.category}
+                                selectedColor={formData.category_color}
+                                onColorChange={(newColor) => setFormData(prev => ({ ...prev, category_color: newColor }))}
+                            />
                         </div>
 
                         {/* Target Level */}
@@ -632,21 +646,22 @@ export default function CEOVideos() {
                                             </div>
 
                                             {/* Badges: Level, Batch, Category */}
-                                            <div className="flex flex-wrap gap-1.5 mb-3 mt-auto pt-2">
+                                            <div className="flex flex-wrap items-center gap-1.5 mb-3 mt-auto pt-2">
+                                                {video.category && (
+                                                    <CategoryBadge 
+                                                        category={video.category} 
+                                                        color={video.category_color} 
+                                                    />
+                                                )}
                                                 {video.level && (
-                                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
+                                                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
                                                         {video.level}
                                                     </span>
                                                 )}
                                                 {video.batch && (
-                                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                                                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
                                                         <span className="material-symbols-outlined text-[12px]">groups</span>
                                                         {video.batch}
-                                                    </span>
-                                                )}
-                                                {video.category && (
-                                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-secondary-container text-on-secondary-container">
-                                                        {video.category}
                                                     </span>
                                                 )}
                                             </div>

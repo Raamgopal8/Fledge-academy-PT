@@ -10,6 +10,7 @@ router = APIRouter()
 class VideoCreate(BaseModel):
     title: str
     category: str
+    category_color: Optional[str] = None
     video_url: str
     level: Optional[str] = None
     batch: Optional[str] = None
@@ -19,6 +20,7 @@ class VideoResponse(BaseModel):
     id: str
     title: str
     category: str
+    category_color: Optional[str] = None
     video_url: str
     uploaded_by_id: str
     created_at: Optional[str] = None
@@ -78,6 +80,7 @@ async def get_videos(
             id=str(v.id),
             title=v.title,
             category=v.category,
+            category_color=getattr(v, "category_color", None),
             video_url=v.video_url,
             uploaded_by_id=str(v.uploaded_by_id),
             created_at=v.created_at.isoformat() if v.created_at else None,
@@ -102,6 +105,7 @@ async def upload_video(video: VideoCreate, current_user: models.User = Depends(g
     new_video = models.Video(
         title=video.title,
         category=video.category,
+        category_color=video.category_color.strip() if video.category_color else None,
         video_url=video.video_url,
         uploaded_by_id=current_user.id,
         level=video.level,
@@ -115,6 +119,7 @@ async def upload_video(video: VideoCreate, current_user: models.User = Depends(g
         id=str(new_video.id),
         title=new_video.title,
         category=new_video.category,
+        category_color=new_video.category_color,
         video_url=new_video.video_url,
         uploaded_by_id=str(new_video.uploaded_by_id),
         created_at=new_video.created_at.isoformat() if new_video.created_at else None,

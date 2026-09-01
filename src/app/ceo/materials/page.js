@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useCEOContext } from '../CEOContext';
+import CategoryColorPicker, { CategoryBadge } from '../../components/CategoryColorPicker';
 
 const LEVELS = [
     { value: 'Level 5', label: 'Level 5 (Beginner)', color: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' },
@@ -28,6 +29,8 @@ export default function CEOMaterials() {
     // Form state
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('Lecture Slides');
+    const [categoryColor, setCategoryColor] = useState('#4F46E5');
     const [level, setLevel] = useState('Level 5');
     const [batch, setBatch] = useState((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1');
     const [file, setFile] = useState(null);
@@ -80,6 +83,8 @@ export default function CEOMaterials() {
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
+        formData.append('category', category || 'General');
+        if (categoryColor) formData.append('category_color', categoryColor);
         formData.append('level', level);
         if (batch) formData.append('batch', batch.trim());
         if (uploadType === 'file') {
@@ -101,6 +106,8 @@ export default function CEOMaterials() {
                 setIsUploadModalOpen(false);
                 setTitle('');
                 setDescription('');
+                setCategory('Lecture Slides');
+                setCategoryColor('#4F46E5');
                 setLevel('Level 5');
                 setBatch((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1');
                 setFile(null);
@@ -305,13 +312,19 @@ export default function CEOMaterials() {
 
                                         {/* Badges */}
                                         <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                                            {material.category && (
+                                                <CategoryBadge 
+                                                    category={material.category} 
+                                                    color={material.category_color} 
+                                                />
+                                            )}
                                             {material.level && (
-                                                <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getLevelBadgeClass(material.level)}`}>
+                                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getLevelBadgeClass(material.level)}`}>
                                                     {material.level}
                                                 </span>
                                             )}
                                             {material.batch && (
-                                                <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                                                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
                                                     <span className="material-symbols-outlined text-[12px]">groups</span>
                                                     {material.batch}
                                                 </span>
@@ -347,7 +360,7 @@ export default function CEOMaterials() {
             {/* Upload Modal */}
             {isUploadModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-surface rounded-3xl p-6 max-w-[500px] w-full shadow-2xl border border-outline-variant/60 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+                    <div className="bg-surface rounded-3xl p-6 max-w-[520px] w-full shadow-2xl border border-outline-variant/60 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
                         <div className="flex justify-between items-center mb-5 pb-3 border-b border-outline-variant/40">
                             <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
@@ -410,6 +423,42 @@ export default function CEOMaterials() {
                                     onChange={(e) => setTitle(e.target.value)}
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2.5 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
                                     placeholder="e.g. Chapter 4 Grammar Cheatsheet"
+                                />
+                            </div>
+
+                            {/* Category Name & Custom Color Picker */}
+                            <div>
+                                <label className="block font-label-md text-on-surface mb-1 font-semibold text-xs">Category / Custom Label</label>
+                                <input 
+                                    type="text" 
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value)}
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors mb-2"
+                                    placeholder="e.g. Lecture Slides, Vocabulary, Grammar, Exam Prep..."
+                                />
+                                <div className="flex flex-wrap gap-1.5 items-center mb-3">
+                                    <span className="text-[10px] text-on-surface-variant font-medium mr-1">Presets:</span>
+                                    {['Lecture Slides', 'Practice Sheet', 'Grammar Guide', 'Vocabulary List', 'Exam Prep', 'Reference Note'].map((cat) => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => setCategory(cat)}
+                                            className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                category === cat
+                                                    ? 'bg-primary text-on-primary border-primary font-bold'
+                                                    : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                            }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Interactive Custom Label Color Selector with Live Preview */}
+                                <CategoryColorPicker 
+                                    categoryName={category}
+                                    selectedColor={categoryColor}
+                                    onColorChange={setCategoryColor}
                                 />
                             </div>
                             

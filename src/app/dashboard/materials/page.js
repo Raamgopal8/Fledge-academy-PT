@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { CategoryBadge } from '@/app/components/CategoryColorPicker';
 
 const LEVEL_COLORS = {
     'Level 5': 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
@@ -203,10 +204,16 @@ export default function StudentMaterials() {
                                                     {material.description || 'No description provided.'}
                                                 </p>
 
-                                                {/* Level Badge (Batch hidden in UI) */}
+                                                {/* Level and Category Badges */}
                                                 <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                                    {material.category && (
+                                                        <CategoryBadge 
+                                                            category={material.category} 
+                                                            color={material.category_color} 
+                                                        />
+                                                    )}
                                                     {material.level && (
-                                                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getLevelBadgeClass(material.level)}`}>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getLevelBadgeClass(material.level)}`}>
                                                             {material.level}
                                                         </span>
                                                     )}

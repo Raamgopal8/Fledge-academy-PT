@@ -70,6 +70,8 @@ class Material(Document):
     title: str
     description: Optional[str] = None
     file_url: str
+    category: Optional[str] = "General"
+    category_color: Optional[str] = None
     uploaded_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
 
@@ -150,6 +152,7 @@ class CommunityMessage(Document):
 class Video(Document):
     title: str
     category: str
+    category_color: Optional[str] = None
     video_url: str
     uploaded_by_id: PydanticObjectId
     created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))

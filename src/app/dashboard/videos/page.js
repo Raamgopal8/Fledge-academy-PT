@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { CategoryBadge } from '@/app/components/CategoryColorPicker';
 
 const LEVEL_COLORS = {
     'Level 5': 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
@@ -566,14 +567,15 @@ export default function StudentVideos() {
 
                                             {/* Level & Category Badges (Batch hidden in UI) */}
                                             <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-outline-variant/40">
-                                                {video.level && (
-                                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
-                                                        {video.level}
-                                                    </span>
-                                                )}
                                                 {video.category && (
-                                                    <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-secondary-container text-on-secondary-container">
-                                                        {video.category}
+                                                    <CategoryBadge 
+                                                        category={video.category} 
+                                                        color={video.category_color} 
+                                                    />
+                                                )}
+                                                {video.level && (
+                                                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
+                                                        {video.level}
                                                     </span>
                                                 )}
                                             </div>
