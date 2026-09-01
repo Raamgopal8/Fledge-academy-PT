@@ -3,14 +3,31 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from beanie import PydanticObjectId
 
+import re
 import models
 from routes.auth import get_current_user
 from redis_client import get_user_account, set_user_account, invalidate_user_account, get_cache, set_cache
 
 router = APIRouter()
 
+def format_google_drive_image_url(url: Optional[str]) -> Optional[str]:
+    if not url:
+        return url
+    url_str = url.strip()
+    if not url_str:
+        return url_str
+    
+    # Converts standard Google Drive shareable links to direct embeddable image URLs
+    match = re.search(r"drive\.google\.com/(?:file/d/([a-zA-Z0-9_-]+)|open\?id=([a-zA-Z0-9_-]+)|uc\?(?:[^&]*&)*id=([a-zA-Z0-9_-]+))", url_str)
+    if match:
+        file_id = match.group(1) or match.group(2) or match.group(3)
+        if file_id:
+            return f"https://lh3.googleusercontent.com/d/{file_id}"
+    return url_str
+
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
+    phone: Optional[str] = None
     profile_image_url: Optional[str] = None
     preferences: Optional[Dict[str, Any]] = None
 
@@ -25,6 +42,7 @@ async def get_profile(current_user: models.User = Depends(get_current_user)):
     profile_data = {
         "email": current_user.email,
         "name": current_user.name,
+        "phone": getattr(current_user, "phone", None),
         "role": current_user.role,
         "profile_image_url": current_user.profile_image_url,
         "level": current_user.level,
@@ -42,8 +60,11 @@ async def update_profile(
 ):
     if profile_data.name is not None:
         current_user.name = profile_data.name
+    if profile_data.phone is not None:
+        current_user.phone = profile_data.phone
     if profile_data.profile_image_url is not None:
-        current_user.profile_image_url = profile_data.profile_image_url
+        clean_image_url = format_google_drive_image_url(profile_data.profile_image_url)
+        current_user.profile_image_url = clean_image_url
     if profile_data.preferences is not None:
         # Merge dicts
         current_prefs = current_user.preferences or {}
@@ -54,28 +75,23 @@ async def update_profile(
     await invalidate_user_account(current_user.email)
     
     user_batches = getattr(current_user, "batches", None) or ([current_user.batch] if getattr(current_user, "batch", None) else [])
-    result = {
-        "message": "Profile updated successfully",
+    user_dict = {
         "email": current_user.email,
         "name": current_user.name,
+        "phone": getattr(current_user, "phone", None),
         "role": current_user.role,
         "profile_image_url": current_user.profile_image_url,
         "level": current_user.level,
         "batch": current_user.batch or (user_batches[0] if user_batches else None),
         "batches": user_batches,
-        "preferences": current_user.preferences,
-        "user": {
-            "email": current_user.email,
-            "name": current_user.name,
-            "role": current_user.role,
-            "profile_image_url": current_user.profile_image_url,
-            "level": current_user.level,
-            "batch": current_user.batch or (user_batches[0] if user_batches else None),
-            "batches": user_batches,
-            "preferences": current_user.preferences
-        }
+        "preferences": current_user.preferences
     }
-    await set_user_account(current_user.email, result["user"], ttl=600)
+    result = {
+        "message": "Profile updated successfully",
+        **user_dict,
+        "user": user_dict
+    }
+    await set_user_account(current_user.email, user_dict, ttl=600)
     return result
 
 class StudentCreate(BaseModel):
