@@ -78,8 +78,8 @@ async def create_test(
     test_data: TestCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
-        raise HTTPException(status_code=403, detail="Only staff can create tests")
+    if (current_user.role or "").lower() not in ["staff", "sensi", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only sensi and admin can create tests")
         
     new_test = models.Test(
         title=test_data.title,
@@ -107,8 +107,8 @@ async def delete_test(
     test_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
-        raise HTTPException(status_code=403, detail="Only staff can delete tests")
+    if (current_user.role or "").lower() not in ["staff", "sensi", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only sensi and admin can delete tests")
         
     test = await models.Test.get(test_id)
     if not test:
@@ -123,7 +123,7 @@ async def submit_test(
     submission_data: TestSubmit,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "student":
+    if (current_user.role or "").lower() != "student":
         raise HTTPException(status_code=403, detail="Only students can submit tests")
         
     # Check if test exists
@@ -198,7 +198,7 @@ async def get_test_submissions(
     test_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    if (current_user.role or "").lower() not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
     # Fetch submissions for this test
@@ -245,8 +245,8 @@ async def review_submission(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
-        raise HTTPException(status_code=403, detail="Only staff can review tests")
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only sensi can review tests")
         
     submission = await models.TestSubmission.get(submission_id)
     

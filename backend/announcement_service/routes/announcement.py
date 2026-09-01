@@ -94,8 +94,8 @@ async def create_announcement(
     announcement: AnnouncementCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can create announcements")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can create/modify announcements")
         
     new_ann = models.Announcement(
         title=announcement.title,
@@ -124,8 +124,8 @@ async def update_announcement(
     announcement_update: AnnouncementUpdate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can update announcements")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can update announcements")
         
     db_ann = await models.Announcement.get(announcement_id)
     
@@ -187,8 +187,8 @@ async def delete_announcement(
     announcement_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can delete announcements")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can delete announcements")
 
     ann = await models.Announcement.get(announcement_id)
     if not ann:

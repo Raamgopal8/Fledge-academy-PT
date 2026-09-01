@@ -20,7 +20,7 @@ class StudentFeeUpdate(BaseModel):
 
 @router.get("")
 async def get_finances(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     
     transactions = await models.FinancialTransaction.find_all().to_list()
@@ -64,7 +64,7 @@ async def update_student_fee(
     fee_data: StudentFeeUpdate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
         
     student = await models.User.get(student_id)
@@ -80,7 +80,7 @@ async def add_transaction(
     transaction_data: TransactionCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
         
     transaction = models.FinancialTransaction(**transaction_data.dict())
@@ -178,7 +178,7 @@ async def delete_transaction(
     transaction_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
         
     transaction = await models.FinancialTransaction.get(transaction_id)

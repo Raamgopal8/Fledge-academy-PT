@@ -113,7 +113,7 @@ async def delete_student_note(
         raise HTTPException(status_code=404, detail="Note not found")
 
     # Only uploader or staff/ceo can delete
-    if current_user.role not in ["staff", "ceo", "admin"] and note.uploader_id != str(current_user.id):
+    if (current_user.role or "").lower() not in ["staff", "sensi", "ceo", "admin"] and note.uploader_id != str(current_user.id):
         raise HTTPException(status_code=403, detail="Not authorized to delete this note")
 
     await note.delete()

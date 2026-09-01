@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useCEOContext } from '@/app/ceo/CEOContext';
+import { useAdminContext } from '@/app/admin/AdminContext';
 
 export default function BatchSelectionModal() {
-    const { selectedBatch, setSelectedBatch } = useCEOContext();
+    const { selectedBatch, setSelectedBatch } = useAdminContext();
     const [isOpen, setIsOpen] = useState(false);
     const [batchInput, setBatchInput] = useState('');
 

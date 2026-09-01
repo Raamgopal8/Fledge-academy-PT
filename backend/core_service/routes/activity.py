@@ -78,6 +78,7 @@ async def user_heartbeat(current_user: models.User = Depends(get_current_user)):
 
     return {"status": "ok", "last_seen_at": now.isoformat()}
 
+@router.get("/admin/logs")
 @router.get("/ceo/logs")
 async def get_activity_logs(
     role: Optional[str] = None,
@@ -87,12 +88,18 @@ async def get_activity_logs(
     limit: Optional[int] = Query(None),
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can access activity logs")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can access activity logs")
 
     query = {}
     if role and role.lower() not in ["all", "all roles"]:
-        query["role"] = role.lower()
+        r = role.lower()
+        if r in ["sensi", "staff"]:
+            query["role"] = {"$in": ["sensi", "staff"]}
+        elif r in ["admin", "ceo"]:
+            query["role"] = {"$in": ["admin", "ceo"]}
+        else:
+            query["role"] = r
 
     if activity_type and activity_type.lower() not in ["all", "all types"]:
         query["activity_type"] = activity_type.lower()
@@ -119,7 +126,7 @@ async def get_activity_logs(
             "user_id": str(log.user_id) if log.user_id else None,
             "user_name": log.user_name,
             "user_email": log.user_email,
-            "role": log.role,
+            "role": "sensi" if log.role == "staff" else ("admin" if log.role == "ceo" else log.role),
             "level": log.level,
             "batch": log.batch,
             "activity_type": log.activity_type,
@@ -131,6 +138,7 @@ async def get_activity_logs(
         for log in logs
     ]
 
+@router.get("/admin/user-sessions")
 @router.get("/ceo/user-sessions")
 async def get_user_sessions(
     role: Optional[str] = None,
@@ -138,14 +146,20 @@ async def get_user_sessions(
     search: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can access user session monitor")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can access user session monitor")
 
     query = {}
     if role and role.lower() not in ["all", "all roles"]:
-        query["role"] = role.lower()
+        r = role.lower()
+        if r in ["sensi", "staff"]:
+            query["role"] = {"$in": ["sensi", "staff"]}
+        elif r in ["admin", "ceo"]:
+            query["role"] = {"$in": ["admin", "ceo"]}
+        else:
+            query["role"] = r
     else:
-        query["role"] = {"$in": ["student", "staff"]}
+        query["role"] = {"$in": ["student", "staff", "sensi"]}
 
     if batch and batch.lower() not in ["all", "all batches", "global", "global access"]:
         query["batch"] = batch
@@ -182,11 +196,13 @@ async def get_user_sessions(
             "Logged into portal" if u.last_login_at else "No activity recorded"
         )
 
+        user_role = "sensi" if u.role == "staff" else ("admin" if u.role == "ceo" else u.role)
+
         user_results.append({
             "id": str(u.id),
             "name": u.name or u.email.split("@")[0],
             "email": u.email,
-            "role": u.role,
+            "role": user_role,
             "level": u.level or "Level 5",
             "batch": u.batch or (u.batches[0] if getattr(u, "batches", None) else "Batch - 1"),
             "profile_image_url": u.profile_image_url,
@@ -204,10 +220,11 @@ async def get_user_sessions(
 
     return user_results
 
+@router.get("/admin/summary")
 @router.get("/ceo/summary")
 async def get_activity_summary(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can access activity summary")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can access activity summary")
 
     now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     start_of_today = datetime(now.year, now.month, now.day)
@@ -221,7 +238,7 @@ async def get_activity_summary(current_user: models.User = Depends(get_current_u
     }).count()
 
     online_staff = await models.User.find({
-        "role": {"$in": ["staff", "ceo"]},
+        "role": {"$in": ["sensi", "staff", "admin", "ceo"]},
         "is_online": True,
         "last_seen_at": {"$gte": five_mins_ago}
     }).count()
@@ -239,7 +256,7 @@ async def get_activity_summary(current_user: models.User = Depends(get_current_u
 
     # 4. Total Users Count
     total_students = await models.User.find({"role": "student"}).count()
-    total_staff = await models.User.find({"role": "staff"}).count()
+    total_staff = await models.User.find({"role": {"$in": ["sensi", "staff"]}}).count()
 
     return {
         "online_students": online_students,
@@ -251,10 +268,11 @@ async def get_activity_summary(current_user: models.User = Depends(get_current_u
         "total_staff": total_staff
     }
 
+@router.delete("/admin/logs")
 @router.delete("/ceo/logs")
 async def clear_activity_logs(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Only CEO can clear activity logs")
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Only Admin can clear activity logs")
 
     await models.UserActivityLog.delete_all()
     return {"message": "All activity logs cleared successfully"}

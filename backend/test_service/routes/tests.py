@@ -105,7 +105,7 @@ async def create_test(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff and CEO can create tests")
         
     new_test = models.Test(
@@ -137,7 +137,7 @@ async def delete_test(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete tests")
     try:
         obj_id = PydanticObjectId(test_id)
@@ -237,7 +237,7 @@ async def get_test_submissions(
     test_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    if (current_user.role or "").lower() not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
     # Fetch submissions for this test
@@ -286,7 +286,7 @@ async def review_submission(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Only staff can review tests")
         
     submission = await models.TestSubmission.get(submission_id)

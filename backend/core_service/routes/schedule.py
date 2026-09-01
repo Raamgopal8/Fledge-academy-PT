@@ -112,7 +112,7 @@ async def create_schedule(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action"
@@ -142,7 +142,7 @@ async def update_schedule(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action"
@@ -177,7 +177,7 @@ async def delete_schedule(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action"

@@ -96,7 +96,7 @@ async def get_videos(
 async def upload_video(video: VideoCreate, current_user: models.User = Depends(get_current_user)):
     """Upload a new video link (restricted to staff, ceo, and admin)"""
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to upload videos"
@@ -132,7 +132,7 @@ async def upload_video(video: VideoCreate, current_user: models.User = Depends(g
 async def delete_video(video_id: str, current_user: models.User = Depends(get_current_user)):
     """Delete a video (restricted to staff, ceo, and admin)"""
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete videos"

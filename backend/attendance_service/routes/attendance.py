@@ -16,13 +16,14 @@ async def get_students_attendance(
     batch: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     query = {"role": "student"}
     if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
         query["batch"] = batch
-    elif current_user.role == "staff":
+    elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
         if not staff_batches and not staff_batch:
@@ -58,19 +59,20 @@ async def mark_attendance(
     data: dict,
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "student"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "sensi", "student", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
     status = data.get("status") # present or absent
     
-    if current_user.role == "student":
+    if user_role == "student":
         if status != "present":
             raise HTTPException(status_code=400, detail="Students can only mark themselves as present")
         student_id_str = current_user.id
     else:
         student_id_str = data.get("student_id")
         if not student_id_str:
-            raise HTTPException(status_code=400, detail="student_id is required for staff")
+            raise HTTPException(status_code=400, detail="student_id is required")
     
     if not status:
         raise HTTPException(status_code=400, detail="status is required")
@@ -100,7 +102,7 @@ async def mark_attendance(
 async def get_today_attendance(
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
     today = get_today_date_str()
@@ -124,7 +126,7 @@ async def get_today_attendance(
 async def get_my_attendance_status(
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "student":
+    if (current_user.role or "").lower() != "student":
         raise HTTPException(status_code=403, detail="Not authorized")
         
     today = get_today_date_str()
@@ -144,7 +146,7 @@ async def get_my_attendance_status(
 async def get_my_attendance_stats(
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "student":
+    if (current_user.role or "").lower() != "student":
         raise HTTPException(status_code=403, detail="Not authorized")
         
     try:
@@ -170,14 +172,15 @@ async def export_attendance_history(
     end_date: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Fetch complete attendance history from start date to current date for CEO & Staff export"""
-    if current_user.role not in ["ceo", "staff", "admin"]:
+    """Fetch complete attendance history from start date to current date for Admin & Sensi export"""
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["ceo", "staff", "admin", "sensi"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
     query = {"role": "student"}
     if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access", "All"]:
         query["batch"] = batch
-    elif current_user.role == "staff":
+    elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
         if staff_batches and len(staff_batches) > 1:

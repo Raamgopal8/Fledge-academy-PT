@@ -141,12 +141,17 @@ async def login(request: LoginRequest):
     except Exception as e:
         print("Error logging login activity:", e)
 
+    normalized_role = "admin" if (user.role or "").lower() == "ceo" else ("sensi" if (user.role or "").lower() == "staff" else (user.role or "student").lower())
+    if user.role != normalized_role:
+        user.role = normalized_role
+        await user.save()
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={
             "sub": request.username, 
             "name": user.name or (user.email.split("@")[0].title() if user.email else "Student"),
-            "role": user.role, 
+            "role": normalized_role, 
             "uid": str(user.id), 
             "batch": primary_batch,
             "batches": user_batches
@@ -156,7 +161,7 @@ async def login(request: LoginRequest):
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
-        "role": user.role, 
+        "role": normalized_role, 
         "level": user.level, 
         "batch": primary_batch,
         "batches": user_batches,

@@ -117,7 +117,7 @@ async def upload_material(
 ):
     """Upload material directly to Cloudflare R2 bucket (no local disk storage)"""
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to upload materials"
@@ -251,7 +251,7 @@ async def delete_material(
 ):
     """Delete a material from database and Cloudflare R2 bucket"""
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete materials"

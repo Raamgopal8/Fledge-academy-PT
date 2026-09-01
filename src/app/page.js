@@ -19,11 +19,11 @@ export default function LoginPage() {
     const token = localStorage.getItem("token");
     const role = (localStorage.getItem("role") || "").toLowerCase();
     if (token) {
-      if (role === "ceo") {
-        router.replace("/ceo/dashboard");
+      if (role === "admin" || role === "ceo") {
+        router.replace("/admin/dashboard");
         return;
-      } else if (role === "staff") {
-        router.replace("/staff/dashboard");
+      } else if (role === "sensi" || role === "staff") {
+        router.replace("/sensi/dashboard");
         return;
       } else if (role === "student") {
         router.replace("/dashboard");
@@ -95,11 +95,12 @@ export default function LoginPage() {
       localStorage.setItem("userProfileImage", data.profile_image_url || "");
 
       // Redirect based on role
-      if (data.role === "ceo") {
-        router.push("/ceo/dashboard");
-      } else if (data.role === "staff") {
-        router.push("/staff/dashboard");
-      } else if (data.role === "student") {
+      const userRole = (data.role || "").toLowerCase();
+      if (userRole === "admin" || userRole === "ceo") {
+        router.push("/admin/dashboard");
+      } else if (userRole === "sensi" || userRole === "staff") {
+        router.push("/sensi/dashboard");
+      } else if (userRole === "student") {
         router.push("/dashboard");
       } else {
         router.push("/dashboard");

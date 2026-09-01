@@ -50,11 +50,18 @@ export default function AuthGuard({ children, requiredRole }) {
         const storedRole = (localStorage.getItem('role') || (payload && payload.role) || '').toLowerCase();
         const requiredRoles = (Array.isArray(requiredRole) ? requiredRole : [requiredRole]).map((r) => String(r).toLowerCase());
 
-        // Check if user role satisfies requirement
+        // Check if user role satisfies requirement with aliasing
+        const isRoleMatch = requiredRoles.some((req) => {
+            if (req === 'admin' || req === 'ceo') return storedRole === 'admin' || storedRole === 'ceo';
+            if (req === 'sensi' || req === 'staff') return storedRole === 'sensi' || storedRole === 'staff';
+            if (req === 'student') return !storedRole || storedRole === 'student';
+            return req === storedRole;
+        });
+
         if (
-            requiredRoles.includes(storedRole) ||
-            (requiredRoles.includes('student') && (!storedRole || storedRole === 'student')) ||
-            (storedRole === 'ceo') // CEO has access across the portal
+            isRoleMatch ||
+            storedRole === 'admin' ||
+            storedRole === 'ceo' // Admin has access across the portal
         ) {
             setIsAuthorized(true);
             // Send initial heartbeat and log page view
@@ -64,10 +71,10 @@ export default function AuthGuard({ children, requiredRole }) {
             logActivity(`Visited ${pageName.charAt(0).toUpperCase() + pageName.slice(1)} page`, 'page_view', { path: currentPath });
         } else {
             // Mismatched role navigation - route to appropriate dashboard
-            if (storedRole === 'ceo') {
-                router.push('/ceo/dashboard');
-            } else if (storedRole === 'staff') {
-                router.push('/staff/dashboard');
+            if (storedRole === 'admin' || storedRole === 'ceo') {
+                router.push('/admin/dashboard');
+            } else if (storedRole === 'sensi' || storedRole === 'staff') {
+                router.push('/sensi/dashboard');
             } else {
                 router.push('/dashboard');
             }

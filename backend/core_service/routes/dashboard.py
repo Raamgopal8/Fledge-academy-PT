@@ -9,9 +9,10 @@ from redis_client import get_cache, set_cache, delete_cache
 
 router = APIRouter()
 
+@router.get("/admin/kpi")
 @router.get("/ceo/kpi")
-async def get_ceo_kpi(batch: Optional[str] = None):
-    cache_key = f"dashboard:ceo:kpi:{batch or 'all'}"
+async def get_admin_kpi(batch: Optional[str] = None):
+    cache_key = f"dashboard:admin:kpi:{batch or 'all'}"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
@@ -22,8 +23,8 @@ async def get_ceo_kpi(batch: Optional[str] = None):
         student_query["batch"] = batch
     total_students = await models.User.find(student_query).count()
 
-    # Total Staff
-    staff_query = {"role": {"$in": ["staff", "ceo"]}}
+    # Total Sensi / Admin Staff
+    staff_query = {"role": {"$in": ["sensi", "staff", "admin", "ceo"]}}
     if batch:
         staff_query["batch"] = batch
     total_staff = await models.User.find(staff_query).count()
@@ -65,9 +66,10 @@ async def get_ceo_kpi(batch: Optional[str] = None):
     await set_cache(cache_key, result, ttl=30)
     return result
 
+@router.get("/admin/performance-chart")
 @router.get("/ceo/performance-chart")
-async def get_ceo_performance_chart():
-    cache_key = "dashboard:ceo:performance-chart"
+async def get_admin_performance_chart():
+    cache_key = "dashboard:admin:performance-chart"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
@@ -102,9 +104,10 @@ async def get_ceo_performance_chart():
     await set_cache(cache_key, chart_data, ttl=60)
     return chart_data
 
+@router.get("/admin/recent-activity")
 @router.get("/ceo/recent-activity")
-async def get_ceo_recent_activity():
-    cache_key = "dashboard:ceo:recent-activity"
+async def get_admin_recent_activity():
+    cache_key = "dashboard:admin:recent-activity"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
@@ -114,27 +117,31 @@ async def get_ceo_recent_activity():
     await set_cache(cache_key, result, ttl=15)
     return result
 
+@router.delete("/admin/recent-activity")
 @router.delete("/ceo/recent-activity")
 async def delete_all_recent_activity():
     await models.Activity.delete_all()
+    await delete_cache("dashboard:admin:recent-activity")
     await delete_cache("dashboard:ceo:recent-activity")
     return {"message": "All activities deleted successfully"}
 
+@router.get("/sensi/summary")
 @router.get("/staff/summary")
-async def get_staff_summary(
+async def get_sensi_summary(
     batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
     user_email = (current_user.email or "").lower()
-    cache_key = f"dashboard:staff:summary:{user_email}:{batch or 'default'}"
+    cache_key = f"dashboard:sensi:summary:{user_email}:{batch or 'default'}"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
 
+    user_role = (current_user.role or "").lower()
     student_query = {"role": "student"}
     if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
         student_query["batch"] = batch
-    elif current_user.role == "staff":
+    elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
         if staff_batches and len(staff_batches) > 1:
@@ -177,15 +184,17 @@ async def get_staff_summary(
     await set_cache(cache_key, result, ttl=30)
     return result
 
+@router.get("/sensi/classes")
 @router.get("/staff/classes")
-async def get_staff_classes(
+async def get_sensi_classes(
     batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
     query = {}
+    user_role = (current_user.role or "").lower()
     if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
         query["batch"] = batch
-    elif current_user.role == "staff":
+    elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
         if staff_batches and len(staff_batches) > 1:
@@ -216,8 +225,9 @@ async def get_staff_classes(
         
     return valid_classes
 
+@router.get("/sensi/activities")
 @router.get("/staff/activities")
-async def get_staff_activities():
+async def get_sensi_activities():
     return [
         {
             "id": 1, "name": "Midterm Quiz: Calculus", "created": "2 days ago",

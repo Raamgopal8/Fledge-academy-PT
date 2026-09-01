@@ -11,19 +11,19 @@ class StaffLogCreate(BaseModel):
 
 @router.get("")
 async def get_staff_logs(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only CEO can view staff logs"
+            detail="Only Admin can view activity logs"
         )
     
     logs = await models.StaffLog.find_all().sort("-timestamp").to_list()
     
-    # Enrich with staff name
+    # Enrich with staff/sensi name
     enriched_logs = []
     for log in logs:
         staff = await models.User.get(log.staff_id)
-        staff_name = staff.name if staff else "Unknown Staff"
+        staff_name = staff.name if staff else "Unknown Sensi"
         enriched_logs.append({
             "id": str(log.id),
             "staff_id": str(log.staff_id),
@@ -40,10 +40,10 @@ async def create_staff_log(
     log_in: StaffLogCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "staff":
+    if (current_user.role or "").lower() not in ["staff", "sensi"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only staff can create staff logs"
+            detail="Only Sensi can create logs"
         )
     
     new_log = models.StaffLog(
@@ -58,12 +58,12 @@ async def create_staff_log(
 async def clear_staff_logs(
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only CEO can clear staff logs"
+            detail="Only Admin can clear logs"
         )
     
     await models.StaffLog.delete_all()
-    return {"message": "All staff logs cleared successfully"}
+    return {"message": "All logs cleared successfully"}
 

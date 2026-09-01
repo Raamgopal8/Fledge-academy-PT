@@ -134,7 +134,7 @@ class StudentUpdate(BaseModel):
 
 @router.get("/students")
 async def get_students(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     students = await models.User.find({"role": "student"}).to_list()
@@ -154,7 +154,7 @@ async def create_student(
     student_data: StudentCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     clean_email = student_data.email.strip().lower()
@@ -186,7 +186,7 @@ async def update_student(
     student_data: StudentUpdate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
     student = await models.User.find_one({"_id": student_id, "role": "student"})
@@ -213,7 +213,7 @@ async def delete_student(
     student_id: PydanticObjectId,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
     student = await models.User.find_one({"_id": student_id, "role": "student"})
@@ -224,7 +224,7 @@ async def delete_student(
     await student.delete()
     return {"message": "Student deleted successfully"}
 
-class StaffCreate(BaseModel):
+class SensiCreate(BaseModel):
     name: str
     email: str
     password: str
@@ -232,7 +232,7 @@ class StaffCreate(BaseModel):
     batch: Optional[str] = None
     batches: Optional[List[str]] = None
 
-class StaffUpdate(BaseModel):
+class SensiUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
@@ -240,123 +240,135 @@ class StaffUpdate(BaseModel):
     batch: Optional[str] = None
     batches: Optional[List[str]] = None
 
+# Support both StaffCreate and SensiCreate for backward compatibility
+StaffCreate = SensiCreate
+StaffUpdate = SensiUpdate
+
+@router.get("/sensi")
 @router.get("/staff")
-async def get_staff(current_user: models.User = Depends(get_current_user)):
-    if current_user.role != "ceo":
+async def get_sensi(current_user: models.User = Depends(get_current_user)):
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    staff_members = await models.User.find({"role": "staff"}).to_list()
+    sensi_members = await models.User.find({"role": {"$in": ["sensi", "staff"]}}).to_list()
     
     return [
         {
             "id": str(s.id),
             "name": s.name,
             "email": s.email,
+            "role": "sensi",
             "level": s.level,
             "batch": s.batch or (s.batches[0] if getattr(s, "batches", None) else None),
             "batches": s.batches if getattr(s, "batches", None) else ([s.batch] if getattr(s, "batch", None) else [])
-        } for s in staff_members
+        } for s in sensi_members
     ]
 
+@router.post("/sensi")
 @router.post("/staff")
-async def create_staff(
-    staff_data: StaffCreate,
+async def create_sensi(
+    sensi_data: SensiCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
     # Check if email exists
-    existing_user = await models.User.find_one({"email": staff_data.email})
+    existing_user = await models.User.find_one({"email": sensi_data.email.strip().lower()})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    staff_batches = staff_data.batches or ([staff_data.batch] if staff_data.batch else [])
-    primary_batch = staff_data.batch or (staff_batches[0] if staff_batches else None)
+    sensi_batches = sensi_data.batches or ([sensi_data.batch] if sensi_data.batch else [])
+    primary_batch = sensi_data.batch or (sensi_batches[0] if sensi_batches else None)
 
-    new_staff = models.User(
-        name=staff_data.name,
-        email=staff_data.email,
-        password=staff_data.password,
-        role="staff",
-        level=staff_data.level,
+    new_sensi = models.User(
+        name=sensi_data.name,
+        email=sensi_data.email.strip().lower(),
+        password=sensi_data.password,
+        role="sensi",
+        level=sensi_data.level,
         batch=primary_batch,
-        batches=staff_batches
+        batches=sensi_batches
     )
-    await new_staff.insert()
+    await new_sensi.insert()
     
-    return {"message": "Staff member created successfully", "id": str(new_staff.id)}
+    return {"message": "Sensi member created successfully", "id": str(new_sensi.id)}
 
-@router.put("/staff/{staff_id}")
-async def update_staff(
-    staff_id: PydanticObjectId,
-    staff_data: StaffUpdate,
+@router.put("/sensi/{sensi_id}")
+@router.put("/staff/{sensi_id}")
+async def update_sensi(
+    sensi_id: PydanticObjectId,
+    sensi_data: SensiUpdate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    staff = await models.User.find_one({"_id": staff_id, "role": "staff"})
+    sensi = await models.User.find_one({"_id": sensi_id, "role": {"$in": ["sensi", "staff"]}})
     
-    if not staff:
-        raise HTTPException(status_code=404, detail="Staff member not found")
+    if not sensi:
+        raise HTTPException(status_code=404, detail="Sensi member not found")
         
-    if staff_data.name is not None:
-        staff.name = staff_data.name
-    if staff_data.email is not None:
-        staff.email = staff_data.email
-    if staff_data.password is not None:
-        staff.password = staff_data.password
-    if staff_data.level is not None:
-        staff.level = staff_data.level
-    if staff_data.batches is not None:
-        staff.batches = staff_data.batches
-        if not staff_data.batch and staff_data.batches:
-            staff.batch = staff_data.batches[0]
-    if staff_data.batch is not None:
-        staff.batch = staff_data.batch
-        if not staff_data.batches:
-            staff.batches = [staff_data.batch] if staff_data.batch else []
+    if sensi_data.name is not None:
+        sensi.name = sensi_data.name
+    if sensi_data.email is not None:
+        sensi.email = sensi_data.email.strip().lower()
+    if sensi_data.password is not None:
+        sensi.password = sensi_data.password
+    if sensi_data.level is not None:
+        sensi.level = sensi_data.level
+    if sensi_data.batches is not None:
+        sensi.batches = sensi_data.batches
+        if not sensi_data.batch and sensi_data.batches:
+            sensi.batch = sensi_data.batches[0]
+    if sensi_data.batch is not None:
+        sensi.batch = sensi_data.batch
+        if not sensi_data.batches:
+            sensi.batches = [sensi_data.batch] if sensi_data.batch else []
         
-    await staff.save()
-    return {"message": "Staff member updated successfully"}
+    await sensi.save()
+    return {"message": "Sensi member updated successfully"}
 
-class StaffLevelUpdate(BaseModel):
+class SensiLevelUpdate(BaseModel):
     level: str
 
-@router.put("/staff/{staff_id}/level")
-async def update_staff_level(
-    staff_id: PydanticObjectId,
-    level_data: StaffLevelUpdate,
-    current_user: models.User = Depends(get_current_user)
-):
-    if current_user.role != "ceo":
-        raise HTTPException(status_code=403, detail="Not authorized")
-        
-    staff = await models.User.find_one({"_id": staff_id, "role": "staff"})
-    
-    if not staff:
-        raise HTTPException(status_code=404, detail="Staff member not found")
-        
-    staff.level = level_data.level
-    await staff.save()
-    return {"message": "Staff level updated successfully"}
+StaffLevelUpdate = SensiLevelUpdate
 
-@router.delete("/staff/{staff_id}")
-async def delete_staff(
-    staff_id: PydanticObjectId,
+@router.put("/sensi/{sensi_id}/level")
+@router.put("/staff/{sensi_id}/level")
+async def update_sensi_level(
+    sensi_id: PydanticObjectId,
+    level_data: SensiLevelUpdate,
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role != "ceo":
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    staff = await models.User.find_one({"_id": staff_id, "role": "staff"})
+    sensi = await models.User.find_one({"_id": sensi_id, "role": {"$in": ["sensi", "staff"]}})
     
-    if not staff:
-        raise HTTPException(status_code=404, detail="Staff member not found")
+    if not sensi:
+        raise HTTPException(status_code=404, detail="Sensi member not found")
         
-    await staff.delete()
-    return {"message": "Staff member deleted successfully"}
+    sensi.level = level_data.level
+    await sensi.save()
+    return {"message": "Sensi level updated successfully"}
+
+@router.delete("/sensi/{sensi_id}")
+@router.delete("/staff/{sensi_id}")
+async def delete_sensi(
+    sensi_id: PydanticObjectId,
+    current_user: models.User = Depends(get_current_user)
+):
+    if (current_user.role or "").lower() not in ["ceo", "admin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    sensi = await models.User.find_one({"_id": sensi_id, "role": {"$in": ["sensi", "staff"]}})
+    
+    if not sensi:
+        raise HTTPException(status_code=404, detail="Sensi member not found")
+        
+    await sensi.delete()
+    return {"message": "Sensi member deleted successfully"}
 
 @router.get("/classroom/members")
 async def get_classroom_members(
