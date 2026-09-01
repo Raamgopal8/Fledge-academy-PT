@@ -181,3 +181,25 @@ async def mark_as_viewed(
     await new_view.insert()
     
     return {"message": "Marked as viewed"}
+
+@router.delete("/{announcement_id}")
+async def delete_announcement(
+    announcement_id: PydanticObjectId,
+    current_user: models.User = Depends(get_current_user)
+):
+    if current_user.role != "ceo":
+        raise HTTPException(status_code=403, detail="Only CEO can delete announcements")
+
+    ann = await models.Announcement.get(announcement_id)
+    if not ann:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+
+    # Delete associated views
+    await models.AnnouncementView.find(
+        models.AnnouncementView.announcement_id == announcement_id
+    ).delete()
+
+    # Delete announcement
+    await ann.delete()
+    return {"message": "Announcement deleted successfully", "id": str(announcement_id)}
+

@@ -170,9 +170,13 @@ async def get_user_sessions(
         )
 
         # Get latest activity log
-        latest_log = await models.UserActivityLog.find(
-            models.UserActivityLog.user_email == u.email
-        ).sort("-timestamp").first_or_node()
+        latest_log = None
+        try:
+            latest_log = await models.UserActivityLog.find(
+                models.UserActivityLog.user_email == u.email
+            ).sort("-timestamp").first_or_none()
+        except Exception as e:
+            print(f"Error fetching activity log for {u.email}:", e)
 
         latest_action = latest_log.action if latest_log else (
             "Logged into portal" if u.last_login_at else "No activity recorded"

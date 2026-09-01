@@ -240,9 +240,9 @@ export default function CEODashboard() {
                 <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 custom-shadow hover:shadow-md transition-shadow flex flex-col justify-between group">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Treasury Balance</p>
+                            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Academy FinanceIs</p>
                             <h2 className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
-                                ${financeSummary?.balance > 10000 ? (financeSummary.balance / 1000).toFixed(1) + 'K' : (financeSummary?.balance?.toFixed(0) || '0')}
+                                ₹{financeSummary?.balance > 10000 ? (financeSummary.balance / 1000).toFixed(1) + 'K' : (financeSummary?.balance?.toFixed(0) || '0')}
                             </h2>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">

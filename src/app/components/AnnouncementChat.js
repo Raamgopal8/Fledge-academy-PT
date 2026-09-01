@@ -11,6 +11,10 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     // For editing
     const [editingId, setEditingId] = useState(null);
     const [editContent, setEditContent] = useState('');
+
+    // For deleting (CEO only)
+    const [deletingId, setDeletingId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     
     const chatContainerRef = useRef(null);
 
@@ -60,8 +64,6 @@ export default function AnnouncementChat({ role, overrideBatch }) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [announcements, isCEO, editingId]);
-
-
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -124,6 +126,32 @@ export default function AnnouncementChat({ role, overrideBatch }) {
         }
     };
 
+    const handleDeleteMessage = async (id) => {
+        if (!isCEO || !id) return;
+        setIsDeleting(true);
+        try {
+            const token = localStorage.getItem('token');
+            const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
+            const res = await fetch(`${annApiBase}/api/announcement/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) throw new Error('Failed to delete announcement');
+            
+            // Optimistically remove from state
+            setAnnouncements(prev => prev.filter(a => (a.id || a._id) !== id));
+            setDeletingId(null);
+        } catch (err) {
+            console.error("Error deleting announcement:", err);
+            alert("Failed to delete announcement. Please try again.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-primary min-h-[50vh]">
@@ -146,13 +174,13 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm w-full">
+        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm w-full relative">
             {/* Header */}
             <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center z-10 shadow-xs">
                 <div>
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Announcements</h2>
                     <p className="font-body-sm text-on-surface-variant">
-                        {isCEO ? 'Broadcast messages to the academy.' : 'Important updates from the CEO.'}
+                        {isCEO ? 'Broadcast and manage announcements for the academy.' : 'Important updates from the CEO.'}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -179,7 +207,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                         return (
                             <div key={annId} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} group`}>
                                 <div className="flex items-baseline gap-2 mb-1 px-1">
-                                    <span className="font-label-sm text-on-surface-variant">{isOwn ? 'You' : 'CEO'}</span>
+                                    <span className="font-label-sm text-on-surface-variant">{isOwn ? 'You (CEO)' : 'CEO'}</span>
                                     <span className="text-[10px] text-outline">{date.toLocaleString()}</span>
                                 </div>
                                 
@@ -194,13 +222,13 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                                         <div className="flex justify-end gap-2 mt-2">
                                             <button 
                                                 onClick={() => setEditingId(null)}
-                                                className="px-3 py-1 rounded hover:bg-surface-container-highest text-on-surface-variant font-label-sm"
+                                                className="px-3 py-1 rounded hover:bg-surface-container-highest text-on-surface-variant font-label-sm cursor-pointer"
                                             >
                                                 Cancel
                                             </button>
                                             <button 
                                                 onClick={() => handleEditMessage(annId)}
-                                                className="px-3 py-1 rounded bg-primary text-on-primary font-label-sm hover:bg-primary/90"
+                                                className="px-3 py-1 rounded bg-primary text-on-primary font-label-sm hover:bg-primary/90 cursor-pointer"
                                             >
                                                 Save
                                             </button>
@@ -209,16 +237,25 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                                 ) : (
                                     <div className="flex items-start gap-2 max-w-[85%]">
                                         {isOwn && (
-                                            <button 
-                                                onClick={() => {
-                                                    setEditingId(annId);
-                                                    setEditContent(ann.content);
-                                                }}
-                                                className="text-on-surface-variant hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-surface-container mt-1"
-                                                title="Edit"
-                                            >
-                                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                                            </button>
+                                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                                                <button 
+                                                    onClick={() => {
+                                                        setEditingId(annId);
+                                                        setEditContent(ann.content);
+                                                    }}
+                                                    className="text-on-surface-variant hover:text-primary p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
+                                                    title="Edit Announcement"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                </button>
+                                                <button 
+                                                    onClick={() => setDeletingId(annId)}
+                                                    className="text-on-surface-variant hover:text-error p-1.5 rounded-lg hover:bg-error/10 transition-colors cursor-pointer"
+                                                    title="Delete Announcement"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                </button>
+                                            </div>
                                         )}
                                         <div className="flex flex-col gap-1">
                                             <div className={`px-4 py-3 font-body-md shadow-sm ${
@@ -259,7 +296,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                         <button 
                             type="submit"
                             disabled={!newMessage.trim() || isSubmitting}
-                            className="w-[52px] h-[52px] rounded-full bg-primary text-on-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-all shadow-md hover:shadow-lg flex-shrink-0 active:scale-95"
+                            className="w-[52px] h-[52px] rounded-full bg-primary text-on-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-all shadow-md hover:shadow-lg flex-shrink-0 active:scale-95 cursor-pointer"
                         >
                             {isSubmitting ? (
                                 <span className="material-symbols-outlined text-[24px] animate-spin">progress_activity</span>
@@ -268,6 +305,52 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                             )}
                         </button>
                     </form>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal for CEO */}
+            {deletingId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+                    <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 shadow-2xl max-w-sm w-full space-y-4 animate-scale-up">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-error/15 text-error flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[24px]">delete</span>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-base text-on-surface">Delete Announcement?</h3>
+                                <p className="text-xs text-on-surface-variant">This announcement will be removed for all users.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2.5 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setDeletingId(null)}
+                                disabled={isDeleting}
+                                className="px-4 py-2 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleDeleteMessage(deletingId)}
+                                disabled={isDeleting}
+                                className="px-4 py-2 rounded-xl text-xs font-bold bg-error text-white hover:bg-error/90 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                                        <span>Delete</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
