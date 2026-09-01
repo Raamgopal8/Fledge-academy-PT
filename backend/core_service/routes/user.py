@@ -27,6 +27,7 @@ def format_google_drive_image_url(url: Optional[str]) -> Optional[str]:
 
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     profile_image_url: Optional[str] = None
     preferences: Optional[Dict[str, Any]] = None
@@ -58,6 +59,29 @@ async def update_profile(
     profile_data: UserProfileUpdate, 
     current_user: models.User = Depends(get_current_user)
 ):
+    user_role = (current_user.role or "").lower()
+    old_email = (current_user.email or "").lower()
+
+    if profile_data.email is not None:
+        new_email = profile_data.email.strip().lower()
+        if user_role == "student":
+            if new_email != old_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Student email address is permanent and cannot be modified."
+                )
+        else:
+            if new_email and new_email != old_email:
+                # Check uniqueness across existing users
+                existing = await models.User.find_one(models.User.email == new_email)
+                if existing and str(existing.id) != str(current_user.id):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="This email address is already registered to another user."
+                    )
+                current_user.email = new_email
+                await invalidate_user_account(old_email)
+
     if profile_data.name is not None:
         current_user.name = profile_data.name
     if profile_data.phone is not None:

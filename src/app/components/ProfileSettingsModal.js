@@ -82,6 +82,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
 
     if (!isOpen) return null;
 
+    const isStudent = (profile.role || currentProfile?.role || (typeof window !== 'undefined' ? localStorage.getItem('role') : '') || '').toLowerCase() === 'student';
     const previewUrl = formatGoogleDriveUrl(profile.profile_image_url);
 
     const handleSave = async (e) => {
@@ -98,6 +99,11 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                 profile_image_url: formattedImageUrl,
                 preferences: profile.preferences
             };
+
+            // Only allow staff/ceo/admin to update their email address
+            if (!isStudent && profile.email) {
+                payload.email = profile.email.trim().toLowerCase();
+            }
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
                 method: 'PUT',
@@ -125,6 +131,7 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                 if (typeof window !== 'undefined') {
                     if (cleanProfile.profile_image_url !== undefined) localStorage.setItem('userProfileImage', cleanProfile.profile_image_url);
                     if (cleanProfile.name) localStorage.setItem('userName', cleanProfile.name);
+                    if (cleanProfile.email && !isStudent) localStorage.setItem('userEmail', cleanProfile.email);
                     const notifEnabled = cleanProfile.preferences?.notifications !== false;
                     localStorage.setItem('notifications_enabled', notifEnabled ? 'true' : 'false');
                     
@@ -147,10 +154,11 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                     }
                 }, 600);
             } else {
-                setMessage('Failed to update profile.');
+                const errData = await res.json().catch(() => ({}));
+                setMessage(errData.detail || 'Failed to update profile.');
             }
         } catch (err) {
-            setMessage('An error occurred while saving.');
+            setMessage(err.message || 'An error occurred while saving.');
         } finally {
             setIsSaving(false);
         }
@@ -238,28 +246,45 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                             </div>
                         </div>
 
-                        {/* Email (Read-only / Locked) */}
+                        {/* Email Address (Locked for Students only, Editable for Staff & CEO) */}
                         <div>
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-xs font-bold text-on-surface">Email Address</label>
-                                <span className="text-[10px] font-semibold text-outline flex items-center gap-0.5">
-                                    <span className="material-symbols-outlined text-[12px]">lock</span>
-                                    <span>Locked</span>
-                                </span>
+                                {isStudent ? (
+                                    <span className="text-[10px] font-semibold text-outline flex items-center gap-0.5">
+                                        <span className="material-symbols-outlined text-[12px]">lock</span>
+                                        <span>Locked</span>
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-semibold text-primary flex items-center gap-0.5">
+                                        <span className="material-symbols-outlined text-[12px]">edit</span>
+                                        <span>Editable</span>
+                                    </span>
+                                )}
                             </div>
-                            <div className="relative flex items-center opacity-85">
+                            <div className={`relative flex items-center ${isStudent ? 'opacity-85' : ''}`}>
                                 <span className="material-symbols-outlined absolute left-3 text-[18px] text-outline">mail</span>
                                 <input 
                                     type="email" 
                                     value={profile.email}
-                                    disabled
-                                    readOnly
-                                    className="w-full bg-surface-container-high/60 dark:bg-slate-800/40 border border-outline-variant/70 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm font-body-md text-on-surface-variant cursor-not-allowed outline-none select-all"
+                                    onChange={!isStudent ? (e) => setProfile({ ...profile, email: e.target.value }) : undefined}
+                                    disabled={isStudent}
+                                    readOnly={isStudent}
+                                    className={`w-full border rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm font-body-md outline-none transition-all ${
+                                        isStudent 
+                                            ? 'bg-surface-container-high/60 dark:bg-slate-800/40 border-outline-variant/70 text-on-surface-variant cursor-not-allowed select-all' 
+                                            : 'bg-surface-container-low dark:bg-slate-800 border-outline-variant text-on-surface focus:border-primary focus:ring-1 focus:ring-primary'
+                                    }`}
                                     placeholder="user@example.com"
-                                    title="Email address is permanent and cannot be changed"
+                                    title={isStudent ? "Student email address is permanent and cannot be changed" : "Edit your email address"}
+                                    required={!isStudent}
                                 />
                             </div>
-                            <p className="text-[10px] text-outline mt-0.5">Your email address is managed by the academy administrator.</p>
+                            <p className="text-[10px] text-outline mt-0.5">
+                                {isStudent 
+                                    ? "Student email address is managed by the academy administrator." 
+                                    : "You can update your account login and contact email address."}
+                            </p>
                         </div>
 
                         {/* Phone Number (Editable) */}
