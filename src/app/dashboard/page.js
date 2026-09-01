@@ -209,7 +209,18 @@ export default function DashboardOverview() {
   // Filter pending tests (not submitted)
   const pendingTests = tests.filter(test => !test.has_submitted);
 
-  const getTaskUrgency = (dueDateStr) => {
+  const getTaskUrgency = (dueDateStr, submission) => {
+    if (submission) {
+      const status = typeof submission === 'object' ? (submission.status || 'Submitted') : 'Submitted';
+      if (status === 'Approved' || status === 'Reviewed') {
+        return { label: 'Completed', color: 'success', icon: 'check_circle' };
+      } else if (status === 'Need Work' || status === 'Needs Work' || status === 'Failed') {
+        return { label: 'Need Work', color: 'warning', icon: 'assignment_return' };
+      } else {
+        return { label: 'Submitted', color: 'primary', icon: 'task_alt' };
+      }
+    }
+    if (!dueDateStr) return { label: 'Upcoming', color: 'outline', icon: 'calendar_today' };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dueDate = new Date(dueDateStr);
@@ -669,13 +680,15 @@ export default function DashboardOverview() {
                 <p className="text-on-surface-variant font-body-sm text-center p-md">You're all caught up!</p>
               ) : (
                 pendingTests.slice(0, 4).map((test) => {
-                  const urgency = getTaskUrgency(test.due_date);
+                  const urgency = getTaskUrgency(test.due_date, test.submission || test.has_submitted);
                   
                   return (
                     <div key={test.id} className="flex flex-col gap-sm p-md hover:bg-surface-container-low transition-colors rounded-xl group border border-transparent hover:border-outline-variant">
                       <div className="flex items-start gap-md cursor-pointer" onClick={() => router.push('/dashboard/tasks')}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center mt-1
-                          ${urgency.color === 'error' ? 'bg-error-container text-error' : 
+                          ${urgency.color === 'success' ? 'bg-green-500/15 text-green-700 dark:text-green-400' :
+                            urgency.color === 'error' ? 'bg-error-container text-error' : 
+                            urgency.color === 'warning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' :
                             urgency.color === 'tertiary' ? 'bg-tertiary-container text-tertiary' : 
                             urgency.color === 'primary' ? 'bg-primary-container text-primary' : 
                             'bg-surface-variant text-on-surface-variant'}`}>
@@ -694,7 +707,9 @@ export default function DashboardOverview() {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider
-                              ${urgency.color === 'error' ? 'bg-error/10 text-error' : 
+                              ${urgency.color === 'success' ? 'bg-green-500/15 text-green-700 dark:text-green-400' :
+                                urgency.color === 'error' ? 'bg-error/10 text-error' : 
+                                urgency.color === 'warning' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400' :
                                 urgency.color === 'tertiary' ? 'bg-tertiary/10 text-tertiary' : 
                                 urgency.color === 'primary' ? 'bg-primary/10 text-primary' : 
                                 'bg-surface-variant text-outline'}`}>

@@ -108,6 +108,28 @@ export default function StudentTests() {
         return LEVEL_COLORS[lvl] || 'bg-primary/10 text-primary border-primary/20';
     };
 
+    const getTaskUrgency = (dueDateStr, submission) => {
+        if (submission) {
+            const status = submission.status || 'Submitted';
+            if (status === 'Approved' || status === 'Reviewed') {
+                return { label: 'Completed', color: 'success', icon: 'check_circle' };
+            } else if (status === 'Need Work' || status === 'Needs Work' || status === 'Failed') {
+                return { label: 'Need Work', color: 'warning', icon: 'assignment_return' };
+            } else {
+                return { label: 'Submitted', color: 'primary', icon: 'task_alt' };
+            }
+        }
+        if (!dueDateStr) return { label: 'No Deadline', color: 'neutral', icon: 'schedule' };
+        const now = new Date();
+        const dueDate = new Date(dueDateStr);
+        const diffHours = (dueDate - now) / (1000 * 60 * 60);
+
+        if (diffHours < 0) return { label: 'Overdue', color: 'error', icon: 'error' };
+        if (diffHours <= 24) return { label: 'Due Soon', color: 'warning', icon: 'alarm' };
+        if (diffHours <= 72) return { label: 'In 3 Days', color: 'primary', icon: 'schedule' };
+        return { label: dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), color: 'neutral', icon: 'calendar_today' };
+    };
+
     const filteredTests = tests.filter(t => {
         if (filterLevel !== 'All' && t.level !== filterLevel) return false;
         if (searchQuery.trim()) {
@@ -196,60 +218,82 @@ export default function StudentTests() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredTests.map(test => (
-                                <div key={test.id} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all custom-shadow flex flex-col justify-between">
-                                    <div>
-                                        <div className="flex justify-between items-start mb-2 gap-2">
-                                            <h3 className="font-headline-sm text-on-surface font-bold text-base line-clamp-2">{test.title}</h3>
-                                            {test.level && (
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${getLevelBadgeClass(test.level)}`}>
-                                                    {test.level}
-                                                </span>
+                            {filteredTests.map(test => {
+                                const urgency = getTaskUrgency(test.due_date, test.submission);
+                                const isApproved = test.submission && (test.submission.status === 'Approved' || test.submission.status === 'Reviewed');
+                                const isNeedWork = test.submission && (test.submission.status === 'Need Work' || test.submission.status === 'Needs Work' || test.submission.status === 'Failed');
+
+                                return (
+                                    <div key={test.id} className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all custom-shadow flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between items-start mb-2 gap-2">
+                                                <h3 className="font-headline-sm text-on-surface font-bold text-base line-clamp-2">{test.title}</h3>
+                                                {test.level && (
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${getLevelBadgeClass(test.level)}`}>
+                                                        {test.level}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {test.due_date && (
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
+                                                        urgency.color === 'error' ? 'bg-error/10 text-error' :
+                                                        urgency.color === 'warning' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                                                        urgency.color === 'primary' ? 'bg-primary/10 text-primary' :
+                                                        urgency.color === 'success' ? 'bg-green-500/15 text-green-700 dark:text-green-400' :
+                                                        'bg-surface-container text-on-surface-variant'
+                                                    }`}>
+                                                        <span className="material-symbols-outlined text-[13px]">{urgency.icon}</span>
+                                                        <span>{urgency.label}</span>
+                                                    </span>
+                                                    <span className="text-xs text-on-surface-variant/80">
+                                                        Due: {new Date(test.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                                    </span>
+                                                </div>
                                             )}
-                                        </div>
 
-                                        {test.due_date && (
-                                            <p className="text-xs font-semibold text-error mb-2 flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-[14px]">event</span>
-                                                <span>Due: {new Date(test.due_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                            <p className="text-on-surface-variant text-xs line-clamp-3 mb-4 leading-relaxed whitespace-pre-wrap">
+                                                {test.description || 'No description provided.'}
                                             </p>
-                                        )}
+                                        </div>
+                                        
+                                        <div className="pt-3 border-t border-outline-variant/40 mt-auto flex items-center justify-between">
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
+                                                test.submission 
+                                                    ? (isApproved
+                                                        ? 'bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/30' 
+                                                        : isNeedWork
+                                                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                                                            : 'bg-primary/10 text-primary border border-primary/20') 
+                                                    : 'bg-error-container text-error border border-error/20'
+                                            }`}>
+                                                <span className="material-symbols-outlined text-[13px]">
+                                                    {isApproved ? 'check_circle' : isNeedWork ? 'assignment_return' : test.submission ? 'task_alt' : 'schedule'}
+                                                </span>
+                                                <span>
+                                                    {test.submission 
+                                                        ? (isApproved ? 'Approved' : (isNeedWork ? 'Need Work' : test.submission.status)) 
+                                                        : 'Pending'}
+                                                </span>
+                                            </span>
 
-                                        <p className="text-on-surface-variant text-xs line-clamp-3 mb-4 leading-relaxed whitespace-pre-wrap">
-                                            {test.description || 'No description provided.'}
-                                        </p>
+                                            <button 
+                                                onClick={() => {
+                                                    setActiveTest(test);
+                                                    setSubmissionContent(test.submission?.submission_content || '');
+                                                }}
+                                                className="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:opacity-90 transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-[15px]">
+                                                     {test.submission ? 'visibility' : 'send'}
+                                                 </span>
+                                                 <span>{test.submission ? 'View' : 'Start'}</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                    
-                                    <div className="pt-3 border-t border-outline-variant/40 mt-auto flex items-center justify-between">
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                                            test.submission 
-                                                ? ((test.submission.status === 'Approved' || test.submission.status === 'Reviewed')
-                                                    ? 'bg-green-500/15 text-green-700 dark:text-green-400' 
-                                                    : (test.submission.status === 'Need Work' || test.submission.status === 'Needs Work' || test.submission.status === 'Failed')
-                                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                                                        : 'bg-primary/10 text-primary') 
-                                                : 'bg-error-container text-error'
-                                        }`}>
-                                            {test.submission 
-                                                ? ((test.submission.status === 'Reviewed' ? 'Approved' : (test.submission.status === 'Needs Work' || test.submission.status === 'Failed' ? 'Need Work' : test.submission.status))) 
-                                                : 'Pending'}
-                                        </span>
-
-                                        <button 
-                                            onClick={() => {
-                                                setActiveTest(test);
-                                                setSubmissionContent(test.submission?.submission_content || '');
-                                            }}
-                                            className="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary font-bold text-xs hover:opacity-90 transition-all flex items-center gap-1 shadow-xs cursor-pointer"
-                                        >
-                                            <span className="material-symbols-outlined text-[15px]">
-                                                 {test.submission ? 'visibility' : 'send'}
-                                             </span>
-                                             <span>{test.submission ? 'View' : 'Start'}</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

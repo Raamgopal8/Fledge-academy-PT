@@ -424,7 +424,8 @@ export function NotificationProvider({ children }) {
                             }
                         }
 
-                        if (test.due_date) {
+                        const isAlreadySubmitted = test.has_submitted || (test.submission && test.submission.status !== 'Need Work' && test.submission.status !== 'Needs Work' && test.submission.status !== 'Failed');
+                        if (test.due_date && !isAlreadySubmitted) {
                             const dueDate = new Date(test.due_date);
                             const diffHours = (dueDate - now) / (1000 * 60 * 60);
                             if (diffHours > 0 && diffHours <= 48) {

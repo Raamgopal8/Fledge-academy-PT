@@ -122,7 +122,17 @@ export default function StudentTasks() {
         }
     };
 
-    const getTaskUrgency = (dueDateStr) => {
+    const getTaskUrgency = (dueDateStr, submission) => {
+        if (submission) {
+            const status = submission.status || 'Submitted';
+            if (status === 'Approved' || status === 'Reviewed') {
+                return { label: 'Completed', color: 'success', icon: 'check_circle' };
+            } else if (status === 'Need Work' || status === 'Needs Work' || status === 'Failed') {
+                return { label: 'Need Work', color: 'warning', icon: 'assignment_return' };
+            } else {
+                return { label: 'Submitted', color: 'primary', icon: 'task_alt' };
+            }
+        }
         if (!dueDateStr) return { label: 'No Deadline', color: 'neutral', icon: 'schedule' };
         const now = new Date();
         const dueDate = new Date(dueDateStr);
@@ -269,7 +279,7 @@ export default function StudentTasks() {
                                 </div>
                             ) : (
                                 filteredTasks.map(task => {
-                                    const urgency = getTaskUrgency(task.due_date);
+                                    const urgency = getTaskUrgency(task.due_date, task.submission);
                                     const isNeedWork = task.submission && (task.submission.status === 'Need Work' || task.submission.status === 'Needs Work' || task.submission.status === 'Failed');
                                     const isApproved = task.submission && (task.submission.status === 'Approved' || task.submission.status === 'Reviewed');
                                     const isPending = !task.submission || isNeedWork;
@@ -353,8 +363,9 @@ export default function StudentTasks() {
                                                  <div className="flex items-center gap-2">
                                                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1 ${
                                                          urgency.color === 'error' ? 'bg-error/10 text-error' :
-                                                         urgency.color === 'warning' ? 'bg-amber-500/10 text-amber-600' :
+                                                         urgency.color === 'warning' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                                                          urgency.color === 'primary' ? 'bg-primary/10 text-primary' :
+                                                         urgency.color === 'success' ? 'bg-green-500/15 text-green-700 dark:text-green-400' :
                                                          'bg-surface-container text-on-surface-variant'
                                                      }`}>
                                                          <span className="material-symbols-outlined text-[13px]">{urgency.icon}</span>
