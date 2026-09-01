@@ -5,11 +5,17 @@ import models
 from routes.auth import get_current_user
 from datetime import datetime, timedelta
 import calendar
+from redis_client import get_cache, set_cache, delete_cache
 
 router = APIRouter()
 
 @router.get("/ceo/kpi")
 async def get_ceo_kpi(batch: Optional[str] = None):
+    cache_key = f"dashboard:ceo:kpi:{batch or 'all'}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     # Total Students
     student_query = {"role": "student"}
     if batch:
@@ -45,9 +51,9 @@ async def get_ceo_kpi(batch: Optional[str] = None):
         
     completion_rate = min(round(completion_rate), 100) # cap at 100%
     
-    return {
+    result = {
         "totalRevenue": f"${total_revenue:,}",
-        "revenueGrowth": "+15%", # Keeping placeholder for growth as it requires historical comparison
+        "revenueGrowth": "+15%",
         "activeStudents": f"{total_students:,}",
         "studentsGrowth": "+5%",
         "activeStaff": f"{total_staff:,}",
@@ -56,9 +62,16 @@ async def get_ceo_kpi(batch: Optional[str] = None):
         "averageRating": str(average_rating),
         "ratingGrowth": "+0.1"
     }
+    await set_cache(cache_key, result, ttl=30)
+    return result
 
 @router.get("/ceo/performance-chart")
 async def get_ceo_performance_chart():
+    cache_key = "dashboard:ceo:performance-chart"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     submissions = await models.TestSubmission.find(models.TestSubmission.score != None).to_list()
     
     today = (datetime.utcnow() + timedelta(hours=5, minutes=30))
@@ -74,7 +87,6 @@ async def get_ceo_performance_chart():
     for sub in submissions:
         if sub.submitted_at:
             month_abbr = calendar.month_abbr[sub.submitted_at.month]
-            # Only count if the month is within our 6-month window (keys in months_data)
             if month_abbr in months_data:
                 months_data[month_abbr]["total_score"] += sub.score
                 months_data[month_abbr]["count"] += 1
@@ -87,16 +99,25 @@ async def get_ceo_performance_chart():
             "score": round(avg_score, 1)
         })
         
+    await set_cache(cache_key, chart_data, ttl=60)
     return chart_data
 
 @router.get("/ceo/recent-activity")
 async def get_ceo_recent_activity():
+    cache_key = "dashboard:ceo:recent-activity"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     activities = await models.Activity.find_all().to_list()
-    return [{"id": str(a.id), "user": a.user, "action": a.action, "time": a.time, "type": a.type} for a in activities]
+    result = [{"id": str(a.id), "user": a.user, "action": a.action, "time": a.time, "type": a.type} for a in activities]
+    await set_cache(cache_key, result, ttl=15)
+    return result
 
 @router.delete("/ceo/recent-activity")
 async def delete_all_recent_activity():
     await models.Activity.delete_all()
+    await delete_cache("dashboard:ceo:recent-activity")
     return {"message": "All activities deleted successfully"}
 
 @router.get("/staff/summary")
@@ -104,6 +125,12 @@ async def get_staff_summary(
     batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
+    user_email = (current_user.email or "").lower()
+    cache_key = f"dashboard:staff:summary:{user_email}:{batch or 'default'}"
+    cached = await get_cache(cache_key)
+    if cached is not None:
+        return cached
+
     student_query = {"role": "student"}
     if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
         student_query["batch"] = batch
@@ -141,12 +168,14 @@ async def get_staff_summary(
     else:
         attendance_rate = "--%"
         
-    return {
+    result = {
         "name": current_user.name or current_user.email.split('@')[0],
         "classesToday": 0,
         "ungradedAssignments": 0,
         "attendanceRate": attendance_rate
     }
+    await set_cache(cache_key, result, ttl=30)
+    return result
 
 @router.get("/staff/classes")
 async def get_staff_classes(
@@ -171,10 +200,18 @@ async def get_staff_classes(
     valid_classes = []
     
     for cls in classes:
-        if "online" in cls.location.lower():
-            if cls.expires_at and cls.expires_at < now:
-                await cls.delete()
-                continue
+        loc = (getattr(cls, "location", "") or "").lower()
+        if "online" in loc:
+            exp = getattr(cls, "expires_at", None)
+            if exp:
+                try:
+                    exp_naive = exp.replace(tzinfo=None) if hasattr(exp, "tzinfo") and exp.tzinfo else exp
+                    now_naive = now.replace(tzinfo=None)
+                    if exp_naive < now_naive:
+                        await cls.delete()
+                        continue
+                except Exception:
+                    pass
         valid_classes.append(cls)
         
     return valid_classes

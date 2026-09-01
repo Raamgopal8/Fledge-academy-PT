@@ -223,15 +223,16 @@ export default function NotificationPopup() {
                                             </p>
                                         </div>
 
-                                        {/* Individual Clear/Delete Button */}
+                                        {/* Individual Clear/Delete Button 'X' */}
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 clearSingleNotification(item.id);
                                             }}
-                                            className="text-on-surface-variant hover:text-error p-1.5 rounded-lg hover:bg-surface-container-high opacity-70 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer"
-                                            title="Clear notification"
+                                            className="text-on-surface-variant/70 hover:text-error hover:bg-error/10 p-1.5 rounded-xl transition-all opacity-80 group-hover:opacity-100 shrink-0 cursor-pointer active:scale-90"
+                                            title="Dismiss & Delete notification"
+                                            aria-label="Delete notification"
                                         >
                                             <span className="material-symbols-outlined text-[18px]">close</span>
                                         </button>

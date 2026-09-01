@@ -145,6 +145,54 @@ export function NotificationProvider({ children }) {
         const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
         const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
 
+        // 0. PERSISTENT DB & REDIS NOTIFICATIONS PIPELINE
+        try {
+            const res = await fetch(`${apiBase}/api/notifications`, { headers });
+            if (res.ok) {
+                const dbNotifs = await res.json();
+                if (Array.isArray(dbNotifs)) {
+                    dbNotifs.forEach(dn => {
+                        const notifId = dn.id || dn._id;
+                        if (!notifId || cleared.includes(notifId)) return;
+                        const notifDate = dn.created_at ? new Date(dn.created_at) : now;
+                        const diffHours = (now - notifDate) / (1000 * 60 * 60);
+                        const isRead = dn.read || dismissed.includes(notifId);
+
+                        let badgeColor = 'bg-primary/10 text-primary border-primary/20';
+                        let icon = 'notifications';
+                        let link = dn.link || (role === 'student' ? '/dashboard' : (role === 'staff' ? '/staff/dashboard' : '/ceo/dashboard'));
+
+                        if (dn.type === 'fee_pending') {
+                            badgeColor = 'bg-error/15 text-error border-error/30';
+                            icon = 'payments';
+                            link = '/dashboard';
+                        } else if (dn.type === 'test_created' || dn.type === 'test_report' || dn.type === 'test_submission') {
+                            badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                            icon = 'assignment';
+                        } else if (dn.type === 'community_message') {
+                            badgeColor = 'bg-purple-100 text-purple-800 border-purple-300';
+                            icon = 'forum';
+                        }
+
+                        collected.push({
+                            id: notifId,
+                            isDbRecord: true,
+                            type: dn.type || 'general',
+                            title: dn.title,
+                            message: dn.message,
+                            timestamp: notifDate,
+                            timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
+                            link,
+                            icon,
+                            badgeColor,
+                            priority: dn.type === 'fee_pending' ? 'high' : 'normal',
+                            isRead
+                        });
+                    });
+                }
+            }
+        } catch (err) {}
+
         // ==========================================
         // 1. CEO NOTIFICATION PIPELINE
         // Requirements: New test reports, New community chat messages
@@ -762,7 +810,17 @@ export function NotificationProvider({ children }) {
                 dismissed.push(id);
                 localStorage.setItem(dismissedKey, JSON.stringify(dismissed));
             }
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
+
+            const token = localStorage.getItem('token');
+            if (token) {
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                fetch(`${apiBase}/api/notifications/${id}/read`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
         } catch (e) {}
     };
 
@@ -779,6 +837,15 @@ export function NotificationProvider({ children }) {
             if (activePopup?.id === id) {
                 setActivePopup(null);
             }
+
+            const token = localStorage.getItem('token');
+            if (token) {
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                fetch(`${apiBase}/api/notifications/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
         } catch (e) {}
     };
 
@@ -793,6 +860,15 @@ export function NotificationProvider({ children }) {
             setNotifications([]);
             setUnreadCount(0);
             setActivePopup(null);
+
+            const token = localStorage.getItem('token');
+            if (token) {
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                fetch(`${apiBase}/api/notifications/clear-all`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
         } catch (e) {}
     };
 
@@ -801,8 +877,18 @@ export function NotificationProvider({ children }) {
             const dismissedKey = `fledge_dismissed_${userRole}_v2`;
             const allIds = notifications.map(n => n.id);
             localStorage.setItem(dismissedKey, JSON.stringify(allIds));
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
             setUnreadCount(0);
             setActivePopup(null);
+
+            const token = localStorage.getItem('token');
+            if (token) {
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                fetch(`${apiBase}/api/notifications/read-all`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
         } catch (e) {}
     };
 

@@ -5,6 +5,7 @@ from beanie import PydanticObjectId
 
 import models
 from routes.auth import get_current_user
+from redis_client import get_user_account, set_user_account, invalidate_user_account, get_cache, set_cache
 
 router = APIRouter()
 
@@ -15,8 +16,13 @@ class UserProfileUpdate(BaseModel):
 
 @router.get("/profile")
 async def get_profile(current_user: models.User = Depends(get_current_user)):
+    user_email = (current_user.email or "").lower()
+    cached = await get_user_account(user_email)
+    if cached is not None:
+        return cached
+
     user_batches = getattr(current_user, "batches", None) or ([current_user.batch] if getattr(current_user, "batch", None) else [])
-    return {
+    profile_data = {
         "email": current_user.email,
         "name": current_user.name,
         "role": current_user.role,
@@ -26,6 +32,8 @@ async def get_profile(current_user: models.User = Depends(get_current_user)):
         "batches": user_batches,
         "preferences": current_user.preferences
     }
+    await set_user_account(user_email, profile_data, ttl=600)
+    return profile_data
 
 @router.put("/profile")
 async def update_profile(
@@ -43,9 +51,10 @@ async def update_profile(
         current_user.preferences = current_prefs
 
     await current_user.save()
+    await invalidate_user_account(current_user.email)
     
     user_batches = getattr(current_user, "batches", None) or ([current_user.batch] if getattr(current_user, "batch", None) else [])
-    return {
+    result = {
         "message": "Profile updated successfully",
         "email": current_user.email,
         "name": current_user.name,
@@ -66,6 +75,8 @@ async def update_profile(
             "preferences": current_user.preferences
         }
     }
+    await set_user_account(current_user.email, result["user"], ttl=600)
+    return result
 
 class StudentCreate(BaseModel):
     email: str

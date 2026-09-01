@@ -218,3 +218,21 @@ class StudentFeeReminder(Document):
     class Settings:
         name = "student_fee_reminders"
 
+
+class Notification(Document):
+    recipient_id: str  # specific user email, user id, or "all", or "role:student", etc.
+    recipient_role: Optional[str] = None  # "student", "staff", "ceo", "all"
+    title: str
+    message: str
+    type: str = "general"
+    link: Optional[str] = None
+    read: bool = False
+    is_deleted: bool = False
+    metadata: dict = {}
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))
+    expires_at: Optional[datetime] = None
+
+    class Settings:
+        name = "notifications"
+
+

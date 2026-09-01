@@ -84,7 +84,7 @@ except OSError:
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-from routes import auth, dashboard, user, schedule, staff_logs, finance, notes, activity
+from routes import auth, dashboard, user, schedule, staff_logs, finance, notes, activity, notification
 
 # Include Routers
 app.include_router(auth.router, prefix="/api", tags=["Auth"])
@@ -95,6 +95,7 @@ app.include_router(staff_logs.router, prefix="/api/staff-logs", tags=["Staff Log
 app.include_router(finance.router, prefix="/api/finance", tags=["Finance"])
 app.include_router(notes.router, prefix="/api/student-notes", tags=["Student Notes"])
 app.include_router(activity.router, prefix="/api/activity", tags=["Activity Monitoring"])
+app.include_router(notification.router, prefix="/api/notifications", tags=["Notifications"])
 
 @app.get("/")
 async def root():

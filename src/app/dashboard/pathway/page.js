@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 export default function StudentPathway() {
@@ -380,9 +381,9 @@ export default function StudentPathway() {
                                         </div>
 
                                         {isCurrent && (
-                                            <span className="font-bold text-[#e9c176] flex items-center gap-1 hover:underline">
+                                           <Link href={`/dashboard`} className="font-bold text-[#e9c176] flex items-center gap-1 hover:underline">
                                                 Continue <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                            </span>
+                                           </Link>
                                         )}
                                         {isCompleted && (
                                             <span className="font-medium text-[#a4d2a4] flex items-center gap-1">
