@@ -22,7 +22,7 @@ const COLOR_OPTIONS = [
 ];
 
 export default function SchedulePage() {
-    const { selectedBatch } = useCEOContext();
+    const { selectedBatch, availableBatches } = useCEOContext();
     const [schedules, setSchedules] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -41,7 +41,9 @@ export default function SchedulePage() {
         day_of_week: 'Monday',
         color: 'Level 5',
         class_link: '',
-        batch: ''
+        batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+            ? selectedBatch 
+            : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
     });
 
     const [formError, setFormError] = useState('');
@@ -85,7 +87,9 @@ export default function SchedulePage() {
             day_of_week: activeTab,
             color: 'Level 5',
             class_link: '',
-            batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1'
+            batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+                ? selectedBatch 
+                : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
         });
         setFormError('');
         setIsModalOpen(true);
@@ -500,23 +504,36 @@ export default function SchedulePage() {
                                         onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
                                     />
                                     {/* Quick Batch Suggestions */}
-                                    <div className="flex flex-wrap gap-1 items-center">
-                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
-                                        {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4'].map((b) => (
+                                    {availableBatches && availableBatches.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 items-center">
+                                            <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
+                                            {availableBatches.map((b) => (
+                                                <button
+                                                    key={b}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, batch: b })}
+                                                    className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                        formData.batch === b
+                                                            ? 'bg-primary text-on-primary border-primary font-semibold'
+                                                            : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                    }`}
+                                                >
+                                                    {b}
+                                                </button>
+                                            ))}
                                             <button
-                                                key={b}
                                                 type="button"
-                                                onClick={() => setFormData({ ...formData, batch: b })}
-                                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                    formData.batch === b
+                                                onClick={() => setFormData({ ...formData, batch: 'All Batches' })}
+                                                className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                    formData.batch === 'All Batches'
                                                         ? 'bg-primary text-on-primary border-primary font-semibold'
                                                         : 'border-outline-variant hover:bg-surface-container text-on-surface'
                                                 }`}
                                             >
-                                                {b}
+                                                All Batches
                                             </button>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

@@ -399,3 +399,39 @@ async def get_classroom_members(
             "batches": getattr(m, "batches", []) or []
         } for m in members
     ]
+
+
+@router.get("/available-batches", response_model=List[str])
+async def get_available_batches(current_user: models.User = Depends(get_current_user)):
+    """Fetch distinct available batch names across all users, class schedules, and materials in the database"""
+    batches = set()
+
+    # 1. Distinct batches from users (students and staff)
+    users = await models.User.find_all().to_list()
+    for u in users:
+        if u.batch and u.batch.strip() and u.batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+            batches.add(u.batch.strip())
+        for b in getattr(u, "batches", []) or []:
+            if b and b.strip() and b.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+                batches.add(b.strip())
+
+    # 2. Distinct batches from class schedules
+    try:
+        schedules = await models.ClassSchedule.find_all().to_list()
+        for s in schedules:
+            if s.batch and s.batch.strip() and s.batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+                batches.add(s.batch.strip())
+            for b in getattr(s, "batches", []) or []:
+                if b and b.strip() and b.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+                    batches.add(b.strip())
+    except Exception:
+        pass
+
+    # Sort batches naturally
+    def sort_key(item: str):
+        nums = re.findall(r'\d+', item)
+        return (int(nums[0]) if nums else 9999, item.lower())
+
+    sorted_batches = sorted(list(batches), key=sort_key)
+    return sorted_batches
+

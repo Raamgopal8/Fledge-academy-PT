@@ -221,7 +221,7 @@ export default function CEODashboard() {
                         <div>
                             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Learning Tracks</p>
                             <h2 className="text-3xl font-extrabold text-on-surface mt-1">
-                                {kpiData?.activeCourses || '1'}
+                                {kpiData?.activeCourses || '0'}
                             </h2>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">

@@ -21,7 +21,7 @@ const SUGGESTED_CATEGORIES = [
 ];
 
 export default function CEOVideos() {
-    const { selectedBatch } = useCEOContext();
+    const { selectedBatch, availableBatches } = useCEOContext();
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +44,9 @@ export default function CEOVideos() {
         category_color: '#4F46E5',
         video_url: '',
         level: 'Level 5',
-        batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1'
+        batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+            ? selectedBatch 
+            : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
     });
 
     useEffect(() => {
@@ -128,7 +130,9 @@ export default function CEOVideos() {
                 category_color: '#4F46E5',
                 video_url: '',
                 level: 'Level 5',
-                batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1'
+                batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+                    ? selectedBatch 
+                    : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
             });
             await fetchVideos();
             setTimeout(() => setSuccessMessage(''), 4000);
@@ -475,23 +479,36 @@ export default function CEOVideos() {
                                 placeholder="e.g. Batch - 1, Batch - 2, or All Batches"
                             />
                             {/* Quick Batch Suggestions */}
-                            <div className="flex flex-wrap gap-1.5 items-center">
-                                <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick select:</span>
-                                {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4'].map((b) => (
+                            {availableBatches && availableBatches.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 items-center">
+                                    <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick select:</span>
+                                    {availableBatches.map((b) => (
+                                        <button
+                                            key={b}
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
+                                            className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                formData.batch === b
+                                                    ? 'bg-primary text-on-primary border-primary font-semibold'
+                                                    : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                            }`}
+                                        >
+                                            {b}
+                                        </button>
+                                    ))}
                                     <button
-                                        key={b}
                                         type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
+                                        onClick={() => setFormData(prev => ({ ...prev, batch: 'All Batches' }))}
                                         className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                            formData.batch === b
+                                            formData.batch === 'All Batches'
                                                 ? 'bg-primary text-on-primary border-primary font-semibold'
                                                 : 'border-outline-variant hover:bg-surface-container text-on-surface'
                                         }`}
                                     >
-                                        {b}
+                                        All Batches
                                     </button>
-                                ))}
-                            </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* YouTube URL */}

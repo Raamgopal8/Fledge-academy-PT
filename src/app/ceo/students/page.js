@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useCEOContext } from '@/app/ceo/CEOContext';
 
 export default function CEOStudents() {
-    const { searchQuery, selectedBatch } = useCEOContext();
+    const { searchQuery, selectedBatch, availableBatches } = useCEOContext();
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -384,11 +384,30 @@ export default function CEOStudents() {
                                 <label className="block text-label-md text-on-surface-variant mb-1">Batch</label>
                                 <input 
                                     type="text" 
-                                    placeholder="e.g. batch-1"
+                                    placeholder="e.g. Batch - 1"
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
                                     value={formData.batch}
                                     onChange={(e) => setFormData({...formData, batch: e.target.value})}
                                 />
+                                {availableBatches && availableBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+                                        <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick assign:</span>
+                                        {availableBatches.map((b) => (
+                                            <button 
+                                                key={b}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
+                                                className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                    formData.batch === b
+                                                        ? 'bg-primary text-on-primary border-primary font-bold'
+                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                }`}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 

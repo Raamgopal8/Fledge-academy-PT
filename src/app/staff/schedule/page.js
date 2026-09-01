@@ -80,7 +80,7 @@ export default function SchedulePage() {
         setEditingSchedule(null);
         const defaultBatch = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches')
             ? selectedBatch 
-            : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Batch - 1');
+            : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : '');
         setFormData({
             name: '',
             time: '09:00 AM - 10:30 AM',
@@ -511,23 +511,25 @@ export default function SchedulePage() {
                                         onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
                                     />
                                     {/* Quick Batch Suggestions */}
-                                    <div className="flex flex-wrap gap-1 items-center">
-                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
-                                        {(staffBatches && staffBatches.length > 0 ? staffBatches : ['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4']).map((b) => (
-                                            <button
-                                                key={b}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, batch: b })}
-                                                className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                    formData.batch === b
-                                                        ? 'bg-primary text-on-primary border-primary font-semibold'
-                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
-                                                }`}
-                                            >
-                                                {b}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    {staffBatches && staffBatches.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 items-center">
+                                            <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
+                                            {staffBatches.map((b) => (
+                                                <button
+                                                    key={b}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, batch: b })}
+                                                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                        formData.batch === b
+                                                            ? 'bg-primary text-on-primary border-primary font-semibold'
+                                                            : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                    }`}
+                                                >
+                                                    {b}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

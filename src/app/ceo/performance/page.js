@@ -623,7 +623,7 @@ export default function CEOPerformance() {
                                                             {u.role}
                                                         </span>
                                                         <span className="text-[11px] text-on-surface-variant font-medium">
-                                                            {u.batch || 'Batch - 1'} • {u.level || 'Level 5'}
+                                                            {u.batch ? `${u.batch} • ` : ''}{u.level || 'Level 5'}
                                                         </span>
                                                     </div>
                                                 </td>

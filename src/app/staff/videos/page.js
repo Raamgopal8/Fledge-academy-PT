@@ -51,7 +51,7 @@ export default function StaffVideos() {
         level: 'Level 5',
         batch: (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
             ? selectedBatch 
-            : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Batch - 1')
+            : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : '')
     });
 
     useEffect(() => {
@@ -162,7 +162,7 @@ export default function StaffVideos() {
                 category_color: '#4F46E5',
                 video_url: '',
                 level: 'Level 5',
-                batch: selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Batch - 1')
+                batch: selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : '')
             });
             await fetchVideos();
             setTimeout(() => setSuccessMessage(''), 4000);
@@ -705,34 +705,25 @@ export default function StaffVideos() {
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors mb-1.5"
                                     placeholder="e.g. Batch - 1 or All Batches"
                                 />
-                                <div className="flex flex-wrap gap-1.5 items-center">
-                                    <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick Select:</span>
-                                    {(staffBatches && staffBatches.length > 0 ? staffBatches : ['Batch - 1', 'Batch - 2', 'Batch - 3']).map((b) => (
-                                        <button
-                                            key={b}
-                                            type="button"
-                                            onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
-                                            className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                formData.batch === b
-                                                    ? 'bg-primary text-on-primary border-primary font-bold'
-                                                    : 'border-outline-variant hover:bg-surface-container text-on-surface'
-                                            }`}
-                                        >
-                                            {b}
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData(prev => ({ ...prev, batch: 'All Batches' }))}
-                                        className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                            formData.batch === 'All Batches'
-                                                ? 'bg-primary text-on-primary border-primary font-bold'
-                                                : 'border-outline-variant hover:bg-surface-container text-on-surface'
-                                        }`}
-                                    >
-                                        All Batches
-                                    </button>
-                                </div>
+                                {staffBatches && staffBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick Select:</span>
+                                        {staffBatches.map((b) => (
+                                            <button
+                                                key={b}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
+                                                className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                    formData.batch === b
+                                                        ? 'bg-primary text-on-primary border-primary font-bold'
+                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                }`}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Category with Suggestions & Custom Color Picker */}

@@ -12,7 +12,7 @@ const LEVELS = [
 ];
 
 export default function CEOMaterials() {
-    const { selectedBatch } = useCEOContext();
+    const { selectedBatch, availableBatches } = useCEOContext();
     const [materials, setMaterials] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -32,7 +32,9 @@ export default function CEOMaterials() {
     const [category, setCategory] = useState('Lecture Slides');
     const [categoryColor, setCategoryColor] = useState('#4F46E5');
     const [level, setLevel] = useState('Level 5');
-    const [batch, setBatch] = useState((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1');
+    const [batch, setBatch] = useState((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+        ? selectedBatch 
+        : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches'));
     const [file, setFile] = useState(null);
     const [link, setLink] = useState('');
     const [uploadType, setUploadType] = useState('file');
@@ -109,7 +111,9 @@ export default function CEOMaterials() {
                 setCategory('Lecture Slides');
                 setCategoryColor('#4F46E5');
                 setLevel('Level 5');
-                setBatch((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') ? selectedBatch : 'Batch - 1');
+                setBatch((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+                    ? selectedBatch 
+                    : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches'));
                 setFile(null);
                 setLink('');
                 setSuccessMessage('Course material uploaded successfully!');
@@ -493,23 +497,36 @@ export default function CEOMaterials() {
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors mb-1.5"
                                     placeholder="e.g. Batch - 1, Batch - 2, or All Batches"
                                 />
-                                <div className="flex flex-wrap gap-1.5 items-center">
-                                    <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
-                                    {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4', 'All Batches'].map((b) => (
+                                {availableBatches && availableBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
+                                        {availableBatches.map((b) => (
+                                            <button
+                                                key={b}
+                                                type="button"
+                                                onClick={() => setBatch(b)}
+                                                className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                    batch === b
+                                                        ? 'bg-primary text-on-primary border-primary font-bold'
+                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                }`}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
                                         <button
-                                            key={b}
                                             type="button"
-                                            onClick={() => setBatch(b)}
+                                            onClick={() => setBatch('All Batches')}
                                             className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                batch === b
+                                                batch === 'All Batches'
                                                     ? 'bg-primary text-on-primary border-primary font-bold'
                                                     : 'border-outline-variant hover:bg-surface-container text-on-surface'
                                             }`}
                                         >
-                                            {b}
+                                            All Batches
                                         </button>
-                                    ))}
-                                </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Description */}

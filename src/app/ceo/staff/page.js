@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useCEOContext } from '@/app/ceo/CEOContext';
 
 export default function CEOStaff() {
-    const { searchQuery, selectedBatch } = useCEOContext();
+    const { searchQuery, selectedBatch, availableBatches, refreshBatches } = useCEOContext();
     const [staff, setStaff] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -430,20 +430,22 @@ export default function CEOStaff() {
                                 </div>
 
                                 {/* Quick Suggestions */}
-                                <div className="flex flex-wrap gap-1.5 mt-2 items-center">
-                                    <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick add:</span>
-                                    {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4'].map((b) => (
-                                        <button 
-                                            key={b}
-                                            type="button"
-                                            onClick={() => handleAddBatchTag(b)}
-                                            disabled={formData.batches.includes(b)}
-                                            className="text-[11px] px-2 py-0.5 rounded-full border border-outline-variant hover:bg-surface-container-high text-on-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            + {b}
-                                        </button>
-                                    ))}
-                                </div>
+                                {availableBatches && availableBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+                                        <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick add:</span>
+                                        {availableBatches.map((b) => (
+                                            <button 
+                                                key={b}
+                                                type="button"
+                                                onClick={() => handleAddBatchTag(b)}
+                                                disabled={formData.batches.includes(b)}
+                                                className="text-[11px] px-2 py-0.5 rounded-full border border-outline-variant hover:bg-surface-container-high text-on-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                + {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
@@ -573,20 +575,22 @@ export default function CEOStaff() {
                                 </div>
 
                                 {/* Quick Suggestions */}
-                                <div className="flex flex-wrap gap-1.5 mt-2 items-center">
-                                    <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick add:</span>
-                                    {['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4'].map((b) => (
-                                        <button 
-                                            key={b}
-                                            type="button"
-                                            onClick={() => handleAddBatchTag(b)}
-                                            disabled={formData.batches.includes(b)}
-                                            className="text-[11px] px-2 py-0.5 rounded-full border border-outline-variant hover:bg-surface-container-high text-on-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            + {b}
-                                        </button>
-                                    ))}
-                                </div>
+                                {availableBatches && availableBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+                                        <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick add:</span>
+                                        {availableBatches.map((b) => (
+                                            <button 
+                                                key={b}
+                                                type="button"
+                                                onClick={() => handleAddBatchTag(b)}
+                                                disabled={formData.batches.includes(b)}
+                                                className="text-[11px] px-2 py-0.5 rounded-full border border-outline-variant hover:bg-surface-container-high text-on-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                + {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 

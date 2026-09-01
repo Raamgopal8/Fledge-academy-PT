@@ -28,7 +28,7 @@ export default function StaffTests() {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [level, setLevel] = useState('Level 5');
-    const [batch, setBatch] = useState(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : 'Batch - 1');
+    const [batch, setBatch] = useState(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : ''));
     const [dueDate, setDueDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -606,34 +606,25 @@ export default function StaffTests() {
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors mb-1.5"
                                     placeholder="e.g. Batch - 1 or All Batches"
                                 />
-                                <div className="flex flex-wrap gap-1.5 items-center">
-                                    <span className="text-[10px] text-on-surface-variant font-medium mr-1">Assigned batches:</span>
-                                    {(staffBatches && staffBatches.length > 0 ? staffBatches : ['Batch - 1', 'Batch - 2', 'Batch - 3', 'Batch - 4']).map((b) => (
-                                        <button
-                                            key={b}
-                                            type="button"
-                                            onClick={() => setBatch(b)}
-                                            className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                batch === b
-                                                    ? 'bg-primary text-on-primary border-primary font-bold'
-                                                    : 'border-outline-variant hover:bg-surface-container text-on-surface'
-                                            }`}
-                                        >
-                                            {b}
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() => setBatch('All Batches')}
-                                        className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                            batch === 'All Batches'
-                                                ? 'bg-primary text-on-primary border-primary font-bold'
-                                                : 'border-outline-variant hover:bg-surface-container text-on-surface'
-                                        }`}
-                                    >
-                                        All Batches
-                                    </button>
-                                </div>
+                                {staffBatches && staffBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Assigned batches:</span>
+                                        {staffBatches.map((b) => (
+                                            <button
+                                                key={b}
+                                                type="button"
+                                                onClick={() => setBatch(b)}
+                                                className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                    batch === b
+                                                        ? 'bg-primary text-on-primary border-primary font-bold'
+                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                }`}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Description / Instructions */}

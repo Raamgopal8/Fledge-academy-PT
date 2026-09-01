@@ -7,13 +7,33 @@ export function CEOProvider({ children }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [selectedBatch, setSelectedBatchState] = useState(null);
+    const [availableBatches, setAvailableBatches] = useState([]);
 
-    // Initialize from localStorage on mount
+    const fetchAvailableBatches = async () => {
+        try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+            if (!token) return;
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/available-batches`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                    setAvailableBatches(data);
+                }
+            }
+        } catch (e) {
+            console.warn("Failed to fetch available batches:", e);
+        }
+    };
+
+    // Initialize from localStorage and fetch batches on mount
     useEffect(() => {
         const storedBatch = localStorage.getItem('ceoSelectedBatch');
         if (storedBatch !== null) {
             setSelectedBatchState(storedBatch);
         }
+        fetchAvailableBatches();
     }, []);
 
     const setSelectedBatch = (batch) => {
@@ -29,7 +49,9 @@ export function CEOProvider({ children }) {
         <CEOContext.Provider value={{ 
             searchQuery, setSearchQuery, 
             isMobileNavOpen, setIsMobileNavOpen,
-            selectedBatch, setSelectedBatch 
+            selectedBatch, setSelectedBatch,
+            availableBatches,
+            refreshBatches: fetchAvailableBatches
         }}>
             {children}
         </CEOContext.Provider>
