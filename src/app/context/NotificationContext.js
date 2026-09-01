@@ -145,6 +145,20 @@ export function NotificationProvider({ children }) {
         const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
         const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
 
+        // Fetch authoritative permanently cleared IDs from backend
+        try {
+            const clearedRes = await fetch(`${apiBase}/api/notifications/cleared-ids`, { headers });
+            if (clearedRes.ok) {
+                const serverCleared = await clearedRes.json();
+                if (Array.isArray(serverCleared) && serverCleared.length > 0) {
+                    cleared = Array.from(new Set([...cleared, ...serverCleared]));
+                    try {
+                        localStorage.setItem(clearedKey, JSON.stringify(cleared));
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {}
+
         // 0. PERSISTENT DB & REDIS NOTIFICATIONS PIPELINE
         try {
             const res = await fetch(`${apiBase}/api/notifications`, { headers });
@@ -892,14 +906,22 @@ export function NotificationProvider({ children }) {
         } catch (e) {}
     };
 
+    const [resyncFeedback, setResyncFeedback] = useState(null);
+
     const resyncAndRefresh = async () => {
         setIsRefreshing(true);
-        try {
-            localStorage.removeItem(`fledge_cleared_${userRole}_v2`);
-            localStorage.removeItem(`fledge_dismissed_${userRole}_v2`);
-        } catch (e) {}
+        setResyncFeedback(null);
+        const countBefore = notifications.length;
+
         await fetchAllNotifications();
-        setTimeout(() => setIsRefreshing(false), 500);
+
+        setTimeout(() => {
+            setIsRefreshing(false);
+            setResyncFeedback('No new notifications arrived');
+            setTimeout(() => {
+                setResyncFeedback(null);
+            }, 3500);
+        }, 500);
     };
 
     return (
@@ -910,6 +932,7 @@ export function NotificationProvider({ children }) {
             isTrayOpen,
             setIsTrayOpen,
             isRefreshing,
+            resyncFeedback,
             userRole,
             dismissPopup,
             markAsDismissed,
@@ -936,6 +959,7 @@ export function useNotifications() {
             isTrayOpen: false,
             setIsTrayOpen: () => {},
             isRefreshing: false,
+            resyncFeedback: null,
             userRole: 'student',
             dismissPopup: () => {},
             markAsDismissed: () => {},

@@ -17,7 +17,8 @@ export default function NotificationPopup() {
         clearAllNotifications,
         markAllAsRead,
         refreshNotifications,
-        isRefreshing
+        isRefreshing,
+        resyncFeedback
     } = useNotifications();
 
     const [activeTab, setActiveTab] = useState('all');
@@ -138,7 +139,6 @@ export default function NotificationPopup() {
                                             title="Clear all notifications"
                                         >
                                             <span className="material-symbols-outlined text-[14px]">delete_sweep</span>
-                                            <span>Clear all</span>
                                         </button>
                                     </>
                                 )}
@@ -179,6 +179,14 @@ export default function NotificationPopup() {
                             ))}
                         </div>
 
+                        {/* Resync Feedback Banner */}
+                        {resyncFeedback && (
+                            <div className="mx-4 mt-3 p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold flex items-center justify-center gap-1.5 animate-fade-in shadow-xs shrink-0">
+                                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                <span>{resyncFeedback}</span>
+                            </div>
+                        )}
+
                         {/* Notification List */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                             {filteredNotifications.length === 0 ? (
@@ -186,7 +194,7 @@ export default function NotificationPopup() {
                                     <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-3">
                                         <span className="material-symbols-outlined text-4xl text-outline">notifications_off</span>
                                     </div>
-                                    <h4 className="font-bold text-sm text-on-surface">No notifications</h4>
+                                    <h4 className="font-bold text-sm text-on-surface">No new notifications arrived</h4>
                                     <p className="text-xs text-outline mt-1 max-w-[260px]">
                                         You're all caught up with your updates and activities.
                                     </p>

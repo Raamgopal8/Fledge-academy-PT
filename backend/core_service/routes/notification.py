@@ -46,7 +46,7 @@ async def get_user_notifications(current_user: models.User = Depends(get_current
     if cached is not None:
         return cached
 
-    # Query matching notifications
+    # Query matching notifications from database
     query = {
         "is_deleted": {"$ne": True},
         "$or": [
@@ -60,11 +60,25 @@ async def get_user_notifications(current_user: models.User = Depends(get_current
     }
 
     notifications = await models.Notification.find(query).sort("-created_at").limit(100).to_list()
-    result = [format_notification(n) for n in notifications]
+    
+    # Filter out any IDs recorded in user preferences as permanently cleared
+    user_prefs = current_user.preferences or {}
+    cleared_list = set(user_prefs.get("cleared_notifications", []))
+    
+    result = [
+        format_notification(n) for n in notifications 
+        if str(n.id) not in cleared_list
+    ]
 
-    # Cache for 15 seconds in Redis for rapid repeated bell opens
+    # Cache for 15 seconds in Redis
     await set_cache(cache_key, result, ttl=15)
     return result
+
+@router.get("/cleared-ids", response_model=List[str])
+async def get_cleared_notification_ids(current_user: models.User = Depends(get_current_user)):
+    """Fetch list of permanently cleared notification IDs for this user"""
+    user_prefs = current_user.preferences or {}
+    return list(user_prefs.get("cleared_notifications", []))
 
 @router.post("", response_model=dict)
 async def create_notification(
@@ -105,13 +119,19 @@ async def mark_notification_read(
     if not notif:
         notif = await models.Notification.find_one({"_id": notification_id})
 
-    if not notif:
-        raise HTTPException(status_code=404, detail="Notification not found")
+    if notif:
+        notif.read = True
+        await notif.save()
 
-    notif.read = True
-    await notif.save()
+    # Also record read state in user preferences for event-based IDs
+    user_prefs = current_user.preferences or {}
+    read_list = list(user_prefs.get("read_notifications", []))
+    if notification_id not in read_list:
+        read_list.append(notification_id)
+        user_prefs["read_notifications"] = read_list[-500:]
+        current_user.preferences = user_prefs
+        await current_user.save()
 
-    # Invalidate cache
     user_email = (current_user.email or "").lower()
     await delete_cache(f"user:notifications:{user_email}")
     return {"message": "Notification marked as read", "id": notification_id}
@@ -144,7 +164,7 @@ async def delete_single_notification(
     notification_id: str,
     current_user: models.User = Depends(get_current_user)
 ):
-    """Delete a single notification from DB (triggered by button 'X')"""
+    """Permanently delete a single notification from DB and register cleared ID"""
     notif = None
     try:
         notif = await models.Notification.get(PydanticObjectId(notification_id))
@@ -153,31 +173,62 @@ async def delete_single_notification(
     if not notif:
         notif = await models.Notification.find_one({"_id": notification_id})
 
-    if not notif:
-        raise HTTPException(status_code=404, detail="Notification not found")
+    # If it's a direct MongoDB notification document, delete it permanently
+    if notif:
+        await notif.delete()
 
-    # If it's a direct user notification or user is CEO/admin, delete or soft-delete
-    await notif.delete()
+    # Permanently store ID in user's cleared list in MongoDB
+    user_prefs = current_user.preferences or {}
+    cleared_list = list(user_prefs.get("cleared_notifications", []))
+    if notification_id not in cleared_list:
+        cleared_list.append(notification_id)
+        user_prefs["cleared_notifications"] = cleared_list[-500:]  # keep last 500
+        current_user.preferences = user_prefs
+        await current_user.save()
 
     user_email = (current_user.email or "").lower()
     await delete_cache(f"user:notifications:{user_email}")
-    return {"message": "Notification deleted successfully", "id": notification_id}
+    return {"message": "Notification permanently deleted", "id": notification_id}
 
 @router.delete("/clear-all")
 async def clear_all_user_notifications(current_user: models.User = Depends(get_current_user)):
-    """Delete / clear all notifications for the current user"""
+    """Permanently delete / clear all notifications for the current user"""
     user_email = (current_user.email or "").lower()
     user_id = str(current_user.id)
     user_role = (current_user.role or "student").lower()
 
+    # Delete user's own persistent notifications from DB
     query = {
         "$or": [
             {"recipient_id": user_email},
-            {"recipient_id": user_id},
-            {"recipient_id": f"role:{user_role}"}
+            {"recipient_id": user_id}
         ]
     }
-
+    # Find all current matching IDs before deleting
+    existing_notifs = await models.Notification.find({
+        "$or": [
+            {"recipient_id": user_email},
+            {"recipient_id": user_id},
+            {"recipient_id": "all"},
+            {"recipient_role": "all"},
+            {"recipient_role": user_role},
+            {"recipient_id": f"role:{user_role}"}
+        ]
+    }).to_list()
+    
     await models.Notification.find(query).delete()
+
+    # Add all to permanent cleared list
+    user_prefs = current_user.preferences or {}
+    cleared_list = list(user_prefs.get("cleared_notifications", []))
+    for n in existing_notifs:
+        nid = str(n.id)
+        if nid not in cleared_list:
+            cleared_list.append(nid)
+    
+    user_prefs["cleared_notifications"] = cleared_list[-500:]
+    current_user.preferences = user_prefs
+    await current_user.save()
+
     await delete_cache(f"user:notifications:{user_email}")
-    return {"message": "All notifications cleared"}
+    return {"message": "All notifications cleared permanently"}
