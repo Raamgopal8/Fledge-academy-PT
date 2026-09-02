@@ -32,6 +32,13 @@ export default function CommunityChat({ role, overrideBatch }) {
 
     const chatScrollRef = useRef(null);
 
+    const formatRole = (r) => {
+        const clean = (r || 'student').toLowerCase();
+        if (clean === 'ceo' || clean === 'admin') return 'Admin';
+        if (clean === 'staff' || clean === 'sensi') return 'Sensi';
+        return 'Student';
+    };
+
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const email = localStorage.getItem('userEmail') || localStorage.getItem('email') || 'Anonymous';
@@ -129,12 +136,13 @@ export default function CommunityChat({ role, overrideBatch }) {
         setNewMessage('');
 
         try {
+            const effectiveRole = role || formatRole(userRole);
             const msgData = {
                 content: contentToSend,
                 author_id: userEmail,
                 author_name: userName,
                 author_image: userProfileImage || localStorage.getItem('userProfileImage') || '',
-                role: role || 'User',
+                role: formatRole(effectiveRole),
                 level: userLevel,
                 ...(userBatch ? { batch: userBatch } : {})
             };
@@ -218,13 +226,14 @@ export default function CommunityChat({ role, overrideBatch }) {
 
         setIsSendingAudio(true);
         try {
+            const effectiveRole = role || formatRole(userRole);
             const formData = new FormData();
             formData.append('audio', audioBlob, 'voice-message.webm');
             formData.append('audio_file', audioBlob, 'voice-message.webm');
             formData.append('author_id', userEmail);
             formData.append('author_name', userName);
             formData.append('author_image', userProfileImage || localStorage.getItem('userProfileImage') || '');
-            formData.append('role', role || 'User');
+            formData.append('role', formatRole(effectiveRole));
             formData.append('level', userLevel);
             if (userBatch) formData.append('batch', userBatch);
 
@@ -381,6 +390,8 @@ export default function CommunityChat({ role, overrideBatch }) {
                         ? msg.author_name.charAt(0).toUpperCase()
                         : (msg.author_id && msg.author_id !== 'Anonymous' ? msg.author_id.charAt(0).toUpperCase() : 'U');
 
+                    const displayRole = formatRole(msg.role);
+
                     return (
                         <div 
                             key={msgId} 
@@ -411,8 +422,14 @@ export default function CommunityChat({ role, overrideBatch }) {
                                     <span className="font-label-sm font-bold text-on-surface text-xs truncate">
                                         {isYou ? 'You' : msg.author_name}
                                     </span>
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant uppercase">
-                                        {msg.role || 'student'}
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${
+                                        displayRole === 'Admin' 
+                                            ? 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40' 
+                                            : (displayRole === 'Sensi' 
+                                                ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40' 
+                                                : 'bg-surface-container-high text-on-surface-variant')
+                                    }`}>
+                                        {displayRole}
                                     </span>
                                     <span className="text-[10px] text-outline shrink-0">{time}</span>
                                     {msg.is_edited && (

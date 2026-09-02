@@ -12,13 +12,13 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     const [editingId, setEditingId] = useState(null);
     const [editContent, setEditContent] = useState('');
 
-    // For deleting (CEO only)
+    // For deleting (Admin only)
     const [deletingId, setDeletingId] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     
     const chatContainerRef = useRef(null);
 
-    const isCEO = role === 'CEO';
+    const isAdmin = (role || '').toLowerCase() === 'admin' || (role || '').toLowerCase() === 'ceo';
 
     const [userLevel, setUserLevel] = useState('Level 5');
     const [userBatch, setUserBatch] = useState('');
@@ -63,16 +63,16 @@ export default function AnnouncementChat({ role, overrideBatch }) {
         if (chatContainerRef.current && !editingId) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
-    }, [announcements, isCEO, editingId]);
+    }, [announcements, isAdmin, editingId]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !isCEO) return;
+        if (!newMessage.trim() || !isAdmin) return;
         
         setIsSubmitting(true);
         try {
             const token = localStorage.getItem('token');
-            const title = `CEO Update - ${new Date().toLocaleDateString()}`;
+            const title = `Admin Update - ${new Date().toLocaleDateString()}`;
             const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
             const res = await fetch(`${annApiBase}/api/announcement`, {
                 method: 'POST',
@@ -101,7 +101,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     };
     
     const handleEditMessage = async (id) => {
-        if (!editContent.trim() || !isCEO) return;
+        if (!editContent.trim() || !isAdmin) return;
         
         try {
             const token = localStorage.getItem('token');
@@ -127,7 +127,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     };
 
     const handleDeleteMessage = async (id) => {
-        if (!isCEO || !id) return;
+        if (!isAdmin || !id) return;
         setIsDeleting(true);
         try {
             const token = localStorage.getItem('token');
@@ -180,7 +180,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                 <div>
                     <h2 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">Announcements</h2>
                     <p className="font-body-sm text-on-surface-variant">
-                        {isCEO ? 'Broadcast and manage announcements for the academy.' : 'Important updates from the CEO.'}
+                        {isAdmin ? 'Broadcast and manage announcements for the academy.' : 'Important updates from the Admin.'}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -202,12 +202,12 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                     announcements.map((ann) => {
                         const annId = ann.id || ann._id;
                         const date = new Date(ann.created_at);
-                        const isOwn = isCEO; // CEO authors all announcements here
+                        const isOwn = isAdmin; // Admin authors all announcements here
                         
                         return (
                             <div key={annId} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} group`}>
                                 <div className="flex items-baseline gap-2 mb-1 px-1">
-                                    <span className="font-label-sm text-on-surface-variant">{isOwn ? 'You (CEO)' : 'CEO'}</span>
+                                    <span className="font-label-sm text-on-surface-variant">{isOwn ? 'You (Admin)' : 'Admin'}</span>
                                     <span className="text-[10px] text-outline">{date.toLocaleString()}</span>
                                 </div>
                                 
@@ -274,8 +274,8 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                 )}
             </div>
 
-            {/* Chat Input (CEO Only) */}
-            {isCEO && (
+            {/* Chat Input (Admin Only) */}
+            {isAdmin && (
                 <div className="p-md bg-surface-container-low border-t border-outline-variant">
                     <form onSubmit={handleSendMessage} className="flex items-end gap-3 max-w-[1000px] mx-auto">
                         <div className="flex-1 bg-surface rounded-2xl border border-outline-variant focus-within:border-primary focus-within:ring-1 focus-within:ring-primary shadow-sm overflow-hidden flex flex-col">
@@ -308,7 +308,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                 </div>
             )}
 
-            {/* Delete Confirmation Modal for CEO */}
+            {/* Delete Confirmation Modal for Admin */}
             {deletingId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
                     <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 shadow-2xl max-w-sm w-full space-y-4 animate-scale-up">

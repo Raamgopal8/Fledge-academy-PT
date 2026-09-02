@@ -11,6 +11,14 @@ import base64
 
 router = APIRouter()
 
+def normalize_role(r: str) -> str:
+    clean = (r or "student").lower()
+    if clean in ["ceo", "admin"]:
+        return "Admin"
+    elif clean in ["staff", "sensi"]:
+        return "Sensi"
+    return "Student"
+
 class MessageCreate(BaseModel):
     content: str
     author_id: str
@@ -31,7 +39,7 @@ async def create_message(msg: MessageCreate):
             author_id=msg.author_id,
             author_name=msg.author_name,
             author_image=msg.author_image,
-            role=msg.role,
+            role=normalize_role(msg.role),
             level=msg.level,
             batch=msg.batch
         )
@@ -114,7 +122,7 @@ async def create_audio_message(
             author_id=author_id,
             author_name=author_name,
             author_image=author_image,
-            role=role,
+            role=normalize_role(role),
             level=level,
             batch=batch
         )
@@ -134,6 +142,8 @@ async def get_messages(level: Optional[str] = None, batch: Optional[str] = None)
         if batch:
             query["batch"] = batch
         messages = await CommunityMessage.find(query).sort("+created_at").to_list()
+        for m in messages:
+            m.role = normalize_role(m.role)
         return messages
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

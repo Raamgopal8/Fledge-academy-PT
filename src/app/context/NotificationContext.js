@@ -174,7 +174,7 @@ export function NotificationProvider({ children }) {
 
                         let badgeColor = 'bg-primary/10 text-primary border-primary/20';
                         let icon = 'notifications';
-                        let link = dn.link || (role === 'student' ? '/dashboard' : (role === 'staff' ? '/staff/dashboard' : '/ceo/dashboard'));
+                        let link = dn.link || (role === 'student' ? '/dashboard' : ((role === 'staff' || role === 'sensi') ? '/sensi/dashboard' : '/admin/dashboard'));
 
                         if (dn.type === 'fee_pending') {
                             badgeColor = 'bg-error/15 text-error border-error/30';
@@ -208,10 +208,10 @@ export function NotificationProvider({ children }) {
         } catch (err) {}
 
         // ==========================================
-        // 1. CEO NOTIFICATION PIPELINE
+        // 1. ADMIN NOTIFICATION PIPELINE
         // Requirements: New test reports, New community chat messages
         // ==========================================
-        if (role === 'ceo' || role === 'admin') {
+        if ((role === 'ceo' || role === 'admin') || role === 'admin') {
             // A. New Test Reports (Completed student submissions)
             try {
                 const res = await fetch(`${testApiBase}/api/tests/submissions/all`, { headers });
@@ -221,7 +221,7 @@ export function NotificationProvider({ children }) {
                         const subDate = new Date(sub.submitted_at || now);
                         const diffHours = (now - subDate) / (1000 * 60 * 60);
                         if (diffHours <= 168) { // last 7 days
-                            const id = `ceo-test-rep-${sub.id || sub._id || subDate.getTime()}`;
+                            const id = `admin-test-rep-${sub.id || sub._id || subDate.getTime()}`;
                             const studentName = sub.student_name || 'Student';
                             const scoreText = sub.score !== undefined ? `${sub.score}/${sub.total_points || 100}` : 'Submitted';
                             collected.push({
@@ -231,7 +231,7 @@ export function NotificationProvider({ children }) {
                                 message: `${studentName} completed "${sub.test_title || 'Class Test'}" with score ${scoreText}.`,
                                 timestamp: subDate,
                                 timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                                link: '/ceo/tests',
+                                link: '/admin/tests',
                                 icon: 'assessment',
                                 badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
                                 accentColor: 'from-emerald-500 to-teal-600',
@@ -254,7 +254,7 @@ export function NotificationProvider({ children }) {
                             const msgDate = new Date(msg.created_at || now);
                             const diffHours = (now - msgDate) / (1000 * 60 * 60);
                             if (diffHours <= 72) { // last 3 days
-                                const id = `ceo-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
+                                const id = `admin-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
                                 collected.push({
                                     id,
                                     type: 'community_message',
@@ -262,7 +262,7 @@ export function NotificationProvider({ children }) {
                                     message: msg.content ? (msg.content.length > 90 ? msg.content.substring(0, 90) + '...' : msg.content) : 'Sent an audio voice message in Community.',
                                     timestamp: msgDate,
                                     timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                                    link: '/ceo/community',
+                                    link: '/admin/community',
                                     icon: 'forum',
                                     badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
                                     accentColor: 'from-blue-500 to-indigo-600',
@@ -494,7 +494,7 @@ export function NotificationProvider({ children }) {
                                 id,
                                 type: 'announcement',
                                 title: `📢 ${ann.title || 'Official Announcement'}`,
-                                message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New announcement posted by CEO/Administration.',
+                                message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New announcement posted by Admin.',
                                 timestamp: annDate,
                                 timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
                                 link: '/dashboard/announcements',
@@ -579,7 +579,7 @@ export function NotificationProvider({ children }) {
                             collected.push({
                                 id,
                                 type: 'fee_pending',
-                                title: '💰 Pending Fee Reminder from CEO',
+                                title: '💰 Pending Fee Reminder from Admin',
                                 message: rem.message || `Pending Fee Balance: ₹${rem.pending_amount || 0}. Total Fee: ₹${rem.total_fee || 0}, Paid: ₹${rem.paid_amount || 0}. Please clear the remaining balance.`,
                                 timestamp: remDate,
                                 timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
@@ -596,7 +596,7 @@ export function NotificationProvider({ children }) {
         }
 
         // ==========================================
-        // 3. STAFF NOTIFICATION PIPELINE
+        // 3. SENSI NOTIFICATION PIPELINE
         // Requirements:
         // - New CEO announcement chat
         // - New students test completed
@@ -604,7 +604,7 @@ export function NotificationProvider({ children }) {
         // - New community chat message
         // - New student notes posted
         // ==========================================
-        else if (role === 'staff') {
+        else if ((role === 'staff' || role === 'sensi')) {
             // A. New CEO Announcement Chat
             try {
                 const res = await fetch(`${annApiBase}/api/announcement`, { headers });
@@ -614,15 +614,15 @@ export function NotificationProvider({ children }) {
                         const annDate = new Date(ann.created_at || now);
                         const diffHours = (now - annDate) / (1000 * 60 * 60);
                         if (diffHours <= 168) {
-                            const id = `staff-ann-${ann.id || ann._id || annDate.getTime()}`;
+                            const id = `sensi-ann-${ann.id || ann._id || annDate.getTime()}`;
                             collected.push({
                                 id,
                                 type: 'announcement',
-                                title: `📢 CEO Announcement: ${ann.title || 'Official Update'}`,
-                                message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New announcement posted by CEO.',
+                                title: `📢 Admin Announcement: ${ann.title || 'Official Update'}`,
+                                message: ann.content ? (ann.content.length > 90 ? ann.content.substring(0, 90) + '...' : ann.content) : 'New announcement posted by Admin.',
                                 timestamp: annDate,
                                 timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                                link: '/staff/announcements',
+                                link: '/sensi/announcements',
                                 icon: 'campaign',
                                 badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
                                 accentColor: 'from-purple-500 to-indigo-600',
@@ -642,7 +642,7 @@ export function NotificationProvider({ children }) {
                         const subDate = new Date(sub.submitted_at || now);
                         const diffHours = (now - subDate) / (1000 * 60 * 60);
                         if (diffHours <= 168) {
-                            const id = `staff-test-sub-${sub.id || sub._id || subDate.getTime()}`;
+                            const id = `sensi-test-sub-${sub.id || sub._id || subDate.getTime()}`;
                             const studentName = sub.student_name || 'Student';
                             collected.push({
                                 id,
@@ -651,7 +651,7 @@ export function NotificationProvider({ children }) {
                                 message: `${studentName} finished "${sub.test_title || 'Assessment'}". Review or grade their answers.`,
                                 timestamp: subDate,
                                 timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                                link: '/staff/tests',
+                                link: '/sensi/tests',
                                 icon: 'rate_review',
                                 badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300 font-bold',
                                 accentColor: 'from-indigo-500 to-blue-600',
@@ -677,13 +677,13 @@ export function NotificationProvider({ children }) {
                                 const diffMinutes = Math.round((classStartTime - now) / (1000 * 60));
                                 if (diffMinutes >= 0 && diffMinutes <= 30) {
                                     collected.push({
-                                        id: `staff-class-reminder-${schedId}-${todayDayName}`,
+                                        id: `sensi-class-reminder-${schedId}-${todayDayName}`,
                                         type: 'class_schedule',
                                         title: diffMinutes === 0 ? '🔴 Teaching Class Starting Now!' : `🔔 Class Starts in ${diffMinutes} Mins!`,
                                         message: `"${item.name}" begins at ${item.time}. Classroom: ${item.location || 'Online'}.`,
                                         timestamp: now,
                                         timeAgo: diffMinutes === 0 ? 'Now' : `In ${diffMinutes}m`,
-                                        link: item.class_link || '/staff/schedule',
+                                        link: item.class_link || '/sensi/schedule',
                                         icon: 'alarm',
                                         badgeColor: 'bg-rose-100 text-rose-800 border-rose-300 font-bold animate-pulse',
                                         accentColor: 'from-rose-500 to-red-600',
@@ -691,13 +691,13 @@ export function NotificationProvider({ children }) {
                                     });
                                 } else {
                                     collected.push({
-                                        id: `staff-sched-today-${schedId}-${todayDayName}`,
+                                        id: `sensi-sched-today-${schedId}-${todayDayName}`,
                                         type: 'class_schedule',
                                         title: '🎓 Class Scheduled Today',
                                         message: `${item.name} at ${item.time || 'Today'} ${item.location ? `• ${item.location}` : ''}`,
                                         timestamp: now,
                                         timeAgo: 'Today',
-                                        link: '/staff/schedule',
+                                        link: '/sensi/schedule',
                                         icon: 'calendar_month',
                                         badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
                                         accentColor: 'from-blue-500 to-indigo-600',
@@ -720,7 +720,7 @@ export function NotificationProvider({ children }) {
                             const msgDate = new Date(msg.created_at || now);
                             const diffHours = (now - msgDate) / (1000 * 60 * 60);
                             if (diffHours <= 72) {
-                                const id = `staff-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
+                                const id = `sensi-comm-msg-${msg.id || msg._id || msgDate.getTime()}`;
                                 collected.push({
                                     id,
                                     type: 'community_message',
@@ -728,7 +728,7 @@ export function NotificationProvider({ children }) {
                                     message: msg.content ? (msg.content.length > 90 ? msg.content.substring(0, 90) + '...' : msg.content) : 'Sent a voice/audio message in Community.',
                                     timestamp: msgDate,
                                     timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                                    link: '/staff/community',
+                                    link: '/sensi/community',
                                     icon: 'forum',
                                     badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
                                     accentColor: 'from-blue-500 to-indigo-600',
@@ -749,7 +749,7 @@ export function NotificationProvider({ children }) {
                         const noteDate = new Date(note.created_at || now);
                         const diffHours = (now - noteDate) / (1000 * 60 * 60);
                         if (diffHours <= 168) {
-                            const id = `staff-note-${note.id || note._id || noteDate.getTime()}`;
+                            const id = `sensi-note-${note.id || note._id || noteDate.getTime()}`;
                             const studentName = note.uploader_name || 'Student';
                             collected.push({
                                 id,
@@ -758,7 +758,7 @@ export function NotificationProvider({ children }) {
                                 message: `${studentName} uploaded "${note.title || 'Study Notes'}" for ${note.level || ''} ${note.batch || ''}.`,
                                 timestamp: noteDate,
                                 timeAgo: diffHours < 1 ? 'Just now' : (diffHours < 24 ? `${Math.floor(diffHours)}h ago` : `${Math.floor(diffHours / 24)}d ago`),
-                                link: '/staff/dashboard',
+                                link: '/sensi/dashboard',
                                 icon: 'edit_note',
                                 badgeColor: 'bg-teal-100 text-teal-800 border-teal-300 font-bold',
                                 accentColor: 'from-teal-500 to-emerald-600',

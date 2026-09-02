@@ -54,7 +54,7 @@ export default function ClassmatesPage() {
 
     // Filter staff (explicitly excluding CEO from student view)
     const staffMembers = members.filter(m => 
-        (m.role || '').toLowerCase() === 'staff' && 
+        ((m.role || '').toLowerCase() === 'staff' || (m.role || '').toLowerCase() === 'sensi') && 
         (m.name || '').trim().toLowerCase() !== 'ceo' && 
         (m.email || '').trim().toLowerCase() !== 'ceo@gmail.com'
     );
@@ -169,7 +169,7 @@ export default function ClassmatesPage() {
                                         </h3>
                                         <span className="text-[11px] font-bold bg-primary/10 text-primary px-3 py-0.5 rounded-full inline-flex items-center gap-1 border border-primary/20">
                                             <span className="material-symbols-outlined text-[13px]">school</span>
-                                            <span>Staff Instructor</span>
+                                            <span>Sensi Instructor</span>
                                         </span>
                                         {staff.email && (
                                             <p className="text-[11px] text-on-surface-variant truncate pt-1 opacity-80" title={staff.email}>
