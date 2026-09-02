@@ -143,7 +143,7 @@ export default function StudentPathway() {
     ];
 
     return (
-        <div className="relative zenpath-wrapper -m-4 sm:-m-6 lg:-m-8 min-h-screen bg-[#16130e] text-[#e9e1d8] overflow-x-hidden scroll-smooth selection:bg-[#e9c176]/30 selection:text-[#ffdea5]">
+        <div className="relative zenpath-wrapper min-h-screen bg-[#16130e] text-[#e9e1d8] overflow-x-hidden scroll-smooth selection:bg-[#e9c176]/30 selection:text-[#ffdea5]">
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap');
                 

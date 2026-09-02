@@ -65,7 +65,7 @@ export default function CEOStudents() {
             }
             await fetchStudents();
             setIsAddModalOpen(false);
-            setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
+            setFormData({ name: '', email: '', password: '', level: '', batch: selectedBatch || '' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -106,7 +106,7 @@ export default function CEOStudents() {
             await fetchStudents();
             setIsEditModalOpen(false);
             setCurrentStudent(null);
-            setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
+            setFormData({ name: '', email: '', password: '', level: '', batch: selectedBatch || '' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -189,7 +189,7 @@ export default function CEOStudents() {
                     </p>
                 </div>
                 <button 
-                    onClick={() => { setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' }); setFormError(''); setIsAddModalOpen(true); }}
+                    onClick={() => { setFormData({ name: '', email: '', password: '', level: '', batch: selectedBatch || '' }); setFormError(''); setIsAddModalOpen(true); }}
                     className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 self-start md:self-auto shadow-xs cursor-pointer active:scale-95"
                 >
                     <span className="material-symbols-outlined text-[20px]">person_add</span>
@@ -232,7 +232,7 @@ export default function CEOStudents() {
                                             student.level === 'Level 1' ? 'bg-red-100 text-red-800' :
                                             'bg-gray-100 text-gray-800'
                                         }`}>
-                                            {student.level || 'Level 5'}
+                                            {student.level || ''}
                                         </span>
                                     </td>
                                     <td className="p-md font-body-md text-on-surface-variant">
