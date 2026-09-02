@@ -3,7 +3,7 @@ import AnnouncementChat from "../../components/AnnouncementChat";
 
 export default function StudentAnnouncements() {
     return (
-        <section className="px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 max-w-[1440px] mx-auto w-full">
+        <section className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 w-full max-w-full overflow-x-hidden">
             <AnnouncementChat role="Student" />
         </section>
     );

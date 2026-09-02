@@ -171,7 +171,7 @@ export default function StudentTasks() {
     });
 
     return (
-        <section className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 space-y-4 sm:space-y-lg w-full max-w-full overflow-x-hidden">
+        <section className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 w-full max-w-full overflow-x-hidden">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                     <div>
@@ -433,12 +433,9 @@ export default function StudentTasks() {
                             <ul className="text-xs text-on-surface-variant space-y-2 leading-relaxed">
                                 <li className="flex items-start gap-1.5">
                                     <span className="material-symbols-outlined text-[15px] text-primary shrink-0 mt-0.5">check_circle</span>
-                                    <span>Provide a public Google Docs, Notion, or GitHub link, or paste written answers directly.</span>
+                                    <span>Provide a public Google Drive link or paste written answers directly, make sure the shared drive is accessible to anyone with the link.</span>
                                 </li>
-                                <li className="flex items-start gap-1.5">
-                                    <span className="material-symbols-outlined text-[15px] text-primary shrink-0 mt-0.5">check_circle</span>
-                                    <span>Check back regularly for instructor grading and constructive review notes.</span>
-                                </li>
+                                
                             </ul>
                         </div>
                     </div>

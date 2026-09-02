@@ -2,7 +2,7 @@
 
 export default function StudentHelp() {
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <section className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 w-full max-w-full overflow-x-hidden">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                 <div>
