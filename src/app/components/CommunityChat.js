@@ -6,6 +6,7 @@ export default function CommunityChat({ role, overrideBatch }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [userName, setUserName] = useState('Anonymous');
     const [userEmail, setUserEmail] = useState('Anonymous');
     const [userRole, setUserRole] = useState(role || 'student');
@@ -99,8 +100,12 @@ export default function CommunityChat({ role, overrideBatch }) {
 
     const fetchMessages = async () => {
         try {
+            const currentLevel = userLevel || (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5');
+            const currentBatch = userBatch !== undefined && userBatch !== '' 
+                ? userBatch 
+                : (overrideBatch !== undefined ? overrideBatch : (typeof window !== 'undefined' ? (localStorage.getItem('batch') || '') : ''));
             const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
-            const res = await fetch(`${communityApiBase}/api/community/messages?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`);
+            const res = await fetch(`${communityApiBase}/api/community/messages?level=${encodeURIComponent(currentLevel)}&batch=${encodeURIComponent(currentBatch)}&t=${Date.now()}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -109,7 +114,13 @@ export default function CommunityChat({ role, overrideBatch }) {
             console.error("Failed to fetch messages:", error);
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
+    };
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await fetchMessages();
     };
 
     useEffect(() => {
@@ -337,11 +348,14 @@ export default function CommunityChat({ role, overrideBatch }) {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={fetchMessages}
-                        className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-75"
                         title="Refresh Messages"
                     >
-                        <span className="material-symbols-outlined text-[18px]">sync</span>
+                        <span className={`material-symbols-outlined text-[18px] ${isRefreshing ? 'animate-spin text-primary' : ''}`}>
+                            sync
+                        </span>
                     </button>
                 </div>
             </div>
@@ -388,10 +402,10 @@ export default function CommunityChat({ role, overrideBatch }) {
                     return (
                         <div 
                             key={msgId} 
-                            className={`group relative flex gap-3 max-w-[88%] sm:max-w-[80%] ${isYou ? 'ml-auto flex-row-reverse' : 'mr-auto flex-row'}`}
+                            className={`group relative flex gap-2 sm:gap-3 max-w-[94%] sm:max-w-[80%] ${isYou ? 'ml-auto flex-row-reverse' : 'mr-auto flex-row'}`}
                         >
                             {/* Avatar */}
-                            <div className={`w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold shadow-xs mt-0.5 ${
+                            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold shadow-xs mt-0.5 ${
                                 isYou 
                                     ? 'bg-primary/20 text-primary border border-primary/30' 
                                     : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/60'
@@ -409,13 +423,13 @@ export default function CommunityChat({ role, overrideBatch }) {
                             </div>
 
                             {/* Message Container */}
-                            <div className={`flex flex-col ${isYou ? 'items-end' : 'items-start'} flex-1 min-w-0`}>
+                            <div className={`flex flex-col ${isYou ? 'items-end' : 'items-start'} flex-1 min-w-0 max-w-full`}>
                                 {/* Header / Sender Info */}
-                                <div className="flex items-center gap-2 mb-1 px-1 flex-wrap">
+                                <div className="flex items-center gap-1.5 sm:gap-2 mb-1 px-1 flex-wrap">
                                     <span className="font-label-sm font-bold text-on-surface text-xs truncate">
                                         {isYou ? 'You' : msg.author_name}
                                     </span>
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${
+                                    <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full uppercase ${
                                         displayRole === 'Admin' 
                                             ? 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40' 
                                             : (displayRole === 'Sensi' 
@@ -434,7 +448,7 @@ export default function CommunityChat({ role, overrideBatch }) {
 
                                 {/* Message Content / Edit Mode */}
                                 {isCurrentlyEditing ? (
-                                    <div className="w-full min-w-[260px] bg-surface-container-lowest dark:bg-slate-900 p-3 rounded-2xl border border-primary/40 shadow-lg space-y-2">
+                                    <div className="w-full min-w-[240px] sm:min-w-[260px] bg-surface-container-lowest dark:bg-slate-900 p-3 rounded-2xl border border-primary/40 shadow-lg space-y-2">
                                         <textarea
                                             value={editingContent}
                                             onChange={(e) => setEditingContent(e.target.value)}
@@ -470,22 +484,24 @@ export default function CommunityChat({ role, overrideBatch }) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className={`relative px-4 py-3 rounded-3xl font-body-md shadow-xs break-words leading-relaxed ${
+                                    <div className={`relative px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl sm:rounded-3xl font-body-md shadow-xs break-words leading-relaxed max-w-full ${
                                         isYou 
                                             ? 'bg-primary text-on-primary rounded-tr-xs' 
                                             : 'bg-surface-container-high dark:bg-slate-900 text-on-surface rounded-tl-xs border border-outline-variant/40'
                                     }`}>
                                         {msg.audio_url ? (
-                                            <div className="flex flex-col gap-1.5 py-1">
-                                                <div className="flex items-center gap-2 text-xs font-bold opacity-90">
-                                                    <span className="material-symbols-outlined text-[18px]">graphic_eq</span>
+                                            <div className="flex flex-col gap-1 py-0.5 max-w-full">
+                                                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold opacity-90">
+                                                    <span className="material-symbols-outlined text-[15px] sm:text-[18px]">graphic_eq</span>
                                                     <span>Voice Message</span>
                                                 </div>
-                                                <audio 
-                                                    controls 
-                                                    src={msg.audio_url} 
-                                                    className="max-w-[260px] sm:max-w-[300px] h-9 custom-audio-player rounded-xl" 
-                                                />
+                                                <div className="w-full max-w-[190px] xs:max-w-[210px] sm:max-w-[260px]">
+                                                    <audio 
+                                                        controls 
+                                                        src={msg.audio_url} 
+                                                        className="w-full h-8 custom-audio-player rounded-lg" 
+                                                    />
+                                                </div>
                                             </div>
                                         ) : (
                                             <span className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</span>
