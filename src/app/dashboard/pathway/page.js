@@ -78,7 +78,7 @@ export default function StudentPathway() {
             accentBg: 'rgba(164, 210, 164, 0.15)',
             accentBorder: 'rgba(164, 210, 164, 0.4)',
             index: 1,
-            alignment: 'justify-center lg:justify-end lg:translate-x-[-4%]'
+            alignment: 'justify-center lg:justify-end'
         },
         {
             id: 'N4',
@@ -93,7 +93,7 @@ export default function StudentPathway() {
             accentBg: 'rgba(138, 172, 173, 0.15)',
             accentBorder: 'rgba(138, 172, 173, 0.4)',
             index: 2,
-            alignment: 'justify-center lg:justify-center lg:translate-x-[12%]'
+            alignment: 'justify-center'
         },
         {
             id: 'N3',
@@ -108,7 +108,7 @@ export default function StudentPathway() {
             accentBg: 'rgba(170, 205, 206, 0.15)',
             accentBorder: 'rgba(170, 205, 206, 0.4)',
             index: 3,
-            alignment: 'justify-center lg:justify-start lg:translate-x-[4%]'
+            alignment: 'justify-center lg:justify-start'
         },
         {
             id: 'N2',
@@ -123,7 +123,7 @@ export default function StudentPathway() {
             accentBg: 'rgba(233, 193, 118, 0.15)',
             accentBorder: 'rgba(233, 193, 118, 0.4)',
             index: 4,
-            alignment: 'justify-center lg:justify-center lg:translate-x-[-10%]'
+            alignment: 'justify-center'
         },
         {
             id: 'N1',
@@ -138,7 +138,7 @@ export default function StudentPathway() {
             accentBg: 'rgba(197, 160, 89, 0.15)',
             accentBorder: 'rgba(197, 160, 89, 0.4)',
             index: 5,
-            alignment: 'justify-center lg:justify-end lg:translate-x-[-8%]'
+            alignment: 'justify-center lg:justify-end'
         }
     ];
 

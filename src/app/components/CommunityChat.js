@@ -534,7 +534,7 @@ export default function CommunityChat({ role, overrideBatch }) {
 
             {/* Audio Message Studio Preview Card (if audio is recorded and ready to send) */}
             {audioUrl && (
-                <div className="p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 animate-slide-up flex flex-col gap-3">
+                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center">

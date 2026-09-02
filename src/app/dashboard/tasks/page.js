@@ -171,7 +171,7 @@ export default function StudentTasks() {
     });
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <section className="max-w-[1440px] mx-auto p-3 sm:p-gutter space-y-4 sm:space-y-lg w-full max-w-full overflow-x-hidden">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                     <div>
@@ -198,7 +198,7 @@ export default function StudentTasks() {
                 </div>
 
                 {successFeedback && (
-                    <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30 animate-fade-in">
+                    <div className="bg-green-500/10 text-green-700 dark:text-green-400 p-4 rounded-2xl flex items-center gap-2.5 border border-green-500/30">
                         <span className="material-symbols-outlined text-[22px]">check_circle</span>
                         <span className="text-sm font-medium">{successFeedback}</span>
                     </div>
@@ -209,10 +209,10 @@ export default function StudentTasks() {
                     {/* Tasks List */}
                     <div className="lg:col-span-8 space-y-4">
                         {/* Control Bar: Tabs & Search */}
-                        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 custom-shadow space-y-3">
+                        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-3 sm:p-4 custom-shadow space-y-3">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 {/* Status Tabs */}
-                                <div className="flex gap-1.5 bg-surface-container-low p-1 rounded-xl border border-outline-variant/60">
+                                <div className="flex gap-1 bg-surface-container-low p-1 rounded-xl border border-outline-variant/60 overflow-x-auto custom-scrollbar w-full sm:w-auto shrink-0 flex-nowrap">
                                     {[
                                         { key: 'all', label: 'All Tasks', count: tasks.length },
                                         { key: 'pending', label: 'Pending', count: pendingTasks.length },
@@ -222,14 +222,14 @@ export default function StudentTasks() {
                                             key={tab.key}
                                             type="button"
                                             onClick={() => setActiveTab(tab.key)}
-                                            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 flex-1 sm:flex-initial ${
                                                 activeTab === tab.key
                                                     ? 'bg-surface text-on-surface shadow-xs font-bold'
                                                     : 'text-on-surface-variant hover:text-on-surface'
                                             }`}
                                         >
                                             <span>{tab.label}</span>
-                                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                                            <span className={`px-1.5 py-0.2 rounded-full text-[10px] shrink-0 ${
                                                 activeTab === tab.key ? 'bg-primary/10 text-primary font-bold' : 'bg-surface-container text-on-surface-variant'
                                             }`}>
                                                 {tab.count}

@@ -96,7 +96,7 @@ export default function StudentMaterials() {
     });
 
     return (
-        <section className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <section className="max-w-[1440px] mx-auto p-3 sm:p-gutter space-y-4 sm:space-y-lg w-full max-w-full overflow-x-hidden">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                     <div>
