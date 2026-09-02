@@ -330,7 +330,7 @@ export default function CEOStudents() {
                                 <label className="block text-label-md text-on-surface-variant mb-1">Name</label>
                                 <input 
                                     type="text" 
-                                    required
+                                    
                                     className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
                                     value={formData.name}
                                     onChange={(e) => setFormData({...formData, name: e.target.value})}

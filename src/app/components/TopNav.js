@@ -43,7 +43,7 @@ export default function TopNav() {
 
   return (
         <header className="sticky top-0 z-20 bg-gradient-to-r from-[#465AA3] via-[#5D8BCC] to-[#6FB7E4] border-b border-outline-variant/10 shadow-md">
-            <div className="flex justify-between items-center w-full px-4 sm:px-6 md:px-8 lg:px-12 max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
+            <div className="flex justify-between items-center w-full px-4 md:px-8 lg:px-12 max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
                 <div className="flex items-center gap-sm md:gap-lg flex-grow md:flex-grow-0">
                     <button 
                         onClick={() => setIsMobileNavOpen(true)}
