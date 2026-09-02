@@ -239,9 +239,10 @@ export default function StudentVideos() {
         const elem = document.getElementById(containerId);
         if (!elem) return;
 
-        const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        const isCurrentlyFs = mobileFullscreenId === containerId || Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
 
-        if (!isNativeFullscreen) {
+        if (!isCurrentlyFs) {
+            setMobileFullscreenId(containerId);
             try {
                 if (elem.requestFullscreen) {
                     await elem.requestFullscreen();
@@ -253,9 +254,10 @@ export default function StudentVideos() {
                     await elem.msRequestFullscreen();
                 }
             } catch (err) {
-                console.warn("Fullscreen request:", err);
+                console.warn("Fullscreen request fallback:", err);
             }
         } else {
+            setMobileFullscreenId(null);
             try {
                 if (document.exitFullscreen) {
                     await document.exitFullscreen();
@@ -267,7 +269,7 @@ export default function StudentVideos() {
                     await document.msExitFullscreen();
                 }
             } catch (err) {
-                console.warn("Exit fullscreen:", err);
+                console.warn("Exit fullscreen fallback:", err);
             }
         }
     };
@@ -308,9 +310,32 @@ export default function StudentVideos() {
                     -ms-user-select: none;
                     user-select: none;
                 }
+                .mobile-landscape-fullscreen {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    width: 100dvw !important;
+                    height: 100dvh !important;
+                    max-width: 100vw !important;
+                    max-height: 100vh !important;
+                    max-width: 100dvw !important;
+                    max-height: 100dvh !important;
+                    transform: none !important;
+                    z-index: 999999 !important;
+                    background: black !important;
+                    border-radius: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
                 :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
-                    width: 100% !important;
-                    height: 100% !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    width: 100dvw !important;
+                    height: 100dvh !important;
                     background-color: black !important;
                     display: flex !important;
                     align-items: center !important;
@@ -435,7 +460,7 @@ export default function StudentVideos() {
                                         <div 
                                             id={`video-player-${video.id}`} 
                                             onContextMenu={(e) => e.preventDefault()}
-                                            className="aspect-video w-full bg-black relative overflow-hidden select-none flex items-center justify-center rounded-t-2xl"
+                                            className={`aspect-video w-full bg-black relative overflow-hidden select-none flex items-center justify-center rounded-t-2xl ${mobileFullscreenId === `video-player-${video.id}` ? 'mobile-landscape-fullscreen' : ''}`}
                                         >
                                             {video.video_url && (video.video_url.endsWith('.mp4') || video.video_url.endsWith('.webm') || video.video_url.endsWith('.ogg') || video.video_url.includes('/raw/') || (!video.video_url.includes('drive.google.com') && !video.video_url.includes('youtube') && !video.video_url.includes('youtu.be') && !video.video_url.includes('vimeo') && !video.video_url.includes('embed'))) ? (
                                                 <video
@@ -470,11 +495,11 @@ export default function StudentVideos() {
                                                     type="button"
                                                     onClick={() => toggleFullscreen(`video-player-${video.id}`)}
                                                     className="w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-lg active:scale-95 cursor-pointer border border-white/20"
-                                                    title="Toggle Fullscreen"
+                                                    title={mobileFullscreenId === `video-player-${video.id}` ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
                                                     aria-label="Toggle Fullscreen"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">
-                                                        fullscreen
+                                                        {mobileFullscreenId === `video-player-${video.id}` ? 'fullscreen_exit' : 'fullscreen'}
                                                     </span>
                                                 </button>
                                             </div>

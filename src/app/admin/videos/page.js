@@ -308,7 +308,7 @@ export default function CEOVideos() {
     return (
         <>
             <style jsx>{`
-                @media (max-width: 768px) {
+                @media (max-width: 900px) and (orientation: landscape), (max-height: 500px) and (orientation: landscape), (max-width: 768px) {
                     .mobile-landscape-fullscreen {
                         position: fixed !important;
                         top: 0 !important;
