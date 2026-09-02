@@ -103,36 +103,11 @@ export default function StudentVideos() {
             }
         } catch (e) {}
 
-        // 7. Listen to fullscreen change and handle orientation locking
+        // 7. Listen to fullscreen change
         const handleFullscreenChange = () => {
             const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-            if (isFs) {
-                if ('orientation' in screen && screen?.orientation?.lock) {
-                    screen.orientation.lock('landscape').catch(() => {});
-                }
-            } else {
+            if (!isFs) {
                 setMobileFullscreenId(null);
-                if ('orientation' in screen && screen?.orientation?.unlock) {
-                    try {
-                        screen.orientation.unlock();
-                    } catch (e) {}
-                }
-            }
-        };
-
-        // 8. Mobile Auto-Rotate listener
-        const handleOrientationChange = () => {
-            if (typeof window === 'undefined' || !('orientation' in screen)) return;
-            const isLandscape = screen.orientation.type.startsWith('landscape');
-            const fsElem = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
-
-            if (isLandscape && !fsElem) {
-                const firstPlayer = document.querySelector('[id^="video-player-"]');
-                if (firstPlayer) {
-                    firstPlayer.requestFullscreen?.().catch(() => {});
-                }
-            } else if (!isLandscape && fsElem) {
-                document.exitFullscreen?.().catch(() => {});
             }
         };
 
@@ -140,10 +115,6 @@ export default function StudentVideos() {
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-        if (typeof window !== 'undefined' && 'orientation' in screen && screen.orientation.addEventListener) {
-            screen.orientation.addEventListener('change', handleOrientationChange);
-        }
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
@@ -159,9 +130,6 @@ export default function StudentVideos() {
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-            if (typeof window !== 'undefined' && 'orientation' in screen && screen.orientation.removeEventListener) {
-                screen.orientation.removeEventListener('change', handleOrientationChange);
-            }
         };
     }, []);
 
@@ -272,10 +240,8 @@ export default function StudentVideos() {
         if (!elem) return;
 
         const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-        const isCustomMobileFs = mobileFullscreenId === containerId;
 
-        if (!isNativeFullscreen && !isCustomMobileFs) {
-            // ENTER FULLSCREEN
+        if (!isNativeFullscreen) {
             try {
                 if (elem.requestFullscreen) {
                     await elem.requestFullscreen();
@@ -287,42 +253,21 @@ export default function StudentVideos() {
                     await elem.msRequestFullscreen();
                 }
             } catch (err) {
-                console.warn("Native fullscreen request warning:", err);
+                console.warn("Fullscreen request:", err);
             }
-
-            setMobileFullscreenId(containerId);
-            try {
-                if (screen?.orientation?.lock) {
-                    await screen.orientation.lock('landscape');
-                } else if (screen?.lockOrientation) {
-                    screen.lockOrientation('landscape');
-                }
-            } catch (err) {}
         } else {
-            // EXIT FULLSCREEN -> Return to normal view
-            setMobileFullscreenId(null);
             try {
-                if (screen?.orientation?.unlock) {
-                    screen.orientation.unlock();
-                } else if (screen?.unlockOrientation) {
-                    screen.unlockOrientation();
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    await document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    await document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    await document.msExitFullscreen();
                 }
-            } catch (err) {}
-
-            if (isNativeFullscreen) {
-                try {
-                    if (document.exitFullscreen) {
-                        await document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) {
-                        await document.webkitExitFullscreen();
-                    } else if (document.mozCancelFullScreen) {
-                        await document.mozCancelFullScreen();
-                    } else if (document.msExitFullscreen) {
-                        await document.msExitFullscreen();
-                    }
-                } catch (err) {
-                    console.warn("Exit fullscreen warning:", err);
-                }
+            } catch (err) {
+                console.warn("Exit fullscreen:", err);
             }
         }
     };
@@ -363,34 +308,9 @@ export default function StudentVideos() {
                     -ms-user-select: none;
                     user-select: none;
                 }
-                @media (max-width: 768px) {
-                    .mobile-landscape-fullscreen {
-                        position: fixed !important;
-                        top: 0 !important;
-                        left: 0 !important;
-                        right: 0 !important;
-                        bottom: 0 !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        width: 100dvw !important;
-                        height: 100dvh !important;
-                        max-width: 100vw !important;
-                        max-height: 100vh !important;
-                        max-width: 100dvw !important;
-                        max-height: 100dvh !important;
-                        transform: none !important;
-                        z-index: 999999 !important;
-                        background: black !important;
-                        border-radius: 0 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                    }
-                }
                 :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    width: 100dvw !important;
-                    height: 100dvh !important;
+                    width: 100% !important;
+                    height: 100% !important;
                     background-color: black !important;
                     display: flex !important;
                     align-items: center !important;
@@ -399,7 +319,8 @@ export default function StudentVideos() {
                     padding: 0 !important;
                     border: none !important;
                 }
-                :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe {
+                :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe,
+                :fullscreen video, :-webkit-full-screen video, :-moz-full-screen video, :-ms-fullscreen video {
                     width: 100% !important;
                     height: 100% !important;
                     border: none !important;
@@ -514,7 +435,7 @@ export default function StudentVideos() {
                                         <div 
                                             id={`video-player-${video.id}`} 
                                             onContextMenu={(e) => e.preventDefault()}
-                                            className={`aspect-video w-full bg-black relative overflow-hidden group select-none flex items-center justify-center ${mobileFullscreenId === `video-player-${video.id}` ? 'mobile-landscape-fullscreen' : ''}`}
+                                            className="aspect-video w-full bg-black relative overflow-hidden select-none flex items-center justify-center rounded-t-2xl"
                                         >
                                             {video.video_url && (video.video_url.endsWith('.mp4') || video.video_url.endsWith('.webm') || video.video_url.endsWith('.ogg') || video.video_url.includes('/raw/') || (!video.video_url.includes('drive.google.com') && !video.video_url.includes('youtube') && !video.video_url.includes('youtu.be') && !video.video_url.includes('vimeo') && !video.video_url.includes('embed'))) ? (
                                                 <video
@@ -522,7 +443,7 @@ export default function StudentVideos() {
                                                     poster={video.thumbnail_url}
                                                     controls
                                                     playsInline
-                                                    controlsList="nodownload nofullscreen" 
+                                                    controlsList="nodownload" 
                                                     disablePictureInPicture
                                                     className="w-full h-full object-contain select-none z-10"
                                                 />
@@ -544,16 +465,16 @@ export default function StudentVideos() {
                                             </div>
 
                                             {/* Top-Right Fullscreen Enable Button */}
-                                            <div className="absolute top-1.5 right-1.5 z-40 flex items-center justify-center pointer-events-auto">
+                                            <div className="absolute top-2 right-2 z-40 flex items-center justify-center pointer-events-auto">
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleFullscreen(`video-player-${video.id}`)}
-                                                    className="w-10 h-10 rounded-full bg-black/90 hover:bg-black hover:scale-105 text-white flex items-center justify-center backdrop-blur-md transition-all shadow-lg active:scale-95 cursor-pointer border border-white/20"
-                                                    title={mobileFullscreenId === `video-player-${video.id}` ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
+                                                    className="w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-lg active:scale-95 cursor-pointer border border-white/20"
+                                                    title="Toggle Fullscreen"
                                                     aria-label="Toggle Fullscreen"
                                                 >
-                                                    <span className="material-symbols-outlined text-[20px]">
-                                                        {mobileFullscreenId === `video-player-${video.id}` ? 'fullscreen_exit' : 'fullscreen'}
+                                                    <span className="material-symbols-outlined text-[18px]">
+                                                        fullscreen
                                                     </span>
                                                 </button>
                                             </div>
