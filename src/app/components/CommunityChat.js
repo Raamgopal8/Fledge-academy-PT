@@ -120,13 +120,6 @@ export default function CommunityChat({ role, overrideBatch }) {
         }
     }, [userLevel, userBatch]);
 
-    // Scroll to bottom on new messages
-    useEffect(() => {
-        if (chatScrollRef.current) {
-            chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-        }
-    }, [messages]);
-
     // 1. Send Text Message
     const handleSendMessage = async (e) => {
         e.preventDefault();
