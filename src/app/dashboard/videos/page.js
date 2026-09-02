@@ -18,6 +18,7 @@ export default function StudentVideos() {
     const [watermarkText, setWatermarkText] = useState('Protected Content');
     const [studentInfo, setStudentInfo] = useState({ level: 'Level 5', batch: '' });
     const [mobileFullscreenId, setMobileFullscreenId] = useState(null);
+    const [activeVideo, setActiveVideo] = useState(null);
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -239,10 +240,9 @@ export default function StudentVideos() {
         const elem = document.getElementById(containerId);
         if (!elem) return;
 
-        const isCurrentlyFs = mobileFullscreenId === containerId || Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        const isNativeFullscreen = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
 
-        if (!isCurrentlyFs) {
-            setMobileFullscreenId(containerId);
+        if (!isNativeFullscreen) {
             try {
                 if (elem.requestFullscreen) {
                     await elem.requestFullscreen();
@@ -254,10 +254,9 @@ export default function StudentVideos() {
                     await elem.msRequestFullscreen();
                 }
             } catch (err) {
-                console.warn("Fullscreen request fallback:", err);
+                console.warn("Fullscreen request:", err);
             }
         } else {
-            setMobileFullscreenId(null);
             try {
                 if (document.exitFullscreen) {
                     await document.exitFullscreen();
@@ -269,7 +268,7 @@ export default function StudentVideos() {
                     await document.msExitFullscreen();
                 }
             } catch (err) {
-                console.warn("Exit fullscreen fallback:", err);
+                console.warn("Exit fullscreen:", err);
             }
         }
     };
@@ -310,32 +309,9 @@ export default function StudentVideos() {
                     -ms-user-select: none;
                     user-select: none;
                 }
-                .mobile-landscape-fullscreen {
-                    position: fixed !important;
-                    top: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    bottom: 0 !important;
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    width: 100dvw !important;
-                    height: 100dvh !important;
-                    max-width: 100vw !important;
-                    max-height: 100vh !important;
-                    max-width: 100dvw !important;
-                    max-height: 100dvh !important;
-                    transform: none !important;
-                    z-index: 999999 !important;
-                    background: black !important;
-                    border-radius: 0 !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
                 :fullscreen, :-webkit-full-screen, :-moz-full-screen, :-ms-fullscreen {
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    width: 100dvw !important;
-                    height: 100dvh !important;
+                    width: 100% !important;
+                    height: 100% !important;
                     background-color: black !important;
                     display: flex !important;
                     align-items: center !important;
@@ -349,6 +325,16 @@ export default function StudentVideos() {
                     width: 100% !important;
                     height: 100% !important;
                     border: none !important;
+                }
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .theater-card {
+                        border-radius: 0 !important;
+                        max-height: 100dvh !important;
+                        height: 100dvh !important;
+                    }
+                    .theater-player-wrapper {
+                        height: calc(100dvh - 44px) !important;
+                    }
                 }
             `}</style>
             <section className={`max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative animate-fade-in no-select-mobile ${isObscured ? 'blur-xl select-none pointer-events-none opacity-50' : ''}`}>
@@ -455,75 +441,64 @@ export default function StudentVideos() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVideos.map(video => (
-                                    <div key={video.id} className="group relative bg-surface-container-low rounded-2xl overflow-hidden border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
-                                        {/* Video Player Container */}
-                                        <div 
-                                            id={`video-player-${video.id}`} 
-                                            onContextMenu={(e) => e.preventDefault()}
-                                            className={`aspect-video w-full bg-black relative overflow-hidden select-none flex items-center justify-center rounded-t-2xl ${mobileFullscreenId === `video-player-${video.id}` ? 'mobile-landscape-fullscreen' : ''}`}
-                                        >
-                                            {video.video_url && (video.video_url.endsWith('.mp4') || video.video_url.endsWith('.webm') || video.video_url.endsWith('.ogg') || video.video_url.includes('/raw/') || (!video.video_url.includes('drive.google.com') && !video.video_url.includes('youtube') && !video.video_url.includes('youtu.be') && !video.video_url.includes('vimeo') && !video.video_url.includes('embed'))) ? (
-                                                <video
-                                                    src={video.video_url}
-                                                    poster={video.thumbnail_url}
-                                                    controls
-                                                    playsInline
-                                                    controlsList="nodownload" 
-                                                    disablePictureInPicture
-                                                    className="w-full h-full object-contain select-none z-10"
+                                    <div 
+                                        key={video.id} 
+                                        onClick={() => setActiveVideo(video)}
+                                        className="group relative bg-surface-container-low rounded-2xl overflow-hidden border border-outline-variant hover:border-primary/60 hover:shadow-xl transition-all duration-300 flex flex-col cursor-pointer active:scale-[0.99]"
+                                    >
+                                        {/* Video Poster Thumbnail Container with Play Overlay */}
+                                        <div className="aspect-video w-full bg-slate-950 relative overflow-hidden flex items-center justify-center rounded-t-2xl">
+                                            {video.thumbnail_url ? (
+                                                <img 
+                                                    src={video.thumbnail_url} 
+                                                    alt={video.title} 
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-85 group-hover:opacity-100"
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                                 />
                                             ) : (
-                                                <iframe 
-                                                    src={getEmbedUrl(video.video_url)} 
-                                                    className="absolute top-0 left-0 w-full h-full border-0 z-10"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                                                    allowFullScreen
-                                                    title={video.title}
-                                                ></iframe>
+                                                <div className="w-full h-full bg-gradient-to-br from-slate-900 via-[#1e293b] to-[#0f172a] flex items-center justify-center">
+                                                    <span className="material-symbols-outlined text-outline/30 text-5xl">smart_display</span>
+                                                </div>
                                             )}
 
-                                            {/* Video-specific floating watermark */}
-                                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.15] mix-blend-overlay animate-pulse select-none z-20">
-                                                <p className="text-white transform -rotate-12 font-bold text-xl md:text-2xl whitespace-nowrap drop-shadow-md">
-                                                    {watermarkText}
-                                                </p>
+                                            {/* Glowing Play Button Badge */}
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/10 transition-colors z-10">
+                                                <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-300">
+                                                    <span className="material-symbols-outlined text-[28px] ml-0.5">play_arrow</span>
+                                                </div>
                                             </div>
 
-                                            {/* Top-Right Fullscreen Enable Button */}
-                                            <div className="absolute top-2 right-2 z-40 flex items-center justify-center pointer-events-auto">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleFullscreen(`video-player-${video.id}`)}
-                                                    className="w-9 h-9 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-lg active:scale-95 cursor-pointer border border-white/20"
-                                                    title={mobileFullscreenId === `video-player-${video.id}` ? "Exit Fullscreen" : "Toggle Fullscreen (Landscape)"}
-                                                    aria-label="Toggle Fullscreen"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">
-                                                        {mobileFullscreenId === `video-player-${video.id}` ? 'fullscreen_exit' : 'fullscreen'}
-                                                    </span>
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Card Info & Badges */}
-                                        <div className="p-5 flex flex-col flex-1">
-                                            <h3 className="font-headline-sm text-on-surface font-bold text-base line-clamp-2 group-hover:text-primary transition-colors mb-3" title={video.title}>
-                                                {video.title}
-                                            </h3>
-
-                                            {/* Level & Category Badges (Batch hidden in UI) */}
-                                            <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-outline-variant/40">
-                                                {video.category && (
+                                            {/* Category Tag Overlay */}
+                                            {video.category && (
+                                                <div className="absolute top-2.5 left-2.5 z-10">
                                                     <CategoryBadge 
                                                         category={video.category} 
                                                         color={video.category_color} 
                                                     />
-                                                )}
-                                                {video.level && (
-                                                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Card Info & Badges */}
+                                        <div className="p-4 sm:p-5 flex flex-col flex-1">
+                                            <h3 className="font-headline-sm text-on-surface font-bold text-sm sm:text-base line-clamp-2 group-hover:text-primary transition-colors mb-3" title={video.title}>
+                                                {video.title}
+                                            </h3>
+
+                                            {/* Level & Watch Action */}
+                                            <div className="flex items-center justify-between gap-1.5 mt-auto pt-2.5 border-t border-outline-variant/40">
+                                                {video.level ? (
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold border ${getLevelBadgeClass(video.level)}`}>
                                                         {video.level}
                                                     </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-on-surface-variant font-medium">Class Lesson</span>
                                                 )}
+
+                                                <span className="text-xs font-bold text-primary flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                                                    <span>Watch</span>
+                                                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -533,6 +508,90 @@ export default function StudentVideos() {
                     </div>
                 </div>
             </section>
+
+            {/* Mobile-Optimized Theater Video Player Modal */}
+            {activeVideo && (
+                <div 
+                    id="student-theater-modal"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 sm:bg-black/80 backdrop-blur-md p-0 sm:p-4 md:p-6 animate-fade-in"
+                >
+                    <div className="bg-surface-container-lowest dark:bg-slate-950 sm:rounded-3xl overflow-hidden max-w-[1100px] w-full h-full sm:h-auto max-h-full sm:max-h-[92vh] shadow-2xl border-0 sm:border border-outline-variant/60 flex flex-col relative theater-card">
+                        {/* Top Bar with Video Title & Actions */}
+                        <div className="p-3.5 sm:p-4 bg-surface-container-low dark:bg-slate-900 flex items-center justify-between border-b border-outline-variant/40 shrink-0 z-30">
+                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-[18px]">play_circle</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="font-bold text-xs sm:text-sm text-on-surface truncate" title={activeVideo.title}>
+                                        {activeVideo.title}
+                                    </h3>
+                                    <div className="flex items-center gap-2 mt-0.5 text-[10px] text-on-surface-variant">
+                                        {activeVideo.category && <span className="font-semibold text-primary">{activeVideo.category}</span>}
+                                        {activeVideo.level && <span>• {activeVideo.level}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleFullscreen('student-theater-player-container')}
+                                    className="w-8 h-8 rounded-full hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+                                    title="Toggle Fullscreen"
+                                    aria-label="Toggle Fullscreen"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">fullscreen</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveVideo(null)}
+                                    className="w-8 h-8 rounded-full hover:bg-error/10 hover:text-error text-on-surface-variant flex items-center justify-center transition-colors cursor-pointer"
+                                    title="Close Video"
+                                    aria-label="Close Video"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Video Player Display */}
+                        <div 
+                            id="student-theater-player-container"
+                            onContextMenu={(e) => e.preventDefault()}
+                            className="flex-1 sm:aspect-video w-full bg-black relative flex items-center justify-center overflow-hidden select-none theater-player-wrapper"
+                        >
+                            {activeVideo.video_url && (activeVideo.video_url.endsWith('.mp4') || activeVideo.video_url.endsWith('.webm') || activeVideo.video_url.endsWith('.ogg') || activeVideo.video_url.includes('/raw/') || (!activeVideo.video_url.includes('drive.google.com') && !activeVideo.video_url.includes('youtube') && !activeVideo.video_url.includes('youtu.be') && !activeVideo.video_url.includes('vimeo') && !activeVideo.video_url.includes('embed'))) ? (
+                                <video
+                                    src={activeVideo.video_url}
+                                    poster={activeVideo.thumbnail_url}
+                                    controls
+                                    autoPlay
+                                    playsInline
+                                    controlsList="nodownload" 
+                                    disablePictureInPicture
+                                    className="w-full h-full object-contain select-none z-10"
+                                />
+                            ) : (
+                                <iframe 
+                                    src={getEmbedUrl(activeVideo.video_url)} 
+                                    className="w-full h-full border-0 z-10"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                                    allowFullScreen
+                                    title={activeVideo.title}
+                                ></iframe>
+                            )}
+
+                            {/* Floating Anti-Piracy Security Watermark */}
+                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.14] mix-blend-overlay animate-pulse select-none z-20 overflow-hidden">
+                                <p className="text-white transform -rotate-12 font-bold text-lg sm:text-2xl whitespace-nowrap drop-shadow-md watermark-text">
+                                    {watermarkText}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }
