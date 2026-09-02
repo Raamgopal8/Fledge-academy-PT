@@ -328,7 +328,7 @@ export default function CommunityChat({ role, overrideBatch }) {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-lowest dark:bg-slate-950 rounded-3xl border border-outline-variant/80 overflow-hidden shadow-elevation-2 w-full">
+        <div className="flex flex-col h-full flex-1 min-h-0 bg-surface-container-lowest dark:bg-slate-950 rounded-3xl border border-outline-variant/80 overflow-hidden shadow-elevation-2 w-full">
             {/* Header */}
             <div className="p-4 sm:p-5 border-b border-outline-variant/60 bg-surface-container-low dark:bg-slate-900 flex justify-between items-center z-10 shadow-xs">
                 <div className="flex items-center gap-3">

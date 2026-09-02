@@ -12,7 +12,7 @@ export default function StudentCommunityPage() {
                 <StudentNavbar />
                 <MainContentWrapper>
                     <TopNav />
-                    <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative animate-fade-in w-full">
+                    <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-3 relative animate-fade-in w-full flex-grow flex flex-col h-[calc(100dvh-6.5rem)] min-h-0">
                         <CommunityChat role="Student" />
                     </div>
                     <StudentFooter />

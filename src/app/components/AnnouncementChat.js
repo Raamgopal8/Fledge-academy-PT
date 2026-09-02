@@ -174,7 +174,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm w-full relative">
+        <div className="flex flex-col h-full flex-1 min-h-0 bg-surface-container-lowest rounded-2xl border border-outline-variant overflow-hidden shadow-sm w-full relative">
             {/* Header */}
             <div className="p-md border-b border-outline-variant bg-surface flex justify-between items-center z-10 shadow-xs">
                 <div>
