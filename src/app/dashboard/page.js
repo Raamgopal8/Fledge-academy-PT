@@ -294,9 +294,9 @@ export default function DashboardOverview() {
   const greeting = `${getGreeting()}, ${profile?.name?.split(' ')[0] || profile?.username || 'Student'}`;
    
   return (
-    <div className="max-w-[1440px] mx-auto p-3 sm:p-gutter space-y-xs w-full max-w-full overflow-x-hidden">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 space-y-4 w-full max-w-full overflow-x-hidden">
       {/* Welcome Section */}
-      <section className="mb-lg mt-2">
+      <section className="mb-lg">
         <div className="flex flex-col md:flex-row md:items-end justify-start gap-xs mb-6">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold mb-sm text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">

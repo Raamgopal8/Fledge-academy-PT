@@ -5,7 +5,7 @@ export default function MainContentWrapper({ children }) {
   const { isMobileNavOpen } = useStudentContext();
 
   return (
-    <main className="flex-grow min-h-screen pb-32 flex flex-col w-full max-w-full overflow-x-hidden">
+    <main className="flex-grow min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
       {children}
     </main>
   );

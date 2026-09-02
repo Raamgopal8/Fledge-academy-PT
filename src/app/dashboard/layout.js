@@ -21,7 +21,7 @@ export default function DashboardLayout({ children }) {
             <TopNav />
             
             {/* Content Area */}
-            <div className="flex-grow relative w-full max-w-full overflow-x-hidden pb-8">
+            <div className="flex-grow relative w-full max-w-full overflow-x-hidden pb-4 sm:pb-6">
               {children}
             </div>
 

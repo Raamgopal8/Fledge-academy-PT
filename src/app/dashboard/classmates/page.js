@@ -82,7 +82,7 @@ export default function ClassmatesPage() {
     };
 
     return (
-        <div className="max-w-[1440px] mx-auto p-gutter space-y-lg animate-fade-in">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 space-y-lg w-full max-w-full overflow-x-hidden">
             {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
                     <div>

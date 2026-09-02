@@ -5,7 +5,7 @@ import Link from 'next/link';
 export default function StudentFooter() {
     return (
         <footer className="mt-auto bg-surface-container-highest/80 dark:bg-slate-900/80 py-5 border-t border-outline-variant/60 w-full backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row justify-between items-center px-4 sm:px-8 max-w-7xl mx-auto gap-4 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row justify-between items-center px-4 sm:px-6 md:px-8 lg:px-12 max-w-[1440px] mx-auto gap-4 text-center sm:text-left">
                 <div className="flex flex-col items-center sm:items-start">
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-on-surface">Fledge Academy</span>

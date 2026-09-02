@@ -103,7 +103,7 @@ export default function StudentSchedulePage() {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-3 sm:p-gutter space-y-4 sm:space-y-lg mt-2 sm:mt-6 w-full max-w-full overflow-x-hidden">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 space-y-4 sm:space-y-lg w-full max-w-full overflow-x-hidden">
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
                     <div>

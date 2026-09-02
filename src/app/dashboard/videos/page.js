@@ -326,7 +326,7 @@ export default function StudentVideos() {
                     border: none !important;
                 }
             `}</style>
-            <section className={`max-w-[1440px] mx-auto p-3 sm:p-gutter space-y-4 sm:space-y-lg w-full max-w-full overflow-x-hidden no-select-mobile ${isObscured ? 'blur-xl select-none pointer-events-none opacity-50' : ''}`}>
+            <section className={`max-w-[1440px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-4 sm:py-6 space-y-4 sm:space-y-lg w-full max-w-full overflow-x-hidden no-select-mobile ${isObscured ? 'blur-xl select-none pointer-events-none opacity-50' : ''}`}>
                 {isObscured && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md">
                         <div className="text-center">
