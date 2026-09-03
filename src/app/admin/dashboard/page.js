@@ -200,7 +200,19 @@ export default function AdminDashboard() {
                         <div>
                             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Active Sensi</p>
                             <h2 className="text-3xl font-extrabold text-on-surface mt-1">
-                                {kpiData?.activeSensi || '0'}
+                                {(() => {
+                                    const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+                                    if (staffList && staffList.length > 0) {
+                                        if (overrideBatch) {
+                                            return staffList.filter(s => {
+                                                const bList = Array.isArray(s.batches) ? s.batches : (s.batch ? [s.batch] : []);
+                                                return bList.some(b => b && b.trim().toLowerCase() === overrideBatch.trim().toLowerCase()) || (s.batch || '').trim().toLowerCase() === overrideBatch.trim().toLowerCase();
+                                            }).length;
+                                        }
+                                        return staffList.length;
+                                    }
+                                    return kpiData?.activeSensi || kpiData?.activeStaff || '0';
+                                })()}
                             </h2>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -221,7 +233,14 @@ export default function AdminDashboard() {
                         <div>
                             <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Learning Tracks</p>
                             <h2 className="text-3xl font-extrabold text-on-surface mt-1">
-                                {kpiData?.activeCourses || '0'}
+                                {(() => {
+                                    if (kpiData?.activeCourses && kpiData.activeCourses !== '0') return kpiData.activeCourses;
+                                    const levelsFromUsers = new Set([
+                                        ...studentList.map(s => s.level).filter(Boolean),
+                                        ...staffList.map(s => s.level).filter(Boolean)
+                                    ]);
+                                    return levelsFromUsers.size > 0 ? levelsFromUsers.size : 5;
+                                })()}
                             </h2>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
