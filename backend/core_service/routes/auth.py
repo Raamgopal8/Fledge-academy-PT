@@ -281,6 +281,7 @@ class FirebaseLoginRequest(BaseModel):
     firebase_uid: Optional[str] = None
     id_token: Optional[str] = None
 
+@router.post("/firebase-login", response_model=Token)
 @router.post("/auth/firebase-login", response_model=Token)
 async def firebase_login(request: FirebaseLoginRequest):
     clean_email = request.email.strip().lower()
