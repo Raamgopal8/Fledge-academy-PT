@@ -3,9 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithPopup } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth as firebaseAuth, googleProvider, db as firestoreDb } from "@/lib/firebase";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -14,7 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const router = useRouter();
 
@@ -114,91 +110,6 @@ export default function LoginPage() {
       setError(err.message);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setError("");
-    setIsGoogleLoading(true);
-
-    try {
-      // 1. Firebase Google OAuth Sign In
-      const userCredential = await signInWithPopup(firebaseAuth, googleProvider);
-      const user = userCredential.user;
-      const idToken = await user.getIdToken();
-
-      // 2. Dual Database Sync: Send Firebase User info to MongoDB backend
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-      const response = await fetch(`${apiBase}/api/auth/firebase-login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: user.email,
-          name: user.displayName || "",
-          photo_url: user.photoURL || "",
-          firebase_uid: user.uid,
-          id_token: idToken,
-        }),
-      });
-
-      if (!response.ok) {
-        let errorMsg = "Failed to synchronize profile. Please try again.";
-        try {
-          const errData = await response.json();
-          errorMsg = errData.detail || errorMsg;
-        } catch (_) {}
-        throw new Error(errorMsg);
-      }
-
-      const data = await response.json();
-
-      // 3. Dual Database Sync: Synchronize mirror profile into Cloud Firestore
-      try {
-        const userDocRef = doc(firestoreDb, "users", user.uid);
-        await setDoc(userDocRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || data.name || "",
-          photoURL: user.photoURL || data.profile_image_url || "",
-          role: data.role || "student",
-          level: data.level || "Level 5",
-          batch: data.batch || "Batch - 1",
-          lastLogin: serverTimestamp(),
-          authProvider: "google.com",
-        }, { merge: true });
-      } catch (fsErr) {
-        console.warn("Firestore sync warning (optional mirror):", fsErr);
-      }
-
-      // 4. Store authenticated session tokens
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("role", data.role);
-      localStorage.setItem("level", data.level || "Level 5");
-      localStorage.setItem("batch", data.batch || "");
-      localStorage.setItem("userName", data.name || user.displayName || "");
-      localStorage.setItem("userEmail", data.email || user.email || "");
-      localStorage.setItem("userProfileImage", data.profile_image_url || user.photoURL || "");
-
-      // 5. Navigate based on assigned role
-      const userRole = (data.role || "").toLowerCase();
-      if (userRole === "admin" || userRole === "ceo") {
-        router.push("/admin/dashboard");
-      } else if (userRole === "sensi" || userRole === "staff") {
-        router.push("/sensi/dashboard");
-      } else {
-        router.push("/dashboard");
-      }
-    } catch (err) {
-      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
-        // User voluntarily dismissed popup
-        setIsGoogleLoading(false);
-        return;
-      }
-      setError(err.message || "Google sign in failed. Please try again.");
-    } finally {
-      setIsGoogleLoading(false);
     }
   };
 
@@ -359,7 +270,7 @@ export default function LoginPage() {
             <button
               className="w-full h-[56px] bg-primary text-white text-label-md text-[16px] rounded-xl hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-sm shadow-lg shadow-primary/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               type="submit"
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <span className="material-symbols-outlined animate-spin">progress_activity</span>
@@ -367,49 +278,6 @@ export default function LoginPage() {
                 <>
                   Login to Dashboard
                   <span className="material-symbols-outlined">arrow_forward</span>
-                </>
-              )}
-            </button>
-
-            {/* Google Environment Divider */}
-            <div className="relative flex items-center my-3">
-              <div className="flex-grow border-t border-outline-variant/60"></div>
-              <span className="flex-shrink-0 mx-3 text-on-surface-variant text-label-sm uppercase tracking-wider text-[11px] font-semibold opacity-70">
-                Or Continue With
-              </span>
-              <div className="flex-grow border-t border-outline-variant/60"></div>
-            </div>
-
-            {/* Additional Authentication: Firebase Google Sign-In Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading || isGoogleLoading}
-              className="w-full h-[52px] bg-surface-container-lowest text-on-surface border border-outline-variant hover:border-primary/50 hover:bg-surface-container-low transition-all active:scale-[0.98] flex items-center justify-center gap-3 rounded-xl shadow-xs font-semibold text-[15px] disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {isGoogleLoading ? (
-                <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                    />
-                  </svg>
-                  <span>Continue with Google</span>
                 </>
               )}
             </button>
