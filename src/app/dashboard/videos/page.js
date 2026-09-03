@@ -149,7 +149,7 @@ export default function StudentVideos() {
                     });
                     if (profRes.ok) {
                         const prof = await profRes.json();
-                        level = prof.level || level || 'Level 5';
+                        level = prof.level || level || '';
                         batch = prof.batch || batch || '';
                         localStorage.setItem('level', level);
                         if (batch) localStorage.setItem('batch', batch);
@@ -159,7 +159,7 @@ export default function StudentVideos() {
                 }
             }
 
-            level = level || 'Level 5';
+            level = level || '';
             batch = batch || '';
             setStudentInfo({ level, batch });
 

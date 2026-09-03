@@ -162,10 +162,10 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             ref={containerRef}
             id={`video-player-${video.id || video._id}`}
             onContextMenu={(e) => e.preventDefault()}
-            className={`w-full bg-black relative select-none flex items-center justify-center transition-all ${
+            className={`w-full bg-black select-none transition-all ${
                 isFullscreen 
-                    ? 'fixed inset-0 z-[9999] w-screen h-screen m-0 p-0 rounded-none' 
-                    : 'aspect-video rounded-t-2xl overflow-hidden'
+                    ? 'fixed inset-0 z-[9999] w-screen h-screen m-0 p-0 rounded-none flex items-center justify-center' 
+                    : 'relative w-full pb-[56.25%] h-0 overflow-hidden rounded-t-2xl'
             }`}
         >
             {/* 1. Native HTML5 Video */}
@@ -177,22 +177,21 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                     playsInline
                     controlsList="nodownload" 
                     disablePictureInPicture
-                    className="w-full h-full object-contain select-none z-10"
+                    className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
                 />
             )}
 
             {/* 2. Google Drive / YouTube / Vimeo / Iframe Embed */}
             {source.type !== 'html5' && source.src && (
-                <div className="w-full h-full relative flex items-center justify-center z-10 overflow-hidden">
-                    <iframe 
-                        src={source.src} 
-                        className="w-full h-full border-0 absolute inset-0 object-contain"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                        allowFullScreen
-                        playsInline
-                        title={videoTitle}
-                    />
-                </div>
+                <iframe 
+                    src={source.src} 
+                    className="absolute top-0 left-0 w-full h-full border-0 z-10"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                    allowFullScreen
+                    playsInline
+                    title={videoTitle}
+                />
             )}
 
             {/* Floating Security Watermark Overlay */}
