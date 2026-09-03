@@ -116,6 +116,61 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
         return `${minutes}:${formattedSeconds}`;
     };
 
+    // Fullscreen Toggle
+    const enterFullscreen = async () => {
+        const elem = containerRef.current;
+        if (!elem) return;
+
+        setIsFullscreen(true);
+
+        try {
+            if (elem.requestFullscreen) {
+                await elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                await elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                await elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                await elem.msRequestFullscreen();
+            }
+
+            if (typeof window !== 'undefined' && screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        } catch (err) {
+            console.warn("Fullscreen request error, overlay active:", err);
+        }
+    };
+
+    const exitFullscreen = async () => {
+        try {
+            if (document.exitFullscreen) {
+                await document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                await document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                await document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                await document.msExitFullscreen();
+            }
+
+            if (typeof window !== 'undefined' && screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+            }
+        } catch (err) {
+            console.warn("Exit fullscreen error:", err);
+        }
+        setIsFullscreen(false);
+    };
+
+    const toggleFullscreen = () => {
+        if (isFullscreen) {
+            exitFullscreen();
+        } else {
+            enterFullscreen();
+        }
+    };
+
     // Auto-hide controls
     const triggerControls = useCallback(() => {
         setShowControls(true);
@@ -130,13 +185,18 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
         }
     }, [isPlaying]);
 
-    // Play / Pause
+    // Play / Pause & Auto Fullscreen
     const togglePlay = () => {
         const video = videoRef.current;
         if (!video) return;
 
         if (video.paused) {
-            video.play().then(() => setIsPlaying(true)).catch(() => {});
+            video.play().then(() => {
+                setIsPlaying(true);
+                if (!isFullscreen) {
+                    enterFullscreen();
+                }
+            }).catch(() => {});
         } else {
             video.pause();
             setIsPlaying(false);
@@ -200,59 +260,6 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
         }
         setShowSpeedMenu(false);
         triggerControls();
-    };
-
-    // Fullscreen Toggle
-    const toggleFullscreen = async () => {
-        const elem = containerRef.current;
-        if (!elem) return;
-
-        const isNativeFullscreen = Boolean(
-            document.fullscreenElement || 
-            document.webkitFullscreenElement || 
-            document.mozFullScreenElement || 
-            document.msFullscreenElement
-        );
-
-        if (!isNativeFullscreen && !isFullscreen) {
-            try {
-                if (elem.requestFullscreen) {
-                    await elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) {
-                    await elem.webkitRequestFullscreen();
-                } else if (elem.mozRequestFullScreen) {
-                    await elem.mozRequestFullScreen();
-                } else if (elem.msRequestFullscreen) {
-                    await elem.msRequestFullscreen();
-                }
-
-                if (typeof window !== 'undefined' && screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(() => {});
-                }
-            } catch (err) {
-                console.warn("Fullscreen fallback to overlay state:", err);
-                setIsFullscreen(true);
-            }
-        } else {
-            try {
-                if (document.exitFullscreen) {
-                    await document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    await document.webkitExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    await document.mozCancelFullScreen();
-                } else if (document.msExitFullscreen) {
-                    await document.msExitFullscreen();
-                }
-
-                if (typeof window !== 'undefined' && screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
-            } catch (err) {
-                console.warn("Exit fullscreen error:", err);
-            }
-            setIsFullscreen(false);
-        }
     };
 
     useEffect(() => {
@@ -344,13 +351,13 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                         </div>
                     )}
 
-                    {/* Big Center Play/Pause Indicator (when paused) */}
+                    {/* Big Center Play Indicator (when paused) */}
                     {!isPlaying && !isBuffering && (
                         <div 
                             onClick={togglePlay}
-                            className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer bg-black/30 hover:bg-black/40 transition-colors"
+                            className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer bg-black/35 hover:bg-black/45 transition-colors"
                         >
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary/90 hover:bg-primary text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary text-white flex items-center justify-center shadow-xl transition-transform hover:scale-110 active:scale-95">
                                 <span className="material-symbols-outlined text-3xl sm:text-4xl translate-x-0.5">play_arrow</span>
                             </div>
                         </div>
@@ -358,12 +365,12 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
 
                     {/* Bottom Control Bar */}
                     <div 
-                        className={`absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 sm:p-4 transition-opacity duration-300 flex flex-col gap-1.5 ${
+                        className={`absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-black/70 to-transparent p-2.5 sm:p-4 transition-opacity duration-300 flex flex-col gap-1.5 ${
                             showControls || !isPlaying ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                         }`}
                     >
                         {/* Interactive Progress Bar */}
-                        <div className="relative w-full flex items-center group/progress h-3 cursor-pointer">
+                        <div className="relative w-full flex items-center h-4 cursor-pointer">
                             <input
                                 type="range"
                                 min="0"
@@ -381,15 +388,15 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                         {/* Controls Row */}
                         <div className="flex items-center justify-between text-white text-xs sm:text-sm">
                             {/* Left Controls: Play/Pause, -10s, +10s, Volume, Time */}
-                            <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="flex items-center gap-1.5 sm:gap-3">
                                 {/* Play / Pause */}
                                 <button
                                     type="button"
                                     onClick={togglePlay}
-                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    className="p-1.5 hover:text-primary transition-colors cursor-pointer touch-manipulation"
                                     title={isPlaying ? "Pause" : "Play"}
                                 >
-                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">
+                                    <span className="material-symbols-outlined text-[22px] sm:text-[26px]">
                                         {isPlaying ? 'pause' : 'play_arrow'}
                                     </span>
                                 </button>
@@ -398,10 +405,10 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                                 <button
                                     type="button"
                                     onClick={() => skipTime(-10)}
-                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    className="p-1.5 hover:text-primary transition-colors cursor-pointer touch-manipulation"
                                     title="Rewind 10s"
                                 >
-                                    <span className="material-symbols-outlined text-[18px] sm:text-[22px]">
+                                    <span className="material-symbols-outlined text-[19px] sm:text-[23px]">
                                         replay_10
                                     </span>
                                 </button>
@@ -410,23 +417,23 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                                 <button
                                     type="button"
                                     onClick={() => skipTime(10)}
-                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    className="p-1.5 hover:text-primary transition-colors cursor-pointer touch-manipulation"
                                     title="Forward 10s"
                                 >
-                                    <span className="material-symbols-outlined text-[18px] sm:text-[22px]">
+                                    <span className="material-symbols-outlined text-[19px] sm:text-[23px]">
                                         forward_10
                                     </span>
                                 </button>
 
                                 {/* Volume / Mute */}
-                                <div className="flex items-center gap-1 group/vol">
+                                <div className="flex items-center gap-1">
                                     <button
                                         type="button"
                                         onClick={toggleMute}
-                                        className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                        className="p-1.5 hover:text-primary transition-colors cursor-pointer touch-manipulation"
                                         title={isMuted ? "Unmute" : "Mute"}
                                     >
-                                        <span className="material-symbols-outlined text-[18px] sm:text-[22px]">
+                                        <span className="material-symbols-outlined text-[19px] sm:text-[23px]">
                                             {isMuted || volume === 0 ? 'volume_off' : volume < 0.5 ? 'volume_down' : 'volume_up'}
                                         </span>
                                     </button>
@@ -437,24 +444,24 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                                         step="0.05"
                                         value={isMuted ? 0 : volume}
                                         onChange={handleVolumeChange}
-                                        className="w-12 sm:w-16 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary hidden sm:inline-block"
+                                        className="w-12 sm:w-16 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary hidden md:inline-block"
                                     />
                                 </div>
 
                                 {/* Timestamp */}
-                                <span className="text-[11px] sm:text-xs text-white/80 font-mono tracking-tight ml-1">
+                                <span className="text-[10px] sm:text-xs text-white/90 font-mono tracking-tight ml-0.5">
                                     {formatTime(currentTime)} / {formatTime(duration)}
                                 </span>
                             </div>
 
                             {/* Right Controls: Playback Speed, Fullscreen */}
-                            <div className="flex items-center gap-2 sm:gap-3 relative">
+                            <div className="flex items-center gap-1.5 sm:gap-3 relative">
                                 {/* Playback Speed */}
                                 <div className="relative">
                                     <button
                                         type="button"
                                         onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                                        className="px-2 py-0.5 rounded-md hover:bg-white/10 text-xs font-bold text-white/90 hover:text-white transition-colors cursor-pointer"
+                                        className="px-2 py-1 rounded-md hover:bg-white/10 text-xs font-bold text-white/90 hover:text-white transition-colors cursor-pointer touch-manipulation"
                                         title="Playback Speed"
                                     >
                                         {playbackRate}x
@@ -467,7 +474,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                                                     key={rate}
                                                     type="button"
                                                     onClick={() => handleSpeedChange(rate)}
-                                                    className={`px-3 py-1 text-xs text-left transition-colors cursor-pointer ${
+                                                    className={`px-3 py-1.5 text-xs text-left transition-colors cursor-pointer ${
                                                         playbackRate === rate ? 'bg-primary text-white font-bold' : 'text-white/80 hover:bg-white/10'
                                                     }`}
                                                 >
@@ -482,10 +489,10 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                                 <button
                                     type="button"
                                     onClick={toggleFullscreen}
-                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    className="p-1.5 hover:text-primary transition-colors cursor-pointer touch-manipulation"
                                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                                 >
-                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">
+                                    <span className="material-symbols-outlined text-[22px] sm:text-[26px]">
                                         {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
                                     </span>
                                 </button>
@@ -495,17 +502,32 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                 </>
             )}
 
-            {/* 2. Fallback / YouTube / Vimeo Iframe Embed (if non-HTML5) */}
+            {/* 2. Fallback / YouTube / Vimeo Iframe Embed */}
             {!isHtml5Compatible && source.src && (
-                <iframe 
-                    src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
-                    className="absolute top-0 left-0 w-full h-full border-0 z-10"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                    allowFullScreen
-                    playsInline
-                    title={videoTitle}
-                />
+                <div className="absolute inset-0 w-full h-full">
+                    <iframe 
+                        src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
+                        className="w-full h-full border-0"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                        allowFullScreen
+                        playsInline
+                        title={videoTitle}
+                    />
+                    {/* Floating Fullscreen Trigger for Iframe */}
+                    <div className="absolute bottom-3 right-3 z-30">
+                        <button
+                            type="button"
+                            onClick={toggleFullscreen}
+                            className="p-2 rounded-full bg-black/75 hover:bg-black text-white backdrop-blur-md transition-all shadow-md active:scale-90 cursor-pointer border border-white/20"
+                            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                        >
+                            <span className="material-symbols-outlined text-[20px]">
+                                {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                            </span>
+                        </button>
+                    </div>
+                </div>
             )}
 
             {/* Floating Security Watermark Overlay */}
