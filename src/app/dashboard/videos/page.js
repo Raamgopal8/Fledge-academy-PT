@@ -26,6 +26,18 @@ export default function StudentVideos() {
     const [watchedVideos, setWatchedVideos] = useState({});
     const [isFullscreen, setIsFullscreen] = useState(false);
 
+    // YouTube-style Mobile Video Player States
+    const videoRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [showControls, setShowControls] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1);
+    const [showSettings, setShowSettings] = useState(false);
+    const [doubleTapFeedback, setDoubleTapFeedback] = useState(null); // 'left' | 'right' | null
+    const [gdriveFallback, setGdriveFallback] = useState(false);
+
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [categories, setCategories] = useState(['All']);
@@ -43,7 +55,7 @@ export default function StudentVideos() {
             if (savedWatched) {
                 setWatchedVideos(JSON.parse(savedWatched));
             }
-        } catch (e) {}
+        } catch (e) { }
 
         // 1. Disable right-click
         const handleContextMenu = (e) => e.preventDefault();
@@ -73,7 +85,7 @@ export default function StudentVideos() {
                 e.preventDefault();
             }
             if (
-                e.key === 'PrintScreen' || 
+                e.key === 'PrintScreen' ||
                 (e.ctrlKey && e.key.toLowerCase() === 'p') || // Print
                 (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5')) || // Mac screenshots
                 (e.metaKey && e.shiftKey && e.key.toLowerCase() === 's') || // Windows Snipping Tool
@@ -85,7 +97,7 @@ export default function StudentVideos() {
                 setIsObscured(true);
                 try {
                     navigator.clipboard.writeText('Screenshots are disabled for protected educational content.');
-                } catch (err) {}
+                } catch (err) { }
                 setTimeout(() => setIsObscured(false), 3000);
             }
 
@@ -104,7 +116,7 @@ export default function StudentVideos() {
             if (e.key === 'PrintScreen') {
                 try {
                     navigator.clipboard.writeText('Screenshots are disabled for protected educational content.');
-                } catch (err) {}
+                } catch (err) { }
             }
         };
 
@@ -116,7 +128,7 @@ export default function StudentVideos() {
             e.preventDefault();
             try {
                 navigator.clipboard.writeText('Educational content is protected.');
-            } catch (err) {}
+            } catch (err) { }
         };
         document.addEventListener('copy', preventCopy);
         document.addEventListener('cut', preventCopy);
@@ -131,14 +143,14 @@ export default function StudentVideos() {
                     setWatermarkText(payload.sub);
                 }
             }
-        } catch (e) {}
+        } catch (e) { }
 
         // 7. Fullscreen change listener
         const handleFullscreenChange = () => {
             const isFs = Boolean(
-                document.fullscreenElement || 
-                document.webkitFullscreenElement || 
-                document.mozFullScreenElement || 
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
                 document.msFullscreenElement
             );
             setIsFullscreen(isFs);
@@ -207,7 +219,7 @@ export default function StudentVideos() {
             if (!res.ok) throw new Error('Failed to fetch videos');
             const data = await res.json();
             setVideos(data);
-            
+
             // Set initial active video
             if (data && data.length > 0) {
                 setActiveVideo(data[0]);
@@ -274,13 +286,40 @@ export default function StudentVideos() {
         return cleanUrl;
     };
 
+    const getDirectStreamSource = (url) => {
+        if (!url) return null;
+        const clean = url.trim();
+        if (clean.includes('drive.google.com')) {
+            const fileMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+            if (fileMatch && fileMatch[1]) {
+                return {
+                    fileId: fileMatch[1],
+                    streamUrl: `https://drive.google.com/uc?export=download&id=${fileMatch[1]}`,
+                    lh3Url: `https://lh3.googleusercontent.com/d/${fileMatch[1]}`
+                };
+            }
+            const idMatch = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return {
+                    fileId: idMatch[1],
+                    streamUrl: `https://drive.google.com/uc?export=download&id=${idMatch[1]}`,
+                    lh3Url: `https://lh3.googleusercontent.com/d/${idMatch[1]}`
+                };
+            }
+        }
+        return null;
+    };
+
     const isIframeEmbed = (url) => {
         if (!url) return false;
         const clean = url.toLowerCase();
-        return clean.includes('youtube.com') || 
-               clean.includes('youtu.be') || 
-               clean.includes('drive.google.com') || 
-               clean.includes('vimeo.com');
+        // If Google Drive fallback was triggered due to stream error, render iframe
+        if (clean.includes('drive.google.com')) {
+            return gdriveFallback;
+        }
+        return clean.includes('youtube.com') ||
+            clean.includes('youtu.be') ||
+            clean.includes('vimeo.com');
     };
 
     const getYouTubeThumbnail = (url) => {
@@ -304,9 +343,9 @@ export default function StudentVideos() {
         if (!elem) return;
 
         const isNativeFullscreen = Boolean(
-            document.fullscreenElement || 
-            document.webkitFullscreenElement || 
-            document.mozFullScreenElement || 
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
             document.msFullscreenElement
         );
 
@@ -346,7 +385,7 @@ export default function StudentVideos() {
             const updated = { ...prev, [videoId]: !prev[videoId] };
             try {
                 localStorage.setItem('fledge_watched_videos', JSON.stringify(updated));
-            } catch (e) {}
+            } catch (e) { }
             return updated;
         });
     };
@@ -378,11 +417,114 @@ export default function StudentVideos() {
     }, [selectedCategory, searchQuery, videos]);
 
     // Current video index in playlist
-    const currentActiveIndex = activeVideo 
+    const currentActiveIndex = activeVideo
         ? filteredVideos.findIndex(v => (v.id || v._id) === (activeVideo.id || activeVideo._id))
         : -1;
     const hasPrev = currentActiveIndex > 0;
     const hasNext = currentActiveIndex >= 0 && currentActiveIndex < filteredVideos.length - 1;
+
+    // Auto-hide overlay controls during playback
+    useEffect(() => {
+        if (!showControls || !isPlaying) return;
+        const timeout = setTimeout(() => setShowControls(false), 2500);
+        return () => clearTimeout(timeout);
+    }, [showControls, isPlaying]);
+
+    // Reset player state when activeVideo changes
+    useEffect(() => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        setDuration(0);
+        setShowControls(true);
+        setShowSettings(false);
+        setDoubleTapFeedback(null);
+        setGdriveFallback(false);
+        if (videoRef.current) {
+            videoRef.current.playbackRate = playbackRate;
+        }
+    }, [activeVideo?.id, activeVideo?._id, activeVideo?.video_url]);
+
+    const togglePlay = (e) => {
+        e?.stopPropagation();
+        if (!videoRef.current) return;
+        if (isPlaying) {
+            videoRef.current.pause();
+            setIsPlaying(false);
+            setShowControls(true);
+        } else {
+            videoRef.current.play().then(() => {
+                setIsPlaying(true);
+            }).catch(err => {
+                console.warn("Autoplay error:", err);
+            });
+        }
+    };
+
+    const handleTimeUpdate = () => {
+        if (videoRef.current) {
+            setCurrentTime(videoRef.current.currentTime);
+        }
+    };
+
+    const handleLoadedMetadata = () => {
+        if (videoRef.current) {
+            setDuration(videoRef.current.duration || 0);
+        }
+    };
+
+    const handleSeek = (e) => {
+        e.stopPropagation();
+        const time = parseFloat(e.target.value);
+        if (videoRef.current) {
+            videoRef.current.currentTime = time;
+            setCurrentTime(time);
+        }
+    };
+
+    const toggleMute = (e) => {
+        e?.stopPropagation();
+        if (!videoRef.current) return;
+        const nextMuted = !videoRef.current.muted;
+        videoRef.current.muted = nextMuted;
+        setIsMuted(nextMuted);
+    };
+
+    const handleSpeedChange = (speed) => {
+        setPlaybackRate(speed);
+        if (videoRef.current) {
+            videoRef.current.playbackRate = speed;
+        }
+        setShowSettings(false);
+    };
+
+    // YouTube Double-Tap to Skip Logic (10s back / 10s forward)
+    const handleVideoTap = (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const width = rect.width;
+
+        if (e.detail === 2) {
+            if (!videoRef.current) return;
+            if (clickX > width / 2) {
+                videoRef.current.currentTime = Math.min((videoRef.current.duration || 10000), videoRef.current.currentTime + 10);
+                setDoubleTapFeedback('right');
+            } else {
+                videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+                setDoubleTapFeedback('left');
+            }
+            setTimeout(() => setDoubleTapFeedback(null), 600);
+        } else if (e.detail === 1) {
+            setShowControls(prev => !prev);
+            setShowSettings(false);
+        }
+    };
+
+    const formatTime = (timeInSeconds) => {
+        if (!timeInSeconds || isNaN(timeInSeconds)) return '0:00';
+        const mins = Math.floor(timeInSeconds / 60);
+        const secs = Math.floor(timeInSeconds % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
 
     const handleSelectVideo = (video) => {
         setActiveVideo(video);
@@ -464,7 +606,7 @@ export default function StudentVideos() {
             `}</style>
 
             <section className={`max-w-[1520px] mx-auto p-3 sm:p-4 md:px-8 lg:px-10 md:py-6 space-y-5 md:space-y-6 relative animate-fade-in no-select-drm ${isObscured ? 'blur-2xl select-none pointer-events-none opacity-40' : ''}`}>
-                
+
                 {/* Security Focus Loss Alert */}
                 {isObscured && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xl">
@@ -479,7 +621,7 @@ export default function StudentVideos() {
                         </div>
                     </div>
                 )}
-                
+
                 {/* Security Floating DRM Watermark Overlay */}
                 <div className="fixed inset-0 z-40 pointer-events-none overflow-hidden opacity-[0.035] dark:opacity-[0.05] flex flex-wrap gap-14 justify-center items-center mix-blend-difference no-select-drm">
                     {Array.from({ length: 36 }).map((_, i) => (
@@ -519,11 +661,10 @@ export default function StudentVideos() {
                             <button
                                 type="button"
                                 onClick={() => setViewMode('cinema')}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                                    viewMode === 'cinema'
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === 'cinema'
                                         ? 'bg-surface-container-lowest text-primary shadow-xs font-bold'
                                         : 'text-on-surface-variant hover:text-on-surface'
-                                }`}
+                                    }`}
                                 title="Cinema Theater Player View"
                             >
                                 <span className="material-symbols-outlined text-[16px]">theaters</span>
@@ -532,11 +673,10 @@ export default function StudentVideos() {
                             <button
                                 type="button"
                                 onClick={() => setViewMode('grid')}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                                    viewMode === 'grid'
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${viewMode === 'grid'
                                         ? 'bg-surface-container-lowest text-primary shadow-xs font-bold'
                                         : 'text-on-surface-variant hover:text-on-surface'
-                                }`}
+                                    }`}
                                 title="Browse Video Catalog Grid"
                             >
                                 <span className="material-symbols-outlined text-[16px]">grid_view</span>
@@ -588,47 +728,229 @@ export default function StudentVideos() {
                         {viewMode === 'cinema' && activeVideo && (
                             <div className="space-y-6">
                                 <div className={`grid grid-cols-1 ${isTheaterMode ? 'lg:grid-cols-1' : 'lg:grid-cols-12'} gap-6 items-start`}>
-                                    
+
                                     {/* ----------------------------------------------------------------- */}
                                     {/* MAIN VIDEO PLAYER COLUMN (Left 7-8 cols on Desktop)                */}
                                     {/* ----------------------------------------------------------------- */}
                                     <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-8 xl:col-span-8'} space-y-4`}>
-                                        
+
                                         {/* Video Stage Frame with Ambient Backdrop */}
                                         <div className="relative group">
                                             {/* Ambient backdrop glow */}
                                             <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-[#5D8BCC]/20 to-primary/10 rounded-3xl blur-xl ambient-glow pointer-events-none -z-10" />
 
-                                            <div 
+                                            <div
                                                 ref={playerContainerRef}
                                                 id="student-video-player-stage"
                                                 onContextMenu={(e) => e.preventDefault()}
-                                                className="aspect-video w-full bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative select-none flex items-center justify-center border border-outline-variant/40 ring-1 ring-white/10"
+                                                onClick={handleVideoTap}
+                                                className="aspect-video w-full bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative select-none flex items-center justify-center border border-outline-variant/40 ring-1 ring-white/10 group cursor-pointer"
                                             >
-                                                {/* Player Embed or HTML5 Video */}
+                                                {/* Player Embed or YouTube-Style HTML5 Video Player */}
                                                 {isIframeEmbed(activeVideo.video_url) ? (
                                                     <iframe
                                                         src={getEmbedUrl(activeVideo.video_url)}
                                                         title={activeVideo.title}
-                                                        className="w-full h-full border-0"
+                                                        className="w-full h-full border-0 pointer-events-auto"
                                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                                                        allowFullScreen
                                                     />
                                                 ) : (
-                                                    <video
-                                                        key={activeVideo.id || activeVideo._id || activeVideo.video_url}
-                                                        src={activeVideo.video_url}
-                                                        poster={activeVideo.thumbnail_url || getYouTubeThumbnail(activeVideo.video_url) || ''}
-                                                        controls
-                                                        playsInline
-                                                        controlsList="nodownload"
-                                                        className="w-full h-full object-contain"
-                                                    />
+                                                    <>
+                                                        {/* Native HTML5 Video Element with Google Drive direct stream support */}
+                                                        {(() => {
+                                                            const gdriveSource = getDirectStreamSource(activeVideo.video_url);
+                                                            return (
+                                                                <video
+                                                                    ref={videoRef}
+                                                                    key={activeVideo.id || activeVideo._id || activeVideo.video_url}
+                                                                    src={gdriveSource ? gdriveSource.streamUrl : activeVideo.video_url}
+                                                                    poster={activeVideo.thumbnail_url || getYouTubeThumbnail(activeVideo.video_url) || ''}
+                                                                    playsInline
+                                                                    controlsList="nodownload"
+                                                                    onTimeUpdate={handleTimeUpdate}
+                                                                    onLoadedMetadata={handleLoadedMetadata}
+                                                                    onError={() => {
+                                                                        if (gdriveSource) {
+                                                                            console.warn("Direct stream failed, switching to preview iframe fallback");
+                                                                            setGdriveFallback(true);
+                                                                        }
+                                                                    }}
+                                                                    onEnded={() => {
+                                                                        setIsPlaying(false);
+                                                                        setShowControls(true);
+                                                                        if (hasNext) handleNextVideo();
+                                                                    }}
+                                                                    className="w-full h-full object-contain pointer-events-none"
+                                                                >
+                                                                    {gdriveSource && (
+                                                                        <>
+                                                                            <source src={gdriveSource.streamUrl} type="video/mp4" />
+                                                                            <source src={gdriveSource.lh3Url} type="video/mp4" />
+                                                                        </>
+                                                                    )}
+                                                                </video>
+                                                            );
+                                                        })()}
+
+                                                        {/* Double-Tap Skip Feedback Ripple Indicator */}
+                                                        {doubleTapFeedback && (
+                                                            <div className={`absolute inset-y-0 w-1/3 flex items-center justify-center pointer-events-none z-30 transition-opacity duration-300 ${doubleTapFeedback === 'left' ? 'left-0 bg-white/10 rounded-r-full' : 'right-0 bg-white/10 rounded-l-full'
+                                                                }`}>
+                                                                <div className="flex flex-col items-center text-white animate-pulse">
+                                                                    <span className="material-symbols-outlined text-4xl">
+                                                                        {doubleTapFeedback === 'left' ? 'replay_10' : 'forward_10'}
+                                                                    </span>
+                                                                    <span className="text-[11px] font-bold tracking-wider">10 seconds</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* YouTube-Style Mobile UI Controls Overlay Layer */}
+                                                        <div
+                                                            className={`absolute inset-0 bg-black/50 flex flex-col justify-between transition-opacity duration-200 z-20 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                                                                }`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            {/* Top Bar: Title & Settings */}
+                                                            <div className="p-3 sm:p-4 flex items-center justify-between bg-gradient-to-b from-black/80 via-black/30 to-transparent">
+                                                                <div className="flex items-center gap-2 max-w-[75%]">
+                                                                    <h3 className="text-white text-xs sm:text-sm font-bold truncate drop-shadow-md">
+                                                                        {activeVideo.title}
+                                                                    </h3>
+                                                                </div>
+                                                                <div className="relative">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setShowSettings(prev => !prev);
+                                                                        }}
+                                                                        className="text-white p-1.5 hover:bg-white/20 rounded-full transition cursor-pointer active:scale-90"
+                                                                        title="Playback Settings"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[20px]">settings</span>
+                                                                    </button>
+
+                                                                    {/* Settings Dropdown Popup */}
+                                                                    {showSettings && (
+                                                                        <div className="absolute right-0 top-10 w-36 bg-black/90 backdrop-blur-md rounded-xl p-2 border border-white/20 shadow-2xl text-white text-xs z-50 animate-scale-up">
+                                                                            <p className="text-[10px] text-white/60 font-semibold px-2 py-1 uppercase tracking-wider">Speed</p>
+                                                                            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(speed => (
+                                                                                <button
+                                                                                    key={speed}
+                                                                                    type="button"
+                                                                                    onClick={() => handleSpeedChange(speed)}
+                                                                                    className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center justify-between text-xs font-medium hover:bg-white/20 transition cursor-pointer ${playbackRate === speed ? 'text-red-500 font-bold' : 'text-white'
+                                                                                        }`}
+                                                                                >
+                                                                                    <span>{speed === 1 ? 'Normal' : `${speed}x`}</span>
+                                                                                    {playbackRate === speed && (
+                                                                                        <span className="material-symbols-outlined text-[14px]">check</span>
+                                                                                    )}
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Center Control Deck: -10s, Play/Pause, +10s */}
+                                                            <div className="flex items-center justify-center gap-6 sm:gap-10 text-white">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (videoRef.current) {
+                                                                            videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10);
+                                                                        }
+                                                                    }}
+                                                                    className="p-2 sm:p-2.5 rounded-full hover:bg-white/20 active:scale-90 transition cursor-pointer"
+                                                                    title="Skip 10s Backward"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-2xl sm:text-3xl">replay_10</span>
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={togglePlay}
+                                                                    className="p-3.5 sm:p-4 bg-black/60 hover:bg-black/80 border border-white/30 rounded-full active:scale-95 transition shadow-2xl cursor-pointer hover:scale-105"
+                                                                    title={isPlaying ? "Pause" : "Play"}
+                                                                >
+                                                                    <span className="material-symbols-outlined text-3xl sm:text-4xl">
+                                                                        {isPlaying ? 'pause' : 'play_arrow'}
+                                                                    </span>
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (videoRef.current) {
+                                                                            videoRef.current.currentTime = Math.min((videoRef.current.duration || 10000), videoRef.current.currentTime + 10);
+                                                                        }
+                                                                    }}
+                                                                    className="p-2 sm:p-2.5 rounded-full hover:bg-white/20 active:scale-90 transition cursor-pointer"
+                                                                    title="Skip 10s Forward"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-2xl sm:text-3xl">forward_10</span>
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Bottom Panel: Time, Audio & YouTube-Style Red Progress Slider */}
+                                                            <div className="w-full p-3 sm:p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent space-y-2">
+                                                                {/* YouTube-Style Red Progress Timeline Slider */}
+                                                                <div className="relative w-full flex items-center group">
+                                                                    <input
+                                                                        type="range"
+                                                                        min="0"
+                                                                        max={duration || 100}
+                                                                        step="0.1"
+                                                                        value={currentTime}
+                                                                        onChange={handleSeek}
+                                                                        className="w-full h-1 sm:h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-red-600 focus:outline-none transition-all hover:h-2"
+                                                                        style={{
+                                                                            background: `linear-gradient(to right, #dc2626 0%, #dc2626 ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(currentTime / (duration || 1)) * 100}%, rgba(255,255,255,0.3) 100%)`
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                {/* Audio, Time Display, & Fullscreen Button */}
+                                                                <div className="flex items-center justify-between text-white text-xs">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={toggleMute}
+                                                                            className="p-1 hover:bg-white/20 rounded-full transition cursor-pointer"
+                                                                            title={isMuted ? "Unmute" : "Mute"}
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[18px]">
+                                                                                {isMuted ? 'volume_off' : 'volume_up'}
+                                                                            </span>
+                                                                        </button>
+                                                                        <span className="text-[11px] font-medium tracking-wide">
+                                                                            {formatTime(currentTime)} <span className="text-white/50">/</span> {formatTime(duration)}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={toggleFullscreen}
+                                                                        className="p-1 hover:bg-white/20 rounded-full transition cursor-pointer"
+                                                                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[18px]">
+                                                                            {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                                                                        </span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </>
                                                 )}
 
                                                 {/* In-Player Floating Security Watermark */}
                                                 {watermarkText && (
-                                                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.14] mix-blend-difference select-none z-20">
+                                                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.14] mix-blend-difference select-none z-10">
                                                         <p className="text-white transform -rotate-12 font-extrabold text-sm sm:text-lg md:text-xl tracking-wider whitespace-nowrap drop-shadow-lg">
                                                             {watermarkText}
                                                         </p>
@@ -650,7 +972,7 @@ export default function StudentVideos() {
                                                     <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                                                     <span className="hidden sm:inline">Previous</span>
                                                 </button>
-                                                
+
                                                 <div className="px-3 py-1 bg-surface-container-low rounded-xl text-[11px] font-bold text-on-surface-variant border border-outline-variant/40">
                                                     Lesson {currentActiveIndex + 1} of {filteredVideos.length}
                                                 </div>
@@ -672,11 +994,10 @@ export default function StudentVideos() {
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleWatched(activeVideo.id || activeVideo._id)}
-                                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
-                                                        isCurrentWatched
+                                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${isCurrentWatched
                                                             ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30'
                                                             : 'bg-surface-container-low text-on-surface-variant border-outline-variant/60 hover:bg-surface-container'
-                                                    }`}
+                                                        }`}
                                                     title="Mark lesson as completed"
                                                 >
                                                     <span className="material-symbols-outlined text-[16px]">
@@ -689,9 +1010,8 @@ export default function StudentVideos() {
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsTheaterMode(prev => !prev)}
-                                                    className={`hidden lg:flex px-3 py-1.5 rounded-xl text-xs font-semibold items-center gap-1.5 border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer ${
-                                                        isTheaterMode ? 'bg-primary/10 text-primary border-primary/30 font-bold' : ''
-                                                    }`}
+                                                    className={`hidden lg:flex px-3 py-1.5 rounded-xl text-xs font-semibold items-center gap-1.5 border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer ${isTheaterMode ? 'bg-primary/10 text-primary border-primary/30 font-bold' : ''
+                                                        }`}
                                                     title="Toggle Theater Mode (T)"
                                                 >
                                                     <span className="material-symbols-outlined text-[16px]">
@@ -719,11 +1039,10 @@ export default function StudentVideos() {
                                             <button
                                                 type="button"
                                                 onClick={() => setMobileTab('overview')}
-                                                className={`flex-1 py-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                                                    mobileTab === 'overview'
+                                                className={`flex-1 py-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${mobileTab === 'overview'
                                                         ? 'bg-primary text-on-primary shadow-xs'
                                                         : 'text-on-surface-variant hover:bg-surface-container'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">info</span>
                                                 <span>Lesson Details</span>
@@ -731,11 +1050,10 @@ export default function StudentVideos() {
                                             <button
                                                 type="button"
                                                 onClick={() => setMobileTab('playlist')}
-                                                className={`flex-1 py-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                                                    mobileTab === 'playlist'
+                                                className={`flex-1 py-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer flex items-center justify-center gap-1.5 ${mobileTab === 'playlist'
                                                         ? 'bg-primary text-on-primary shadow-xs'
                                                         : 'text-on-surface-variant hover:bg-surface-container'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">playlist_play</span>
                                                 <span>Course Playlist ({filteredVideos.length})</span>
@@ -748,9 +1066,9 @@ export default function StudentVideos() {
                                                 <div>
                                                     <div className="flex flex-wrap items-center gap-2 mb-2">
                                                         {activeVideo.category && (
-                                                            <CategoryBadge 
-                                                                category={activeVideo.category} 
-                                                                color={activeVideo.category_color} 
+                                                            <CategoryBadge
+                                                                category={activeVideo.category}
+                                                                color={activeVideo.category_color}
                                                             />
                                                         )}
                                                         {activeVideo.level && (
@@ -796,7 +1114,7 @@ export default function StudentVideos() {
                                     {/* PLAYLIST SIDEBAR COLUMN (Right 4-5 cols or Below on Theater)       */}
                                     {/* ----------------------------------------------------------------- */}
                                     <div className={`${isTheaterMode ? 'w-full' : 'lg:col-span-4 xl:col-span-4'} ${mobileTab === 'playlist' ? 'block' : 'hidden lg:block'}`}>
-                                        <div 
+                                        <div
                                             ref={playlistContainerRef}
                                             className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-4 md:p-5 shadow-sm space-y-4 lg:sticky lg:top-4 max-h-[860px] flex flex-col"
                                         >
@@ -817,7 +1135,7 @@ export default function StudentVideos() {
                                                 {/* Search inside Playlist */}
                                                 <div className="relative">
                                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">search</span>
-                                                    <input 
+                                                    <input
                                                         type="text"
                                                         placeholder="Search lessons..."
                                                         value={searchQuery}
@@ -825,7 +1143,7 @@ export default function StudentVideos() {
                                                         className="w-full pl-8 pr-3 py-1.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
                                                     />
                                                     {searchQuery && (
-                                                        <button 
+                                                        <button
                                                             onClick={() => setSearchQuery('')}
                                                             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-[14px]"
                                                         >
@@ -842,11 +1160,10 @@ export default function StudentVideos() {
                                                                 key={cat}
                                                                 type="button"
                                                                 onClick={() => setSelectedCategory(cat)}
-                                                                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                                                                    selectedCategory === cat
+                                                                className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${selectedCategory === cat
                                                                         ? 'bg-primary text-on-primary font-bold shadow-2xs'
                                                                         : 'bg-surface-container-low border border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {cat}
                                                             </button>
@@ -866,18 +1183,17 @@ export default function StudentVideos() {
                                                         <div
                                                             key={video.id || video._id || idx}
                                                             onClick={() => handleSelectVideo(video)}
-                                                            className={`group p-2.5 rounded-2xl border transition-all cursor-pointer flex gap-3 items-center relative ${
-                                                                isSelected
+                                                            className={`group p-2.5 rounded-2xl border transition-all cursor-pointer flex gap-3 items-center relative ${isSelected
                                                                     ? 'bg-primary/10 border-primary/60 shadow-xs ring-1 ring-primary/40'
                                                                     : 'bg-surface-container-low/60 border-outline-variant/50 hover:bg-surface-container hover:border-outline-variant'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {/* Thumbnail / Index box */}
                                                             <div className="relative w-24 sm:w-28 aspect-video rounded-xl overflow-hidden bg-black flex-shrink-0 flex items-center justify-center border border-outline-variant/30">
                                                                 {video.thumbnail_url || ytThumb ? (
-                                                                    <img 
-                                                                        src={video.thumbnail_url || ytThumb} 
-                                                                        alt={video.title} 
+                                                                    <img
+                                                                        src={video.thumbnail_url || ytThumb}
+                                                                        alt={video.title}
                                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                                                         loading="lazy"
                                                                     />
@@ -916,9 +1232,8 @@ export default function StudentVideos() {
                                                                     )}
                                                                 </div>
 
-                                                                <h4 className={`text-xs font-bold line-clamp-2 transition-colors ${
-                                                                    isSelected ? 'text-primary font-extrabold' : 'text-on-surface group-hover:text-primary'
-                                                                }`}>
+                                                                <h4 className={`text-xs font-bold line-clamp-2 transition-colors ${isSelected ? 'text-primary font-extrabold' : 'text-on-surface group-hover:text-primary'
+                                                                    }`}>
                                                                     {video.title}
                                                                 </h4>
 
@@ -954,11 +1269,10 @@ export default function StudentVideos() {
                                                         key={cat}
                                                         type="button"
                                                         onClick={() => setSelectedCategory(cat)}
-                                                        className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                                                            selectedCategory === cat
+                                                        className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${selectedCategory === cat
                                                                 ? 'bg-primary text-on-primary shadow-xs font-bold'
                                                                 : 'bg-surface-container-low border border-outline-variant/60 text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {cat}
                                                     </button>
@@ -969,7 +1283,7 @@ export default function StudentVideos() {
                                         {/* Search Input */}
                                         <div className="relative min-w-[240px]">
                                             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 placeholder="Search lessons..."
                                                 value={searchQuery}
@@ -987,12 +1301,12 @@ export default function StudentVideos() {
                                         const isWatched = Boolean(watchedVideos[video.id || video._id]);
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={video.id || video._id || idx}
                                                 className="group bg-surface-container-lowest rounded-3xl overflow-hidden border border-outline-variant/60 hover:border-primary/60 hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
                                             >
                                                 {/* Thumbnail Header with Play Overlay */}
-                                                <div 
+                                                <div
                                                     onClick={() => {
                                                         setActiveVideo(video);
                                                         setViewMode('cinema');
@@ -1000,8 +1314,8 @@ export default function StudentVideos() {
                                                     className="relative aspect-video bg-black overflow-hidden cursor-pointer flex items-center justify-center"
                                                 >
                                                     {video.thumbnail_url || ytThumb ? (
-                                                        <img 
-                                                            src={video.thumbnail_url || ytThumb} 
+                                                        <img
+                                                            src={video.thumbnail_url || ytThumb}
                                                             alt={video.title}
                                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                             loading="lazy"
@@ -1014,7 +1328,7 @@ export default function StudentVideos() {
 
                                                     {/* Gradient & Play Button Overlay */}
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
-                                                    
+
                                                     <div className="absolute inset-0 flex items-center justify-center">
                                                         <div className="w-12 h-12 rounded-full bg-primary/90 text-white flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform backdrop-blur-sm">
                                                             <span className="material-symbols-outlined text-2xl">play_arrow</span>
@@ -1040,7 +1354,7 @@ export default function StudentVideos() {
                                                 {/* Card Content Details */}
                                                 <div className="p-4 flex flex-col flex-1 justify-between gap-3">
                                                     <div>
-                                                        <h3 
+                                                        <h3
                                                             onClick={() => {
                                                                 setActiveVideo(video);
                                                                 setViewMode('cinema');
@@ -1054,9 +1368,9 @@ export default function StudentVideos() {
 
                                                     <div className="flex items-center justify-between pt-2 border-t border-outline-variant/40">
                                                         {video.category && (
-                                                            <CategoryBadge 
-                                                                category={video.category} 
-                                                                color={video.category_color} 
+                                                            <CategoryBadge
+                                                                category={video.category}
+                                                                color={video.category_color}
                                                             />
                                                         )}
 
