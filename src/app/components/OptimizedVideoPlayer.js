@@ -10,27 +10,35 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
     const posterUrl = video?.thumbnail_url || '';
     const videoTitle = video?.title || 'Course Video';
 
+    const [useIframeFallback, setUseIframeFallback] = useState(false);
+
     // Parse URL for proper embed formats
     const parseVideoSource = (url) => {
         if (!url) return { type: 'unknown', src: '' };
 
-        // 1. Google Drive Links
+        // 1. Google Drive Links (Convert to direct streaming source)
         if (url.includes('drive.google.com')) {
+            let fileId = null;
             const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
             if (fileMatch && fileMatch[1]) {
+                fileId = fileMatch[1];
+            } else {
+                const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                if (idMatch && idMatch[1]) {
+                    fileId = idMatch[1];
+                }
+            }
+
+            if (fileId) {
                 return { 
-                    type: 'gdrive', 
-                    src: `https://drive.google.com/file/d/${fileMatch[1]}/preview` 
+                    type: 'gdrive',
+                    fileId: fileId,
+                    directSrc: `https://drive.google.com/uc?export=download&id=${fileId}`,
+                    altDirectSrc: `https://lh3.googleusercontent.com/d/${fileId}`,
+                    iframeSrc: `https://drive.google.com/file/d/${fileId}/preview`
                 };
             }
-            const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-            if (idMatch && idMatch[1]) {
-                return { 
-                    type: 'gdrive', 
-                    src: `https://drive.google.com/file/d/${idMatch[1]}/preview` 
-                };
-            }
-            return { type: 'gdrive', src: url };
+            return { type: 'iframe', src: url };
         }
 
         // 2. YouTube Links
@@ -168,7 +176,23 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                     : 'relative w-full pb-[56.25%] h-0 overflow-hidden rounded-t-2xl'
             }`}
         >
-            {/* 1. Native HTML5 Video */}
+            {/* 1. Google Drive Direct Stream (Native HTML5 Player) */}
+            {source.type === 'gdrive' && !useIframeFallback && (
+                <video
+                    poster={posterUrl}
+                    controls
+                    playsInline
+                    controlsList="nodownload" 
+                    disablePictureInPicture
+                    onError={() => setUseIframeFallback(true)}
+                    className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
+                >
+                    <source src={source.directSrc} type="video/mp4" />
+                    <source src={source.altDirectSrc} type="video/mp4" />
+                </video>
+            )}
+
+            {/* 2. Direct HTML5 Video Files */}
             {source.type === 'html5' && (
                 <video
                     src={source.src}
@@ -181,10 +205,10 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                 />
             )}
 
-            {/* 2. Google Drive / YouTube / Vimeo / Iframe Embed */}
-            {source.type !== 'html5' && source.src && (
+            {/* 3. Google Drive Fallback / YouTube / Vimeo / Iframe Embed */}
+            {((source.type === 'gdrive' && useIframeFallback) || (source.type !== 'gdrive' && source.type !== 'html5' && source.src)) && (
                 <iframe 
-                    src={source.src} 
+                    src={source.type === 'gdrive' ? source.iframeSrc : source.src} 
                     className="absolute top-0 left-0 w-full h-full border-0 z-10"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
