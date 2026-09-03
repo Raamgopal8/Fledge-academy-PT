@@ -33,7 +33,7 @@ export default function TempLoginPage() {
         },
         body: JSON.stringify({
           email: user.email,
-          name: user.displayName || fallbackName || user.email.split("@")[0].title(),
+          name: user.displayName || fallbackName || (user.email ? user.email.split("@")[0] : "Student"),
           photo_url: user.photoURL || "",
           firebase_uid: user.uid,
           id_token: idToken,
