@@ -1,11 +1,23 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 export default function OptimizedVideoPlayer({ video, watermarkText }) {
     const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(1);
+    const [isMuted, setIsMuted] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1);
+    const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [showControls, setShowControls] = useState(true);
     const [useFallbackIframe, setUseFallbackIframe] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(false);
+
+    const containerRef = useRef(null);
     const videoRef = useRef(null);
+    const controlsTimeoutRef = useRef(null);
 
     const videoUrl = (video?.video_url || '').trim();
     const posterUrl = video?.thumbnail_url || '';
@@ -46,7 +58,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             if (match && match[1]) {
                 return { 
                     type: 'youtube', 
-                    src: `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&playsinline=1` 
+                    src: `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&playsinline=1` 
                 };
             }
         }
@@ -55,7 +67,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             if (match && match[1]) {
                 return { 
                     type: 'youtube', 
-                    src: `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&playsinline=1` 
+                    src: `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&playsinline=1` 
                 };
             }
         }
@@ -66,7 +78,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             if (match && match[1]) {
                 return { 
                     type: 'vimeo', 
-                    src: `https://player.vimeo.com/video/${match[1]}?autoplay=1&playsinline=1` 
+                    src: `https://player.vimeo.com/video/${match[1]}?playsinline=1` 
                 };
             }
         }
@@ -86,92 +98,417 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
     };
 
     const source = parseVideoSource(videoUrl);
+    const isHtml5Compatible = (source.type === 'html5' || source.type === 'gdrive') && !useFallbackIframe;
 
-    const handleStartPlayback = () => {
-        setIsPlaying(true);
+    // Format seconds to mm:ss or hh:mm:ss
+    const formatTime = (secs) => {
+        if (!secs || isNaN(secs)) return '0:00';
+        const totalSeconds = Math.floor(secs);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const formattedSeconds = seconds < 10 ? `0${seconds}` : seconds;
+        if (hours > 0) {
+            const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+            return `${hours}:${formattedMinutes}:${formattedSeconds}`;
+        }
+        return `${minutes}:${formattedSeconds}`;
+    };
+
+    // Auto-hide controls
+    const triggerControls = useCallback(() => {
+        setShowControls(true);
+        if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current);
+        }
+        if (isPlaying) {
+            controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+                setShowSpeedMenu(false);
+            }, 3000);
+        }
+    }, [isPlaying]);
+
+    // Play / Pause
+    const togglePlay = () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (video.paused) {
+            video.play().then(() => setIsPlaying(true)).catch(() => {});
+        } else {
+            video.pause();
+            setIsPlaying(false);
+        }
+        triggerControls();
+    };
+
+    // Seek +/- 10s
+    const skipTime = (amount) => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + amount));
+        triggerControls();
+    };
+
+    // Scrub / Seek Progress Bar
+    const handleSeek = (e) => {
+        const video = videoRef.current;
+        if (!video || !duration) return;
+        const newTime = parseFloat(e.target.value);
+        video.currentTime = newTime;
+        setCurrentTime(newTime);
+        triggerControls();
+    };
+
+    // Volume Change
+    const handleVolumeChange = (e) => {
+        const newVol = parseFloat(e.target.value);
+        setVolume(newVol);
+        setIsMuted(newVol === 0);
         if (videoRef.current) {
-            videoRef.current.play().catch(() => {});
+            videoRef.current.volume = newVol;
+            videoRef.current.muted = newVol === 0;
+        }
+        triggerControls();
+    };
+
+    // Mute Toggle
+    const toggleMute = () => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (isMuted) {
+            video.muted = false;
+            setIsMuted(false);
+            if (volume === 0) {
+                setVolume(1);
+                video.volume = 1;
+            }
+        } else {
+            video.muted = true;
+            setIsMuted(true);
+        }
+        triggerControls();
+    };
+
+    // Speed Switcher
+    const handleSpeedChange = (rate) => {
+        setPlaybackRate(rate);
+        if (videoRef.current) {
+            videoRef.current.playbackRate = rate;
+        }
+        setShowSpeedMenu(false);
+        triggerControls();
+    };
+
+    // Fullscreen Toggle
+    const toggleFullscreen = async () => {
+        const elem = containerRef.current;
+        if (!elem) return;
+
+        const isNativeFullscreen = Boolean(
+            document.fullscreenElement || 
+            document.webkitFullscreenElement || 
+            document.mozFullScreenElement || 
+            document.msFullscreenElement
+        );
+
+        if (!isNativeFullscreen && !isFullscreen) {
+            try {
+                if (elem.requestFullscreen) {
+                    await elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    await elem.webkitRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    await elem.mozRequestFullScreen();
+                } else if (elem.msRequestFullscreen) {
+                    await elem.msRequestFullscreen();
+                }
+
+                if (typeof window !== 'undefined' && screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+            } catch (err) {
+                console.warn("Fullscreen fallback to overlay state:", err);
+                setIsFullscreen(true);
+            }
+        } else {
+            try {
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    await document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    await document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    await document.msExitFullscreen();
+                }
+
+                if (typeof window !== 'undefined' && screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+            } catch (err) {
+                console.warn("Exit fullscreen error:", err);
+            }
+            setIsFullscreen(false);
         }
     };
 
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const isFs = Boolean(
+                document.fullscreenElement || 
+                document.webkitFullscreenElement || 
+                document.mozFullScreenElement || 
+                document.msFullscreenElement
+            );
+            setIsFullscreen(isFs);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        };
+    }, []);
+
+    const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+
     return (
         <div 
+            ref={containerRef}
             id={`video-player-${video.id || video._id}`}
             onContextMenu={(e) => e.preventDefault()}
-            className="relative w-full pb-[56.25%] h-0 overflow-hidden bg-black select-none rounded-t-2xl group/player"
+            onMouseMove={triggerControls}
+            onTouchStart={triggerControls}
+            className={`w-full bg-black select-none group relative transition-all ${
+                isFullscreen 
+                    ? 'fixed inset-0 z-[9999] w-screen h-screen m-0 p-0 rounded-none flex items-center justify-center' 
+                    : 'relative w-full pb-[56.25%] h-0 overflow-hidden rounded-t-2xl'
+            }`}
         >
-            {/* 1. Default Poster Thumbnail & Center Play Button Overlay (when not playing) */}
-            {!isPlaying && (
-                <div 
-                    onClick={handleStartPlayback}
-                    className="absolute inset-0 z-30 cursor-pointer flex items-center justify-center bg-black/40 hover:bg-black/20 transition-all"
-                >
-                    {/* Thumbnail Image Background if present */}
-                    {posterUrl && (
-                        <img 
-                            src={posterUrl} 
-                            alt={videoTitle} 
-                            className="absolute inset-0 w-full h-full object-cover select-none"
-                        />
-                    )}
-
-                    {/* Dark gradient backdrop */}
-                    <div className="absolute inset-0 bg-black/30" />
-
-                    {/* Default Centered Play Button Box matching reference */}
-                    <div className="relative z-10 w-16 h-12 sm:w-20 sm:h-14 bg-black/80 hover:bg-black/95 rounded-2xl flex items-center justify-center shadow-2xl transition-transform transform group-hover/player:scale-105 active:scale-95 border border-white/10">
-                        <span className="material-symbols-outlined text-white text-3xl sm:text-4xl translate-x-0.5">
-                            play_arrow
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* 2. Active Video Playback */}
-            {isPlaying && (
+            {/* 1. Direct HTML5 / Google Drive Stream Player */}
+            {isHtml5Compatible && (
                 <>
-                    {/* Native HTML5 Video & Direct Google Drive Stream */}
-                    {(source.type === 'html5' || (source.type === 'gdrive' && !useFallbackIframe)) && (
-                        <video
-                            ref={videoRef}
-                            src={source.src}
-                            poster={posterUrl}
-                            controls
-                            autoPlay
-                            playsInline
-                            controlsList="nodownload" 
-                            disablePictureInPicture
-                            onError={() => {
-                                if (source.type === 'gdrive') {
-                                    setUseFallbackIframe(true);
-                                }
-                            }}
-                            className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
-                        >
-                            <source src={source.src} type="video/mp4" />
-                            {source.fileId && (
-                                <source src={`https://lh3.googleusercontent.com/d/${source.fileId}`} type="video/mp4" />
-                            )}
-                            Your browser does not support HTML5 video.
-                        </video>
+                    <video
+                        ref={videoRef}
+                        src={source.src}
+                        poster={posterUrl}
+                        playsInline
+                        preload="metadata"
+                        onClick={togglePlay}
+                        onTimeUpdate={() => {
+                            if (videoRef.current) {
+                                setCurrentTime(videoRef.current.currentTime);
+                            }
+                        }}
+                        onLoadedMetadata={() => {
+                            if (videoRef.current) {
+                                setDuration(videoRef.current.duration);
+                            }
+                        }}
+                        onWaiting={() => setIsBuffering(true)}
+                        onPlaying={() => {
+                            setIsBuffering(false);
+                            setIsPlaying(true);
+                        }}
+                        onPause={() => setIsPlaying(false)}
+                        onEnded={() => setIsPlaying(false)}
+                        onError={() => {
+                            if (source.type === 'gdrive') {
+                                setUseFallbackIframe(true);
+                            }
+                        }}
+                        className="absolute top-0 left-0 w-full h-full object-contain cursor-pointer z-10"
+                    >
+                        <source src={source.src} type="video/mp4" />
+                        {source.fileId && (
+                            <source src={`https://lh3.googleusercontent.com/d/${source.fileId}`} type="video/mp4" />
+                        )}
+                    </video>
+
+                    {/* Buffering Indicator */}
+                    {isBuffering && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                            <div className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center">
+                                <span className="material-symbols-outlined text-3xl text-primary animate-spin">progress_activity</span>
+                            </div>
+                        </div>
                     )}
 
-                    {/* Fallback Embed or YouTube / Vimeo / Iframe */}
-                    {((source.type !== 'html5' && source.type !== 'gdrive') || (source.type === 'gdrive' && useFallbackIframe)) && source.src && (
-                        <iframe 
-                            src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
-                            className="absolute top-0 left-0 w-full h-full border-0 z-10"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                            allowFullScreen
-                            playsInline
-                            title={videoTitle}
-                        />
+                    {/* Big Center Play/Pause Indicator (when paused) */}
+                    {!isPlaying && !isBuffering && (
+                        <div 
+                            onClick={togglePlay}
+                            className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer bg-black/30 hover:bg-black/40 transition-colors"
+                        >
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary/90 hover:bg-primary text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
+                                <span className="material-symbols-outlined text-3xl sm:text-4xl translate-x-0.5">play_arrow</span>
+                            </div>
+                        </div>
                     )}
+
+                    {/* Bottom Control Bar */}
+                    <div 
+                        className={`absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 sm:p-4 transition-opacity duration-300 flex flex-col gap-1.5 ${
+                            showControls || !isPlaying ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                        }`}
+                    >
+                        {/* Interactive Progress Bar */}
+                        <div className="relative w-full flex items-center group/progress h-3 cursor-pointer">
+                            <input
+                                type="range"
+                                min="0"
+                                max={duration || 100}
+                                step="0.1"
+                                value={currentTime}
+                                onChange={handleSeek}
+                                className="w-full h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary hover:h-2 transition-all"
+                                style={{
+                                    background: `linear-gradient(to right, #5D8BCC ${progressPercentage}%, rgba(255, 255, 255, 0.3) ${progressPercentage}%)`
+                                }}
+                            />
+                        </div>
+
+                        {/* Controls Row */}
+                        <div className="flex items-center justify-between text-white text-xs sm:text-sm">
+                            {/* Left Controls: Play/Pause, -10s, +10s, Volume, Time */}
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                {/* Play / Pause */}
+                                <button
+                                    type="button"
+                                    onClick={togglePlay}
+                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    title={isPlaying ? "Pause" : "Play"}
+                                >
+                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">
+                                        {isPlaying ? 'pause' : 'play_arrow'}
+                                    </span>
+                                </button>
+
+                                {/* Rewind 10s */}
+                                <button
+                                    type="button"
+                                    onClick={() => skipTime(-10)}
+                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    title="Rewind 10s"
+                                >
+                                    <span className="material-symbols-outlined text-[18px] sm:text-[22px]">
+                                        replay_10
+                                    </span>
+                                </button>
+
+                                {/* Forward 10s */}
+                                <button
+                                    type="button"
+                                    onClick={() => skipTime(10)}
+                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    title="Forward 10s"
+                                >
+                                    <span className="material-symbols-outlined text-[18px] sm:text-[22px]">
+                                        forward_10
+                                    </span>
+                                </button>
+
+                                {/* Volume / Mute */}
+                                <div className="flex items-center gap-1 group/vol">
+                                    <button
+                                        type="button"
+                                        onClick={toggleMute}
+                                        className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                        title={isMuted ? "Unmute" : "Mute"}
+                                    >
+                                        <span className="material-symbols-outlined text-[18px] sm:text-[22px]">
+                                            {isMuted || volume === 0 ? 'volume_off' : volume < 0.5 ? 'volume_down' : 'volume_up'}
+                                        </span>
+                                    </button>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.05"
+                                        value={isMuted ? 0 : volume}
+                                        onChange={handleVolumeChange}
+                                        className="w-12 sm:w-16 h-1 bg-white/30 rounded-lg appearance-none cursor-pointer accent-primary hidden sm:inline-block"
+                                    />
+                                </div>
+
+                                {/* Timestamp */}
+                                <span className="text-[11px] sm:text-xs text-white/80 font-mono tracking-tight ml-1">
+                                    {formatTime(currentTime)} / {formatTime(duration)}
+                                </span>
+                            </div>
+
+                            {/* Right Controls: Playback Speed, Fullscreen */}
+                            <div className="flex items-center gap-2 sm:gap-3 relative">
+                                {/* Playback Speed */}
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                                        className="px-2 py-0.5 rounded-md hover:bg-white/10 text-xs font-bold text-white/90 hover:text-white transition-colors cursor-pointer"
+                                        title="Playback Speed"
+                                    >
+                                        {playbackRate}x
+                                    </button>
+
+                                    {showSpeedMenu && (
+                                        <div className="absolute bottom-full right-0 mb-2 bg-slate-900/95 border border-white/15 rounded-xl py-1 shadow-2xl backdrop-blur-md flex flex-col min-w-[75px] z-50">
+                                            {[0.75, 1, 1.25, 1.5, 2].map((rate) => (
+                                                <button
+                                                    key={rate}
+                                                    type="button"
+                                                    onClick={() => handleSpeedChange(rate)}
+                                                    className={`px-3 py-1 text-xs text-left transition-colors cursor-pointer ${
+                                                        playbackRate === rate ? 'bg-primary text-white font-bold' : 'text-white/80 hover:bg-white/10'
+                                                    }`}
+                                                >
+                                                    {rate}x
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Fullscreen Button */}
+                                <button
+                                    type="button"
+                                    onClick={toggleFullscreen}
+                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                                >
+                                    <span className="material-symbols-outlined text-[20px] sm:text-[24px]">
+                                        {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </>
             )}
 
-            {/* 3. Floating Security Watermark Overlay */}
+            {/* 2. Fallback / YouTube / Vimeo Iframe Embed (if non-HTML5) */}
+            {!isHtml5Compatible && source.src && (
+                <iframe 
+                    src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
+                    className="absolute top-0 left-0 w-full h-full border-0 z-10"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                    allowFullScreen
+                    playsInline
+                    title={videoTitle}
+                />
+            )}
+
+            {/* Floating Security Watermark Overlay */}
             {watermarkText && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.14] mix-blend-overlay animate-pulse select-none z-20">
                     <p className="text-white transform -rotate-12 font-bold text-lg sm:text-xl md:text-2xl whitespace-nowrap drop-shadow-md">
