@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { CategoryBadge } from '@/app/components/CategoryColorPicker';
-import OptimizedVideoPlayer from '@/app/components/OptimizedVideoPlayer';
 
 const LEVEL_COLORS = {
     'Level 5': 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
@@ -17,7 +16,7 @@ export default function StudentVideos() {
     const [error, setError] = useState(null);
     const [isObscured, setIsObscured] = useState(false);
     const [watermarkText, setWatermarkText] = useState('Protected Content');
-    const [studentInfo, setStudentInfo] = useState({ level: 'Level 5', batch: '' });
+    const [studentInfo, setStudentInfo] = useState({ level: '', batch: '' });
     const [mobileFullscreenId, setMobileFullscreenId] = useState(null);
 
     // Filter states
@@ -432,8 +431,40 @@ export default function StudentVideos() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredVideos.map(video => (
                                     <div key={video.id} className="group relative bg-surface-container-low rounded-2xl overflow-hidden border border-outline-variant hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
-                                        {/* Optimized Video Player */}
-                                        <OptimizedVideoPlayer video={video} watermarkText={watermarkText} />
+                                        {/* Simple Default Video Player */}
+                                        <div 
+                                            id={`video-player-${video.id || video._id}`} 
+                                            onContextMenu={(e) => e.preventDefault()}
+                                            className="aspect-video w-full bg-black relative select-none flex items-center justify-center rounded-t-2xl overflow-hidden"
+                                        >
+                                            {getEmbedUrl(video.video_url) ? (
+                                                <iframe
+                                                    src={getEmbedUrl(video.video_url)}
+                                                    title={video.title}
+                                                    className="w-full h-full border-0"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                                    allowFullScreen
+                                                />
+                                            ) : (
+                                                <video
+                                                    src={video.video_url}
+                                                    poster={video.thumbnail_url || ''}
+                                                    controls
+                                                    playsInline
+                                                    controlsList="nodownload"
+                                                    className="w-full h-full object-contain"
+                                                />
+                                            )}
+
+                                            {/* Security Watermark Overlay */}
+                                            {watermarkText && (
+                                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.12] mix-blend-difference select-none z-20">
+                                                    <p className="text-white transform -rotate-12 font-bold text-base sm:text-xl whitespace-nowrap drop-shadow-md">
+                                                        {watermarkText}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Card Info & Badges */}
                                         <div className="p-5 flex flex-col flex-1">
