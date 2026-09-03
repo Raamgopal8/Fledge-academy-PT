@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
 export default function OptimizedVideoPlayer({ video, watermarkText }) {
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
     const [useFallbackIframe, setUseFallbackIframe] = useState(false);
-    const containerRef = useRef(null);
+    const videoRef = useRef(null);
 
     const videoUrl = (video?.video_url || '').trim();
     const posterUrl = video?.thumbnail_url || '';
@@ -46,7 +46,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             if (match && match[1]) {
                 return { 
                     type: 'youtube', 
-                    src: `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&playsinline=1` 
+                    src: `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&playsinline=1` 
                 };
             }
         }
@@ -55,7 +55,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             if (match && match[1]) {
                 return { 
                     type: 'youtube', 
-                    src: `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&playsinline=1` 
+                    src: `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0&modestbranding=1&controls=1&playsinline=1` 
                 };
             }
         }
@@ -66,7 +66,7 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
             if (match && match[1]) {
                 return { 
                     type: 'vimeo', 
-                    src: `https://player.vimeo.com/video/${match[1]}?playsinline=1` 
+                    src: `https://player.vimeo.com/video/${match[1]}?autoplay=1&playsinline=1` 
                 };
             }
         }
@@ -87,132 +87,91 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
 
     const source = parseVideoSource(videoUrl);
 
-    const toggleFullscreen = async () => {
-        const elem = containerRef.current;
-        if (!elem) return;
-
-        const isNativeFullscreen = Boolean(
-            document.fullscreenElement || 
-            document.webkitFullscreenElement || 
-            document.mozFullScreenElement || 
-            document.msFullscreenElement
-        );
-
-        if (!isNativeFullscreen && !isFullscreen) {
-            try {
-                if (elem.requestFullscreen) {
-                    await elem.requestFullscreen();
-                } else if (elem.webkitRequestFullscreen) {
-                    await elem.webkitRequestFullscreen();
-                } else if (elem.mozRequestFullScreen) {
-                    await elem.mozRequestFullScreen();
-                } else if (elem.msRequestFullscreen) {
-                    await elem.msRequestFullscreen();
-                }
-
-                // Attempt to auto-lock landscape on supported mobile devices
-                if (typeof window !== 'undefined' && screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(() => {});
-                }
-            } catch (err) {
-                console.warn("Fullscreen request error, falling back to overlay state:", err);
-                setIsFullscreen(true);
-            }
-        } else {
-            try {
-                if (document.exitFullscreen) {
-                    await document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    await document.webkitExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    await document.mozCancelFullScreen();
-                } else if (document.msExitFullscreen) {
-                    await document.msExitFullscreen();
-                }
-
-                if (typeof window !== 'undefined' && screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
-            } catch (err) {
-                console.warn("Exit fullscreen error:", err);
-            }
-            setIsFullscreen(false);
+    const handleStartPlayback = () => {
+        setIsPlaying(true);
+        if (videoRef.current) {
+            videoRef.current.play().catch(() => {});
         }
     };
 
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            const isFs = Boolean(
-                document.fullscreenElement || 
-                document.webkitFullscreenElement || 
-                document.mozFullScreenElement || 
-                document.msFullscreenElement
-            );
-            setIsFullscreen(isFs);
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-        };
-    }, []);
-
     return (
         <div 
-            ref={containerRef}
             id={`video-player-${video.id || video._id}`}
             onContextMenu={(e) => e.preventDefault()}
-            className={`w-full bg-black select-none transition-all ${
-                isFullscreen 
-                    ? 'fixed inset-0 z-[9999] w-screen h-screen m-0 p-0 rounded-none flex items-center justify-center' 
-                    : 'relative w-full pb-[56.25%] h-0 overflow-hidden rounded-t-2xl'
-            }`}
+            className="relative w-full pb-[56.25%] h-0 overflow-hidden bg-black select-none rounded-t-2xl group/player"
         >
-            {/* 1. Native HTML5 Video & Direct Google Drive Stream */}
-            {(source.type === 'html5' || (source.type === 'gdrive' && !useFallbackIframe)) && (
-                <video
-                    src={source.src}
-                    poster={posterUrl}
-                    controls
-                    playsInline
-                    controlsList="nodownload" 
-                    disablePictureInPicture
-                    onError={() => {
-                        if (source.type === 'gdrive') {
-                            setUseFallbackIframe(true);
-                        }
-                    }}
-                    className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
+            {/* 1. Default Poster Thumbnail & Center Play Button Overlay (when not playing) */}
+            {!isPlaying && (
+                <div 
+                    onClick={handleStartPlayback}
+                    className="absolute inset-0 z-30 cursor-pointer flex items-center justify-center bg-black/40 hover:bg-black/20 transition-all"
                 >
-                    <source src={source.src} type="video/mp4" />
-                    {source.fileId && (
-                        <source src={`https://lh3.googleusercontent.com/d/${source.fileId}`} type="video/mp4" />
+                    {/* Thumbnail Image Background if present */}
+                    {posterUrl && (
+                        <img 
+                            src={posterUrl} 
+                            alt={videoTitle} 
+                            className="absolute inset-0 w-full h-full object-cover select-none"
+                        />
                     )}
-                    Your browser does not support HTML5 video.
-                </video>
+
+                    {/* Dark gradient backdrop */}
+                    <div className="absolute inset-0 bg-black/30" />
+
+                    {/* Default Centered Play Button Box matching reference */}
+                    <div className="relative z-10 w-16 h-12 sm:w-20 sm:h-14 bg-black/80 hover:bg-black/95 rounded-2xl flex items-center justify-center shadow-2xl transition-transform transform group-hover/player:scale-105 active:scale-95 border border-white/10">
+                        <span className="material-symbols-outlined text-white text-3xl sm:text-4xl translate-x-0.5">
+                            play_arrow
+                        </span>
+                    </div>
+                </div>
             )}
 
-            {/* 2. Google Drive Fallback / YouTube / Vimeo / Iframe Embed */}
-            {((source.type !== 'html5' && source.type !== 'gdrive') || (source.type === 'gdrive' && useFallbackIframe)) && source.src && (
-                <iframe 
-                    src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
-                    className="absolute top-0 left-0 w-full h-full border-0 z-10"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
-                    allowFullScreen
-                    playsInline
-                    title={videoTitle}
-                />
+            {/* 2. Active Video Playback */}
+            {isPlaying && (
+                <>
+                    {/* Native HTML5 Video & Direct Google Drive Stream */}
+                    {(source.type === 'html5' || (source.type === 'gdrive' && !useFallbackIframe)) && (
+                        <video
+                            ref={videoRef}
+                            src={source.src}
+                            poster={posterUrl}
+                            controls
+                            autoPlay
+                            playsInline
+                            controlsList="nodownload" 
+                            disablePictureInPicture
+                            onError={() => {
+                                if (source.type === 'gdrive') {
+                                    setUseFallbackIframe(true);
+                                }
+                            }}
+                            className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
+                        >
+                            <source src={source.src} type="video/mp4" />
+                            {source.fileId && (
+                                <source src={`https://lh3.googleusercontent.com/d/${source.fileId}`} type="video/mp4" />
+                            )}
+                            Your browser does not support HTML5 video.
+                        </video>
+                    )}
+
+                    {/* Fallback Embed or YouTube / Vimeo / Iframe */}
+                    {((source.type !== 'html5' && source.type !== 'gdrive') || (source.type === 'gdrive' && useFallbackIframe)) && source.src && (
+                        <iframe 
+                            src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
+                            className="absolute top-0 left-0 w-full h-full border-0 z-10"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
+                            allowFullScreen
+                            playsInline
+                            title={videoTitle}
+                        />
+                    )}
+                </>
             )}
 
-            {/* Floating Security Watermark Overlay */}
+            {/* 3. Floating Security Watermark Overlay */}
             {watermarkText && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-[0.14] mix-blend-overlay animate-pulse select-none z-20">
                     <p className="text-white transform -rotate-12 font-bold text-lg sm:text-xl md:text-2xl whitespace-nowrap drop-shadow-md">
@@ -220,21 +179,6 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                     </p>
                 </div>
             )}
-
-            {/* Top-Right Fullscreen Toggle Button */}
-            <div className={`absolute z-40 flex items-center justify-center pointer-events-auto ${isFullscreen ? 'top-4 right-4' : 'top-2 right-2'}`}>
-                <button
-                    type="button"
-                    onClick={toggleFullscreen}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-90 cursor-pointer border border-white/20"
-                    title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen"}
-                    aria-label={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen"}
-                >
-                    <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                        {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-                    </span>
-                </button>
-            </div>
         </div>
     );
 }
