@@ -36,29 +36,33 @@ export default function StudentTasks() {
             let level = localStorage.getItem('level');
             let batch = localStorage.getItem('batch');
             let name = localStorage.getItem('userName') || localStorage.getItem('name') || '';
+            const invalidNames = ['student', 'unknown', 'unkown', 'null', 'none', 'undefined'];
 
-            if (name) setStudentName(name);
+            if (name && !invalidNames.includes(name.trim().toLowerCase())) {
+                setStudentName(name.trim());
+            }
 
-            // If level or batch not in storage, fetch from profile
-            if (!level || !batch || !name) {
-                try {
-                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (profRes.ok) {
-                        const prof = await profRes.json();
-                        level = prof.level || level || 'Level 5';
-                        batch = prof.batch || batch || '';
-                        if (prof.name) {
-                            setStudentName(prof.name);
-                            localStorage.setItem('userName', prof.name);
-                        }
-                        localStorage.setItem('level', level);
-                        if (batch) localStorage.setItem('batch', batch);
+            // Always fetch real profile from database to ensure real profile name
+            try {
+                const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (profRes.ok) {
+                    const prof = await profRes.json();
+                    level = prof.level || level || 'Level 5';
+                    batch = prof.batch || batch || '';
+                    const realProfileName = (prof.name && !invalidNames.includes(prof.name.trim().toLowerCase()))
+                        ? prof.name.trim()
+                        : (prof.email ? prof.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '');
+                    if (realProfileName) {
+                        setStudentName(realProfileName);
+                        localStorage.setItem('userName', realProfileName);
                     }
-                } catch (e) {
-                    console.error('Profile fetch error:', e);
+                    localStorage.setItem('level', level);
+                    if (batch) localStorage.setItem('batch', batch);
                 }
+            } catch (e) {
+                console.error('Profile fetch error:', e);
             }
 
             level = level || 'Level 5';
@@ -89,7 +93,17 @@ export default function StudentTasks() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const activeName = studentName.trim() || localStorage.getItem('userName') || localStorage.getItem('name') || '';
+        const invalidNames = ['student', 'unknown', 'unkown', 'null', 'none', 'undefined', ''];
+        let activeName = studentName.trim();
+        if (!activeName || invalidNames.includes(activeName.toLowerCase())) {
+            const stored = localStorage.getItem('userName') || localStorage.getItem('name') || '';
+            if (stored && !invalidNames.includes(stored.trim().toLowerCase())) {
+                activeName = stored.trim();
+            } else {
+                const email = localStorage.getItem('userEmail') || '';
+                activeName = email ? email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Student';
+            }
+        }
         if (!activeTaskForSubmission || !submissionContent.trim() || !activeName) return;
 
         setIsSubmitting(true);
@@ -383,6 +397,12 @@ export default function StudentTasks() {
                                                      onClick={() => {
                                                          setActiveTaskForSubmission(task);
                                                          setSubmissionContent(task.submission?.submission_content || '');
+                                                         if (!studentName || ['student', 'unknown', 'unkown', 'null', 'none', 'undefined', ''].includes(studentName.trim().toLowerCase())) {
+                                                             const stored = localStorage.getItem('userName') || localStorage.getItem('name') || '';
+                                                             if (stored && !['student', 'unknown', 'unkown', 'null', 'none', 'undefined', ''].includes(stored.trim().toLowerCase())) {
+                                                                 setStudentName(stored.trim());
+                                                             }
+                                                         }
                                                      }}
                                                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
                                                          isPending 

@@ -47,6 +47,7 @@ export default function StaffTests() {
     // Submissions View
     const [activeTest, setActiveTest] = useState(null);
     const [submissions, setSubmissions] = useState([]);
+    const [studentsMap, setStudentsMap] = useState({});
     const [isReviewing, setIsReviewing] = useState(null); // submission ID
     const [reviewComment, setReviewComment] = useState('');
     const [reviewStatus, setReviewStatus] = useState('Approved');
@@ -149,12 +150,32 @@ export default function StaffTests() {
     const fetchSubmissions = async (test) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${test.id}/submissions`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const [res, studentsRes] = await Promise.all([
+                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/${test.id}/submissions`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => null)
+            ]);
+
+            let studentMap = { ...studentsMap };
+            if (studentsRes && studentsRes.ok) {
+                const sList = await studentsRes.json();
+                if (Array.isArray(sList)) {
+                    sList.forEach(s => {
+                        const sId = s.id || s._id;
+                        if (sId && s.name && !['student', 'unknown', 'unkown', 'null', 'none', 'undefined', ''].includes(s.name.trim().toLowerCase())) {
+                            studentMap[sId] = s.name.trim();
+                        }
+                    });
+                    setStudentsMap(studentMap);
+                }
+            }
+
             if (res.ok) {
                 const data = await res.json();
-                setSubmissions(data);
+                setSubmissions(Array.isArray(data) ? data : []);
                 setActiveTest(test);
             }
         } catch (err) {
@@ -257,7 +278,13 @@ export default function StaffTests() {
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <h3 className="font-title-md text-on-surface font-bold text-sm">
-                                                {(sub.student_name && !['unknown', 'unkown', 'null', 'none', ''].includes(sub.student_name.trim().toLowerCase())) ? sub.student_name : (sub.student_email ? sub.student_email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Student')}
+                                                {(() => {
+                                                    const invalid = ['unknown', 'unkown', 'null', 'none', 'undefined', 'student', ''];
+                                                    if (studentsMap[sub.student_id]) return studentsMap[sub.student_id];
+                                                    if (sub.student_name && !invalid.includes(sub.student_name.trim().toLowerCase())) return sub.student_name;
+                                                    if (sub.student_email) return sub.student_email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                                                    return 'Student';
+                                                })()}
                                             </h3>
                                             <p className="text-xs text-on-surface-variant font-medium mt-0.5">{new Date(sub.submitted_at).toLocaleString()}</p>
                                         </div>

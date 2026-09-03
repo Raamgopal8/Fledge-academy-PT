@@ -282,7 +282,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                             <textarea
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type an announcement to broadcast..."
+                                placeholder="Type an message"
                                 className="w-full bg-transparent px-4 py-3 focus:outline-none font-body-md text-on-surface resize-none min-h-[52px] max-h-[150px] custom-scrollbar"
                                 rows={1}
                                 onKeyDown={(e) => {
