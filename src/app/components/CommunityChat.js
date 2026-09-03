@@ -511,25 +511,25 @@ export default function CommunityChat({ role, overrideBatch }) {
 
                                 {/* Hover Action Toolbar (Edit / Delete) */}
                                 {canManage && !isCurrentlyEditing && (
-                                    <div className={`flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity ${isYou ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`flex items-center gap-1 mt-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${isYou ? 'justify-end' : 'justify-start'}`}>
                                         {!msg.audio_url && (
                                             <button
                                                 type="button"
                                                 onClick={() => startEditing(msg)}
-                                                className="p-1 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                                                className="p-1.5 sm:p-1 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer active:scale-95"
                                                 title="Edit message"
                                             >
-                                                <span className="material-symbols-outlined text-[15px]">edit</span>
+                                                <span className="material-symbols-outlined text-[16px] sm:text-[15px]">edit</span>
                                             </button>
                                         )}
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteMessage(msgId)}
                                             disabled={isCurrentlyDeleting}
-                                            className="p-1 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors cursor-pointer"
+                                            className="p-1.5 sm:p-1 rounded-lg text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors cursor-pointer active:scale-95"
                                             title="Delete message"
                                         >
-                                            <span className="material-symbols-outlined text-[15px]">
+                                            <span className="material-symbols-outlined text-[16px] sm:text-[15px]">
                                                 {isCurrentlyDeleting ? 'sync' : 'delete'}
                                             </span>
                                         </button>

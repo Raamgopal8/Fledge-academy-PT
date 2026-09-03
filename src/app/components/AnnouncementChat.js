@@ -237,20 +237,20 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                                 ) : (
                                     <div className="flex items-start gap-2 max-w-[85%]">
                                         {isOwn && (
-                                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+                                            <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity mt-1">
                                                 <button 
                                                     onClick={() => {
                                                         setEditingId(annId);
                                                         setEditContent(ann.content);
                                                     }}
-                                                    className="text-on-surface-variant hover:text-primary p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"
+                                                    className="text-on-surface-variant hover:text-primary p-2 sm:p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer active:scale-95"
                                                     title="Edit Announcement"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">edit</span>
                                                 </button>
                                                 <button 
                                                     onClick={() => setDeletingId(annId)}
-                                                    className="text-on-surface-variant hover:text-error p-1.5 rounded-lg hover:bg-error/10 transition-colors cursor-pointer"
+                                                    className="text-on-surface-variant hover:text-error p-2 sm:p-1.5 rounded-lg hover:bg-error/10 transition-colors cursor-pointer active:scale-95"
                                                     title="Delete Announcement"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">delete</span>
