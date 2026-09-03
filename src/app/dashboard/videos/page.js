@@ -752,7 +752,8 @@ export default function StudentVideos() {
                                                         src={getEmbedUrl(activeVideo.video_url)}
                                                         title={activeVideo.title}
                                                         className="w-full h-full border-0 pointer-events-auto"
-                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; unload"
+                                                        allowFullScreen
                                                     />
                                                 ) : (
                                                     <>
