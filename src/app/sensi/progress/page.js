@@ -32,11 +32,12 @@ export default function StudentProgress() {
             });
 
             if (!res.ok) {
-                throw new Error('Failed to fetch student progress data');
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || 'Failed to fetch student progress data');
             }
 
             const data = await res.json();
-            setSubmissions(data);
+            setSubmissions(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error("Error fetching progress:", err);
             setError(err.message);

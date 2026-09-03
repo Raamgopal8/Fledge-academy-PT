@@ -278,7 +278,8 @@ async def review_submission(
 async def get_all_submissions(
     current_user: models.User = Depends(get_current_user)
 ):
-    if current_user.role not in ["staff", "ceo"]:
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
     submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()

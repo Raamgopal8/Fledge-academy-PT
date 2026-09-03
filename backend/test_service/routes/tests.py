@@ -322,7 +322,7 @@ async def get_all_submissions(
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
-    if user_role not in ["staff", "ceo", "admin"]:
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
     target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global"]) else None
@@ -346,7 +346,7 @@ async def get_all_submissions(
     else:
         staff_batches = getattr(current_user, "batches", []) or []
         staff_batch = getattr(current_user, "batch", None)
-        if user_role == "staff" and (staff_batches or staff_batch):
+        if user_role in ["staff", "sensi"] and (staff_batches or staff_batch):
             allowed_batches = list(staff_batches)
             if staff_batch and staff_batch not in allowed_batches:
                 allowed_batches.append(staff_batch)
