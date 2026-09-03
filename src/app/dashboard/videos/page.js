@@ -36,7 +36,6 @@ export default function StudentVideos() {
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
     const [doubleTapFeedback, setDoubleTapFeedback] = useState(null); // 'left' | 'right' | null
-    const [gdriveFallback, setGdriveFallback] = useState(false);
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -286,38 +285,11 @@ export default function StudentVideos() {
         return cleanUrl;
     };
 
-    const getDirectStreamSource = (url) => {
-        if (!url) return null;
-        const clean = url.trim();
-        if (clean.includes('drive.google.com')) {
-            const fileMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-            if (fileMatch && fileMatch[1]) {
-                return {
-                    fileId: fileMatch[1],
-                    streamUrl: `https://drive.google.com/uc?export=download&id=${fileMatch[1]}`,
-                    lh3Url: `https://lh3.googleusercontent.com/d/${fileMatch[1]}`
-                };
-            }
-            const idMatch = clean.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-            if (idMatch && idMatch[1]) {
-                return {
-                    fileId: idMatch[1],
-                    streamUrl: `https://drive.google.com/uc?export=download&id=${idMatch[1]}`,
-                    lh3Url: `https://lh3.googleusercontent.com/d/${idMatch[1]}`
-                };
-            }
-        }
-        return null;
-    };
-
     const isIframeEmbed = (url) => {
         if (!url) return false;
         const clean = url.toLowerCase();
-        // If Google Drive fallback was triggered due to stream error, render iframe
-        if (clean.includes('drive.google.com')) {
-            return gdriveFallback;
-        }
-        return clean.includes('youtube.com') ||
+        return clean.includes('drive.google.com') ||
+            clean.includes('youtube.com') ||
             clean.includes('youtu.be') ||
             clean.includes('vimeo.com');
     };
@@ -438,7 +410,6 @@ export default function StudentVideos() {
         setShowControls(true);
         setShowSettings(false);
         setDoubleTapFeedback(null);
-        setGdriveFallback(false);
         if (videoRef.current) {
             videoRef.current.playbackRate = playbackRate;
         }
@@ -757,41 +728,23 @@ export default function StudentVideos() {
                                                     />
                                                 ) : (
                                                     <>
-                                                        {/* Native HTML5 Video Element with Google Drive direct stream support */}
-                                                        {(() => {
-                                                            const gdriveSource = getDirectStreamSource(activeVideo.video_url);
-                                                            return (
-                                                                <video
-                                                                    ref={videoRef}
-                                                                    key={activeVideo.id || activeVideo._id || activeVideo.video_url}
-                                                                    src={gdriveSource ? gdriveSource.streamUrl : activeVideo.video_url}
-                                                                    poster={activeVideo.thumbnail_url || getYouTubeThumbnail(activeVideo.video_url) || ''}
-                                                                    playsInline
-                                                                    controlsList="nodownload"
-                                                                    onTimeUpdate={handleTimeUpdate}
-                                                                    onLoadedMetadata={handleLoadedMetadata}
-                                                                    onError={() => {
-                                                                        if (gdriveSource) {
-                                                                            console.warn("Direct stream failed, switching to preview iframe fallback");
-                                                                            setGdriveFallback(true);
-                                                                        }
-                                                                    }}
-                                                                    onEnded={() => {
-                                                                        setIsPlaying(false);
-                                                                        setShowControls(true);
-                                                                        if (hasNext) handleNextVideo();
-                                                                    }}
-                                                                    className="w-full h-full object-contain pointer-events-none"
-                                                                >
-                                                                    {gdriveSource && (
-                                                                        <>
-                                                                            <source src={gdriveSource.streamUrl} type="video/mp4" />
-                                                                            <source src={gdriveSource.lh3Url} type="video/mp4" />
-                                                                        </>
-                                                                    )}
-                                                                </video>
-                                                            );
-                                                        })()}
+                                                        {/* Native HTML5 Video Element for direct video files */}
+                                                        <video
+                                                            ref={videoRef}
+                                                            key={activeVideo.id || activeVideo._id || activeVideo.video_url}
+                                                            src={activeVideo.video_url}
+                                                            poster={activeVideo.thumbnail_url || getYouTubeThumbnail(activeVideo.video_url) || ''}
+                                                            playsInline
+                                                            controlsList="nodownload"
+                                                            onTimeUpdate={handleTimeUpdate}
+                                                            onLoadedMetadata={handleLoadedMetadata}
+                                                            onEnded={() => {
+                                                                setIsPlaying(false);
+                                                                setShowControls(true);
+                                                                if (hasNext) handleNextVideo();
+                                                            }}
+                                                            className="w-full h-full object-contain pointer-events-none"
+                                                        />
 
                                                         {/* Double-Tap Skip Feedback Ripple Indicator */}
                                                         {doubleTapFeedback && (
