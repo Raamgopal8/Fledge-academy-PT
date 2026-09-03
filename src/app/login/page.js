@@ -143,8 +143,8 @@ export default function TempLoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-surface flex items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-6 md:p-8 space-y-6">
+    <main className="min-h-screen bg-surface flex flex-col items-center justify-center p-4 sm:p-6 md:p-10">
+      <div className="w-full max-w-[440px] bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-xl p-6 sm:p-8 space-y-6">
         
         {/* Header with Badge */}
         <div className="text-center space-y-2">
