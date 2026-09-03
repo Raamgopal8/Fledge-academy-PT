@@ -4,41 +4,40 @@ import React, { useState, useRef, useEffect } from 'react';
 
 export default function OptimizedVideoPlayer({ video, watermarkText }) {
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [useFallbackIframe, setUseFallbackIframe] = useState(false);
     const containerRef = useRef(null);
 
     const videoUrl = (video?.video_url || '').trim();
     const posterUrl = video?.thumbnail_url || '';
     const videoTitle = video?.title || 'Course Video';
 
-    const [useIframeFallback, setUseIframeFallback] = useState(false);
-
-    // Parse URL for proper embed formats
+    // Parse URL for proper direct stream / embed formats
     const parseVideoSource = (url) => {
         if (!url) return { type: 'unknown', src: '' };
 
-        // 1. Google Drive Links (Convert to direct streaming source)
+        // 1. Google Drive Links -> Convert to direct streaming source
         if (url.includes('drive.google.com')) {
-            let fileId = null;
             const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
             if (fileMatch && fileMatch[1]) {
-                fileId = fileMatch[1];
-            } else {
-                const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                if (idMatch && idMatch[1]) {
-                    fileId = idMatch[1];
-                }
-            }
-
-            if (fileId) {
+                const fileId = fileMatch[1];
                 return { 
                     type: 'gdrive',
-                    fileId: fileId,
-                    directSrc: `https://drive.google.com/uc?export=download&id=${fileId}`,
-                    altDirectSrc: `https://lh3.googleusercontent.com/d/${fileId}`,
-                    iframeSrc: `https://drive.google.com/file/d/${fileId}/preview`
+                    fileId,
+                    src: `https://drive.google.com/uc?export=download&id=${fileId}`,
+                    fallbackSrc: `https://drive.google.com/file/d/${fileId}/preview` 
                 };
             }
-            return { type: 'iframe', src: url };
+            const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                const fileId = idMatch[1];
+                return { 
+                    type: 'gdrive',
+                    fileId,
+                    src: `https://drive.google.com/uc?export=download&id=${fileId}`,
+                    fallbackSrc: `https://drive.google.com/file/d/${fileId}/preview` 
+                };
+            }
+            return { type: 'gdrive', src: url, fallbackSrc: url };
         }
 
         // 2. YouTube Links
@@ -176,24 +175,8 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                     : 'relative w-full pb-[56.25%] h-0 overflow-hidden rounded-t-2xl'
             }`}
         >
-            {/* 1. Google Drive Direct Stream (Native HTML5 Player) */}
-            {source.type === 'gdrive' && !useIframeFallback && (
-                <video
-                    poster={posterUrl}
-                    controls
-                    playsInline
-                    controlsList="nodownload" 
-                    disablePictureInPicture
-                    onError={() => setUseIframeFallback(true)}
-                    className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
-                >
-                    <source src={source.directSrc} type="video/mp4" />
-                    <source src={source.altDirectSrc} type="video/mp4" />
-                </video>
-            )}
-
-            {/* 2. Direct HTML5 Video Files */}
-            {source.type === 'html5' && (
+            {/* 1. Native HTML5 Video & Direct Google Drive Stream */}
+            {(source.type === 'html5' || (source.type === 'gdrive' && !useFallbackIframe)) && (
                 <video
                     src={source.src}
                     poster={posterUrl}
@@ -201,14 +184,25 @@ export default function OptimizedVideoPlayer({ video, watermarkText }) {
                     playsInline
                     controlsList="nodownload" 
                     disablePictureInPicture
+                    onError={() => {
+                        if (source.type === 'gdrive') {
+                            setUseFallbackIframe(true);
+                        }
+                    }}
                     className="absolute top-0 left-0 w-full h-full object-contain select-none z-10"
-                />
+                >
+                    <source src={source.src} type="video/mp4" />
+                    {source.fileId && (
+                        <source src={`https://lh3.googleusercontent.com/d/${source.fileId}`} type="video/mp4" />
+                    )}
+                    Your browser does not support HTML5 video.
+                </video>
             )}
 
-            {/* 3. Google Drive Fallback / YouTube / Vimeo / Iframe Embed */}
-            {((source.type === 'gdrive' && useIframeFallback) || (source.type !== 'gdrive' && source.type !== 'html5' && source.src)) && (
+            {/* 2. Google Drive Fallback / YouTube / Vimeo / Iframe Embed */}
+            {((source.type !== 'html5' && source.type !== 'gdrive') || (source.type === 'gdrive' && useFallbackIframe)) && source.src && (
                 <iframe 
-                    src={source.type === 'gdrive' ? source.iframeSrc : source.src} 
+                    src={useFallbackIframe && source.fallbackSrc ? source.fallbackSrc : source.src} 
                     className="absolute top-0 left-0 w-full h-full border-0 z-10"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" 
