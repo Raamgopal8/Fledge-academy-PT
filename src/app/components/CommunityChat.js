@@ -628,7 +628,7 @@ export default function CommunityChat({ role, overrideBatch }) {
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Type a message to the community..."
+                            placeholder="Type a message"
                             className="flex-1 bg-surface-container-lowest dark:bg-slate-950 rounded-2xl px-4 py-2.5 border border-outline-variant focus:outline-none focus:border-primary font-body-md text-on-surface text-xs sm:text-sm transition-all shadow-xs"
                         />
                         <button 

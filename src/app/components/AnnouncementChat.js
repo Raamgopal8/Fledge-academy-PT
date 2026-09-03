@@ -282,7 +282,7 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                             <textarea
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type an message"
+                                placeholder="Type a message"
                                 className="w-full bg-transparent px-4 py-3 focus:outline-none font-body-md text-on-surface resize-none min-h-[52px] max-h-[150px] custom-scrollbar"
                                 rows={1}
                                 onKeyDown={(e) => {
@@ -310,24 +310,24 @@ export default function AnnouncementChat({ role, overrideBatch }) {
 
             {/* Delete Confirmation Modal for Admin */}
             {deletingId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-                    <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 shadow-2xl max-w-sm w-full space-y-4 animate-scale-up">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-error/15 text-error flex items-center justify-center">
-                                <span className="material-symbols-outlined text-[24px]">delete</span>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 rounded-3xl p-6 sm:p-7 shadow-2xl w-full max-w-[440px] sm:w-[440px] space-y-5 relative">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-12 h-12 rounded-2xl bg-error/15 text-error flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-[26px]">delete</span>
                             </div>
-                            <div>
-                                <h3 className="font-bold text-base text-on-surface">Delete Announcement?</h3>
-                                <p className="text-xs text-on-surface-variant">This announcement will be removed for all users.</p>
+                            <div className="min-w-0">
+                                <h3 className="font-bold text-lg text-on-surface">Delete Announcement?</h3>
+                                <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">This announcement will be permanently removed for all users.</p>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2.5 pt-2">
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-outline-variant/40">
                             <button
                                 type="button"
                                 onClick={() => setDeletingId(null)}
                                 disabled={isDeleting}
-                                className="px-4 py-2 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                                className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-on-surface border border-outline-variant hover:bg-surface-container transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -335,16 +335,16 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                                 type="button"
                                 onClick={() => handleDeleteMessage(deletingId)}
                                 disabled={isDeleting}
-                                className="px-4 py-2 rounded-xl text-xs font-bold bg-error text-white hover:bg-error/90 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-error text-white hover:bg-error/90 transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                             >
                                 {isDeleting ? (
                                     <>
-                                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                        <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
                                         <span>Deleting...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                                        <span className="material-symbols-outlined text-[18px]">delete</span>
                                         <span>Delete</span>
                                     </>
                                 )}
