@@ -48,7 +48,11 @@ export default function CEOStudents() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ email: formData.email.trim() })
+                body: JSON.stringify({ 
+                    email: formData.email.trim(),
+                    level: formData.level || 'Level 5',
+                    batch: formData.batch || 'Batch - 1'
+                })
             });
             if (!res.ok) {
                 let errText = 'Failed to add student';
@@ -65,7 +69,7 @@ export default function CEOStudents() {
             }
             await fetchStudents();
             setIsAddModalOpen(false);
-            setFormData({ name: '', email: '', password: '', level: '', batch: selectedBatch || '' });
+            setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
         } catch (err) {
             setFormError(err.message);
         }
@@ -189,7 +193,14 @@ export default function CEOStudents() {
                     </p>
                 </div>
                 <button 
-                    onClick={() => { setFormData({ name: '', email: '', password: '', level: '', batch: selectedBatch || '' }); setFormError(''); setIsAddModalOpen(true); }}
+                    onClick={() => { 
+                        const defaultBatch = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
+                            ? selectedBatch 
+                            : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'Batch - 1');
+                        setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: defaultBatch }); 
+                        setFormError(''); 
+                        setIsAddModalOpen(true); 
+                    }}
                     className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 self-start md:self-auto shadow-xs cursor-pointer active:scale-95"
                 >
                     <span className="material-symbols-outlined text-[20px]">person_add</span>
@@ -298,6 +309,49 @@ export default function CEOStudents() {
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                                     autoFocus
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-label-md font-medium text-on-surface mb-1.5">Level</label>
+                                <select 
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                                    value={formData.level || 'Level 5'}
+                                    onChange={(e) => setFormData({...formData, level: e.target.value})}
+                                >
+                                    <option value="Level 5">Level 5</option>
+                                    <option value="Level 4">Level 4</option>
+                                    <option value="Level 3">Level 3</option>
+                                    <option value="Level 2">Level 2</option>
+                                    <option value="Level 1">Level 1</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-label-md font-medium text-on-surface mb-1.5">Batch</label>
+                                <input 
+                                    type="text" 
+                                    placeholder="e.g. Batch - 1"
+                                    className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-3 text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                    value={formData.batch}
+                                    onChange={(e) => setFormData({...formData, batch: e.target.value})}
+                                />
+                                {availableBatches && availableBatches.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2 items-center">
+                                        <span className="text-[11px] text-on-surface-variant font-medium mr-1">Quick assign:</span>
+                                        {availableBatches.map((b) => (
+                                            <button 
+                                                key={b}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
+                                                className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
+                                                    formData.batch === b
+                                                        ? 'bg-primary text-on-primary border-primary font-bold'
+                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                }`}
+                                            >
+                                                {b}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button 
