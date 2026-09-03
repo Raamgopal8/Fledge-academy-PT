@@ -257,7 +257,7 @@ export default function SchedulePage() {
             <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-5 md:p-6 custom-shadow hover:shadow-md transition-all grid grid-cols-1 lg:grid-cols-4 gap-5 items-start w-full">
                 
                 {/* Left Side: Days Navigation */}
-                <div className="bg-surface-container-lowest p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 scrollbar-none">
+                <div className="bg-surface-container-lowest p-1.5 sm:p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1.5 scrollbar-none w-full max-w-full">
                     {DAYS_OF_WEEK.map((day) => {
                         const count = schedules.filter(s => s.day_of_week === day).length;
                         const isActive = activeTab === day;
@@ -265,16 +265,16 @@ export default function SchedulePage() {
                             <button
                                 key={day}
                                 onClick={() => setActiveTab(day)}
-                                className={`flex items-center justify-between px-4 py-3 rounded-lg font-label-md text-label-md whitespace-nowrap transition-all cursor-pointer min-w-[120px] lg:w-full ${
+                                className={`flex items-center justify-between gap-3 px-3.5 py-2.5 sm:py-3 rounded-xl font-label-md text-xs sm:text-sm whitespace-nowrap transition-all cursor-pointer min-w-max lg:min-w-0 lg:w-full shrink-0 ${
                                     isActive
-                                        ? 'bg-secondary-container text-on-secondary-container font-bold'
-                                        : 'text-on-surface-variant hover:bg-surface-container-low'
+                                        ? 'bg-secondary-container text-on-secondary-container font-bold shadow-xs'
+                                        : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
                                 }`}
                             >
                                 <span>{day}</span>
-                                <span className={`ml-2 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
                                     isActive 
-                                        ? 'bg-on-secondary-container/10 text-on-secondary-container'
+                                        ? 'bg-on-secondary-container/15 text-on-secondary-container'
                                         : 'bg-surface-container-highest text-outline'
                                 }`}>
                                     {count}
