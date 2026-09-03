@@ -634,19 +634,6 @@ export default function StudentVideos() {
                                                         </p>
                                                     </div>
                                                 )}
-
-                                                {/* Fullscreen Quick Control Overlay Button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={toggleFullscreen}
-                                                    className="absolute top-3 right-3 z-30 w-8 h-8 md:w-9 md:h-9 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center backdrop-blur-md transition-all shadow-md active:scale-95 cursor-pointer border border-white/20 hover:scale-105"
-                                                    title={isFullscreen ? "Exit Fullscreen (F)" : "Enter Fullscreen (F)"}
-                                                    aria-label="Toggle Fullscreen"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">
-                                                        {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-                                                    </span>
-                                                </button>
                                             </div>
                                         </div>
 
