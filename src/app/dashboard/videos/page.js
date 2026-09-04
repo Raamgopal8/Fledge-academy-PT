@@ -255,23 +255,23 @@ export default function StudentVideos() {
         if (cleanUrl.includes('youtube.com/watch')) {
             const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
             }
         }
         if (cleanUrl.includes('youtu.be/')) {
             const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
             }
         }
         if (cleanUrl.includes('youtube.com/embed/')) {
             const separator = cleanUrl.includes('?') ? '&' : '?';
-            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
         }
         if (cleanUrl.includes('youtube.com/shorts/')) {
             const match = cleanUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
             }
         }
 
@@ -962,7 +962,7 @@ export default function StudentVideos() {
                                                                     />
                                                                 </div>
 
-                                                                {/* Audio, Time Display, & Fullscreen Button */}
+                                                                {/* Audio and Time Display */}
                                                                 <div className="flex items-center justify-between text-white text-xs">
                                                                     <div className="flex items-center gap-3">
                                                                         <button
@@ -979,17 +979,6 @@ export default function StudentVideos() {
                                                                             {formatTime(currentTime)} <span className="text-white/50">/</span> {formatTime(duration)}
                                                                         </span>
                                                                     </div>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={toggleFullscreen}
-                                                                        className="p-1 hover:bg-white/20 rounded-full transition cursor-pointer"
-                                                                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[18px]">
-                                                                            {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-                                                                        </span>
-                                                                    </button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1054,7 +1043,7 @@ export default function StudentVideos() {
                                                     <span className="hidden sm:inline">{isCurrentWatched ? 'Completed' : 'Mark Watched'}</span>
                                                 </button>
 
-                                                {/* Theater Mode Toggle (Desktop only) */}
+                                                 {/* Theater Mode Toggle (Desktop only) */}
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsTheaterMode(prev => !prev)}
@@ -1066,18 +1055,6 @@ export default function StudentVideos() {
                                                         {isTheaterMode ? 'fit_screen' : 'crop_landscape'}
                                                     </span>
                                                     <span>{isTheaterMode ? 'Default View' : 'Theater View'}</span>
-                                                </button>
-
-                                                {/* Fullscreen Button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={toggleFullscreen}
-                                                    className="p-1.5 rounded-xl border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer"
-                                                    title="Fullscreen (F)"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">
-                                                        {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-                                                    </span>
                                                 </button>
                                             </div>
                                         </div>
@@ -1151,7 +1128,6 @@ export default function StudentVideos() {
                                                 {/* Keyboard shortcuts reminder for desktop */}
                                                 <div className="hidden lg:flex items-center gap-4 text-[11px] text-on-surface-variant pt-2 border-t border-outline-variant/40">
                                                     <span className="font-semibold">Shortcuts:</span>
-                                                    <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-surface-container rounded border border-outline-variant text-[10px] font-mono">F</kbd> Fullscreen</span>
                                                     <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-surface-container rounded border border-outline-variant text-[10px] font-mono">T</kbd> Theater Mode</span>
                                                 </div>
                                             </div>

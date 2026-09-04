@@ -269,23 +269,23 @@ export default function CEOVideos() {
         if (cleanUrl.includes('youtube.com/watch')) {
             const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
             }
         }
         if (cleanUrl.includes('youtu.be/')) {
             const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
             }
         }
         if (cleanUrl.includes('youtube.com/embed/')) {
             const separator = cleanUrl.includes('?') ? '&' : '?';
-            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
         }
         if (cleanUrl.includes('youtube.com/shorts/')) {
             const match = cleanUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
             }
         }
 
