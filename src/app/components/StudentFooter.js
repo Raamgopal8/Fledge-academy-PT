@@ -24,11 +24,11 @@ export default function StudentFooter() {
                     </Link>
                     <span className="text-outline/40 hidden sm:inline">•</span>
                     <Link className="hover:text-primary transition-colors" href="/terms">
-                        Terms of Service
+                        Terms & Conditions
                     </Link>
                     <span className="text-outline/40 hidden sm:inline">•</span>
                     <Link className="hover:text-primary transition-colors" href="/contact">
-                        Contact Support
+                        Contact Us
                     </Link>
                 </div>
             </div>

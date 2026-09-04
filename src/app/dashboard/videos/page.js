@@ -255,22 +255,23 @@ export default function StudentVideos() {
         if (cleanUrl.includes('youtube.com/watch')) {
             const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
             }
         }
         if (cleanUrl.includes('youtu.be/')) {
             const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
             }
         }
         if (cleanUrl.includes('youtube.com/embed/')) {
-            return cleanUrl;
+            const separator = cleanUrl.includes('?') ? '&' : '?';
+            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
         }
         if (cleanUrl.includes('youtube.com/shorts/')) {
             const match = cleanUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1`;
+                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3`;
             }
         }
 
@@ -292,6 +293,12 @@ export default function StudentVideos() {
             clean.includes('youtube.com') ||
             clean.includes('youtu.be') ||
             clean.includes('vimeo.com');
+    };
+
+    const isYouTubeEmbed = (url) => {
+        if (!url) return false;
+        const clean = url.toLowerCase();
+        return clean.includes('youtube.com') || clean.includes('youtu.be');
     };
 
     const getYouTubeThumbnail = (url) => {
@@ -554,7 +561,8 @@ export default function StudentVideos() {
                     border-radius: 0 !important;
                 }
                 :fullscreen iframe, :-webkit-full-screen iframe, :-moz-full-screen iframe, :-ms-fullscreen iframe,
-                :fullscreen video, :-webkit-full-screen video, :-moz-full-screen video, :-ms-fullscreen video {
+                :fullscreen video, :-webkit-full-screen video, :-moz-full-screen video, :-ms-fullscreen video,
+                :fullscreen .player-embed-wrapper, :-webkit-full-screen .player-embed-wrapper, :-moz-full-screen .player-embed-wrapper, :-ms-fullscreen .player-embed-wrapper {
                     width: 100% !important;
                     height: 100% !important;
                     border: none !important;
@@ -719,13 +727,75 @@ export default function StudentVideos() {
                                             >
                                                 {/* Player Embed or YouTube-Style HTML5 Video Player */}
                                                 {isIframeEmbed(activeVideo.video_url) ? (
-                                                    <iframe
-                                                        src={getEmbedUrl(activeVideo.video_url)}
-                                                        title={activeVideo.title}
-                                                        className="w-full h-full border-0 pointer-events-auto"
-                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; unload"
-                                                        allowFullScreen
-                                                    />
+                                                    <div className="player-embed-wrapper relative w-full h-full overflow-hidden">
+                                                        <iframe
+                                                            src={getEmbedUrl(activeVideo.video_url)}
+                                                            title={activeVideo.title}
+                                                            className="w-full h-full border-0 pointer-events-auto"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; unload"
+                                                            allowFullScreen
+                                                        />
+
+                                                        {/* Transparent Shield & Mask Overlay to hide/block YouTube & Share buttons in normal & fullscreen */}
+                                                        {isYouTubeEmbed(activeVideo.video_url) && (
+                                                            <>
+                                                                {/* Bottom Bar Transparent Shield Mask covering Watch on YouTube & Share/Watch Later */}
+                                                                <div
+                                                                    className="absolute bottom-0 left-0 right-0 h-16 sm:h-20 lg:h-24 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1 sm:pb-2"
+                                                                >
+                                                                    {/* Left transparent shield covering share / watch later pills */}
+                                                                    <div
+                                                                        className="w-32 sm:w-44 lg:w-56 h-12 sm:h-16 bg-transparent pointer-events-auto cursor-default select-none"
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }}
+                                                                        onTouchStart={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }}
+                                                                    />
+                                                                    {/* Right transparent shield covering 'Watch on YouTube' button */}
+                                                                    <div
+                                                                        className="w-48 sm:w-64 lg:w-80 h-12 sm:h-16 bg-transparent pointer-events-auto cursor-default select-none"
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }}
+                                                                        onTouchStart={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                {/* Top-Right Transparent Share button shield mask if present in paused state */}
+                                                                <div
+                                                                    className="absolute top-0 right-0 w-20 sm:w-28 h-14 sm:h-18 bg-transparent pointer-events-auto cursor-default select-none z-20"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onMouseDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchStart={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <>
                                                         {/* Native HTML5 Video Element for direct video files */}

@@ -257,7 +257,7 @@ export default function LoginPage() {
               <p className="text-xs text-on-surface-variant leading-relaxed select-none">
                 By logging in, you agree to our{" "}
                 <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
-                  Terms of Service
+                  Terms & Conditions
                 </Link>{" "}
                 and{" "}
                 <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">

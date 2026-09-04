@@ -33,7 +33,7 @@ export default function SensiLayout({ children }) {
                                 </div>
                                 <div className="flex flex-wrap justify-center gap-4 text-xs text-on-surface-variant">
                                     <a className="hover:text-primary transition-colors" href="/privacy">Privacy Policy</a>
-                                    <a className="hover:text-primary transition-colors" href="/terms">Terms of Service</a>
+                                    <a className="hover:text-primary transition-colors" href="/terms">Terms & Conditions</a>
                                     <a className="hover:text-primary transition-colors" href="/contact">Contact Us</a>
                                 </div>
                             </div>

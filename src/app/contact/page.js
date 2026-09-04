@@ -70,14 +70,7 @@ export default function ContactPage() {
             <span className="material-symbols-outlined text-primary text-[32px]">school</span>
             <span className="font-headline-md text-headline-md text-primary">Fledge Academy</span>
           </div>
-          <button 
-            onClick={() => router.back()} 
-            className="flex items-center gap-xs px-4 py-2 rounded-xl border border-outline-variant hover:bg-surface-container-low transition-colors text-label-md text-on-surface"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-            Back
-          </button>
-        </div>
+          </div>
       </header>
 
       {/* Main Content */}
@@ -104,7 +97,7 @@ export default function ContactPage() {
                   <span className="material-symbols-outlined text-primary-fixed text-[24px] mt-xs">mail</span>
                   <div>
                     <h4 className="text-label-sm text-primary-fixed uppercase tracking-wider">Email Us</h4>
-                    <p className="text-body-md font-medium">support@fledgeacademy.com</p>
+                    <p className="text-body-md font-medium">fledgeacademy@gmail.com</p>
                   </div>
                 </div>
 
@@ -158,7 +151,6 @@ export default function ContactPage() {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      placeholder="John Doe"
                       className="w-full h-[52px] px-4 bg-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
                     />
                   </div>
@@ -172,7 +164,6 @@ export default function ContactPage() {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      placeholder="johndoe@example.com"
                       className="w-full h-[52px] px-4 bg-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
                     />
                   </div>
@@ -187,7 +178,6 @@ export default function ContactPage() {
                     value={formData.phone}
                     onChange={handleChange}
                     required
-                    placeholder="+1 (555) 000-0000"
                     className="w-full h-[52px] px-4 bg-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md"
                   />
                 </div>
@@ -201,7 +191,6 @@ export default function ContactPage() {
                     value={formData.feedback}
                     onChange={handleChange}
                     required
-                    placeholder="Tell us about your experience..."
                     className="w-full p-4 bg-surface border border-outline-variant rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-body-md resize-none"
                   ></textarea>
                 </div>

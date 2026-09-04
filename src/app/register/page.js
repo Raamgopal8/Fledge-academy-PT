@@ -394,7 +394,7 @@ export default function RegisterPage() {
                                 <span>
                                     I agree to the{" "}
                                     <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
-                                        Terms of Service
+                                        Terms & Conditions  
                                     </Link>{" "}
                                     and{" "}
                                     <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
