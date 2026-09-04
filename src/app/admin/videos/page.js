@@ -315,6 +315,11 @@ export default function CEOVideos() {
         return clean.includes('youtube.com') || clean.includes('youtu.be');
     };
 
+    const isGoogleDriveEmbed = (url) => {
+        if (!url) return false;
+        return url.toLowerCase().includes('drive.google.com');
+    };
+
     const getYouTubeThumbnail = (url) => {
         if (!url) return null;
         let videoId = null;
@@ -717,11 +722,23 @@ export default function CEOVideos() {
                                                             allowFullScreen
                                                         />
 
+                                                        {/* Top-Right Shield & Mask: completely hides and blocks Google Drive pop-out button on mobile and desktop */}
+                                                        {isGoogleDriveEmbed(activeVideo.video_url) && (
+                                                            <div
+                                                                className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-black z-30 pointer-events-auto cursor-default select-none flex items-center justify-center"
+                                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                            />
+                                                        )}
+
                                                         {/* Transparent Shield & Mask Overlay to hide/block YouTube & Share buttons in normal & fullscreen */}
                                                         {isYouTubeEmbed(activeVideo.video_url) && (
                                                             <>
-                                                                {/* Bottom Bar Transparent Shield Mask */}
-                                                                <div className="absolute bottom-0 left-0 right-0 h-16 sm:h-20 lg:h-24 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1 sm:pb-2">
+                                                                {/* Bottom Bar Transparent Shield Mask covering Watch on YouTube & Share/Watch Later */}
+                                                                <div
+                                                                    className="absolute bottom-0 left-0 right-0 h-16 sm:h-20 lg:h-24 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1 sm:pb-2"
+                                                                >
                                                                     <div
                                                                         className="w-32 sm:w-44 lg:w-56 h-12 sm:h-16 bg-transparent pointer-events-auto cursor-default select-none"
                                                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}

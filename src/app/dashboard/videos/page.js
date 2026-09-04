@@ -301,6 +301,11 @@ export default function StudentVideos() {
         return clean.includes('youtube.com') || clean.includes('youtu.be');
     };
 
+    const isGoogleDriveEmbed = (url) => {
+        if (!url) return false;
+        return url.toLowerCase().includes('drive.google.com');
+    };
+
     const getYouTubeThumbnail = (url) => {
         if (!url) return null;
         let videoId = null;
@@ -735,6 +740,25 @@ export default function StudentVideos() {
                                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; unload"
                                                             allowFullScreen
                                                         />
+
+                                                        {/* Top-Right Shield & Mask: completely hides and blocks Google Drive pop-out button and YouTube share button on mobile and desktop */}
+                                                        {isGoogleDriveEmbed(activeVideo.video_url) && (
+                                                            <div
+                                                                className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-black z-30 pointer-events-auto cursor-default select-none flex items-center justify-center"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                }}
+                                                                onMouseDown={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                }}
+                                                                onTouchStart={(e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                }}
+                                                            />
+                                                        )}
 
                                                         {/* Transparent Shield & Mask Overlay to hide/block YouTube & Share buttons in normal & fullscreen */}
                                                         {isYouTubeEmbed(activeVideo.video_url) && (
