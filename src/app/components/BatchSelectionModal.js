@@ -3,85 +3,234 @@ import { useState, useEffect } from 'react';
 import { useAdminContext } from '@/app/admin/AdminContext';
 
 export default function BatchSelectionModal() {
-    const { selectedBatch, setSelectedBatch } = useAdminContext();
+    const { 
+        selectedBatch, setSelectedBatch, 
+        selectedLevel, setSelectedLevel, 
+        availableBatches, availableLevels,
+        isBatchModalOpen, setIsBatchModalOpen 
+    } = useAdminContext();
+
     const [isOpen, setIsOpen] = useState(false);
     const [batchInput, setBatchInput] = useState('');
+    const [levelInput, setLevelInput] = useState('');
+
+    const [tempLevel, setTempLevel] = useState(selectedLevel || 'All Levels');
+    const [tempBatch, setTempBatch] = useState(selectedBatch || 'All Batches');
 
     useEffect(() => {
-        // Automatically open if no batch is selected
-        if (selectedBatch === null) {
+        // Automatically open if no batch or level has been set, or if explicitly requested
+        if (selectedBatch === null || isBatchModalOpen) {
             setIsOpen(true);
+            setTempLevel(selectedLevel || 'All Levels');
+            setTempBatch(selectedBatch || 'All Batches');
         } else {
             setIsOpen(false);
         }
-    }, [selectedBatch]);
+    }, [selectedBatch, isBatchModalOpen, selectedLevel]);
 
-    const handleSelectAll = () => {
-        setSelectedBatch('All Batches');
+    const handleClose = () => {
+        if (selectedBatch === null) setSelectedBatch('All Batches');
+        if (!selectedLevel) setSelectedLevel('All Levels');
         setIsOpen(false);
+        if (setIsBatchModalOpen) setIsBatchModalOpen(false);
     };
 
-    const handleSelectBatch = (e) => {
-        e.preventDefault();
-        if (batchInput.trim()) {
-            setSelectedBatch(batchInput.trim());
-            setIsOpen(false);
-        }
+    const handleApply = (e) => {
+        if (e) e.preventDefault();
+        const finalLevel = levelInput.trim() || tempLevel || 'All Levels';
+        const finalBatch = batchInput.trim() || tempBatch || 'All Batches';
+        
+        setSelectedLevel(finalLevel);
+        setSelectedBatch(finalBatch);
+        setIsOpen(false);
+        if (setIsBatchModalOpen) setIsBatchModalOpen(false);
     };
 
     if (!isOpen) return null;
 
+    const levelsToDisplay = Array.isArray(availableLevels) && availableLevels.length > 0
+        ? availableLevels
+        : ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'];
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-surface rounded-xl shadow-xl p-6 w-full max-w-[400px] relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-surface rounded-2xl shadow-2xl p-6 sm:p-7 w-full max-w-[500px] relative border border-outline-variant/70 max-h-[92vh] overflow-y-auto custom-scrollbar">
                 {/* Close Button */}
                 <button 
-                    onClick={() => {
-                        if (selectedBatch === null) setSelectedBatch('All Batches');
-                        setIsOpen(false);
-                    }}
-                    className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface transition-colors"
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container transition-colors cursor-pointer"
+                    title="Close"
                 >
-                    <span className="material-symbols-outlined">close</span>
+                    <span className="material-symbols-outlined text-[20px]">close</span>
                 </button>
 
-                <h2 className="text-xl font-bold text-on-surface mb-2 mt-2">Select Batch</h2>
-                <p className="text-sm text-on-surface-variant mb-6">
-                    Choose a specific batch to view its data, or select 'All Batches' for a global view.
-                </p>
+                <div className="flex items-center gap-3 mb-2 mt-1">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <span className="material-symbols-outlined text-[24px]">tune</span>
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-on-surface">Portal Scope & Filters</h2>
+                        <p className="text-xs text-on-surface-variant">Configure level and batch view for the academy</p>
+                    </div>
+                </div>
 
-                <div className="space-y-4">
-                    <button
-                        onClick={handleSelectAll}
-                        className="w-full py-2 px-4 bg-primary/10 text-primary rounded-lg font-medium hover:bg-primary/20 transition-colors flex items-center justify-center gap-2"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">public</span>
-                        All Batches
-                    </button>
+                <form onSubmit={handleApply} className="space-y-5 mt-5">
+                    {/* SECTION 1: LEVEL FILTER (ABOVE BATCH) */}
+                    <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/60 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[16px]">stairs</span>
+                                Select Level
+                            </label>
+                            <span className="text-[11px] font-semibold text-on-surface-variant bg-surface px-2 py-0.5 rounded-md border border-outline-variant/40">
+                                Active: {tempLevel}
+                            </span>
+                        </div>
 
-                    <div className="relative flex items-center py-2">
-                        <div className="flex-grow border-t border-outline-variant"></div>
-                        <span className="flex-shrink-0 mx-4 text-sm font-medium text-on-surface-variant">OR</span>
-                        <div className="flex-grow border-t border-outline-variant"></div>
+                        {/* Global Level Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setTempLevel('All Levels');
+                                setLevelInput('');
+                            }}
+                            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+                                tempLevel === 'All Levels' && !levelInput
+                                    ? 'bg-primary text-on-primary border-primary shadow-xs'
+                                    : 'bg-surface text-on-surface border-outline-variant hover:bg-surface-container'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-[16px]">public</span>
+                            All Levels (Global Level)
+                        </button>
+
+                        {/* Available Levels Chips */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {levelsToDisplay.map((lvl) => {
+                                const isSelected = tempLevel === lvl && !levelInput;
+                                return (
+                                    <button
+                                        key={lvl}
+                                        type="button"
+                                        onClick={() => {
+                                            setTempLevel(lvl);
+                                            setLevelInput('');
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-primary/20 text-primary border-primary font-bold shadow-xs'
+                                                : 'bg-surface text-on-surface-variant border-outline-variant/70 hover:bg-surface-container'
+                                        }`}
+                                    >
+                                        {lvl}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Custom Level Input */}
+                        <div className="flex gap-2 pt-1">
+                            <input
+                                type="text"
+                                value={levelInput}
+                                onChange={(e) => {
+                                    setLevelInput(e.target.value);
+                                    if (e.target.value.trim()) setTempLevel(e.target.value.trim());
+                                }}
+                                placeholder="Or enter level (e.g. Level 5)"
+                                className="flex-grow h-[36px] px-3 bg-surface border border-outline-variant rounded-lg focus:outline-none focus:border-primary text-xs"
+                            />
+                        </div>
                     </div>
 
-                    <form onSubmit={handleSelectBatch} className="flex gap-2">
-                        <input
-                            type="text"
-                            value={batchInput}
-                            onChange={(e) => setBatchInput(e.target.value)}
-                            placeholder="Enter batch (e.g. batch-1)"
-                            className="flex-grow h-[40px] px-4 bg-surface-container-lowest border border-outline-variant rounded-lg focus:outline-none focus:border-primary text-body-md"
-                        />
+                    {/* SECTION 2: BATCH FILTER (BELOW LEVEL) */}
+                    <div className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/60 space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[16px]">domain</span>
+                                Select Batch
+                            </label>
+                            <span className="text-[11px] font-semibold text-on-surface-variant bg-surface px-2 py-0.5 rounded-md border border-outline-variant/40">
+                                Active: {tempBatch}
+                            </span>
+                        </div>
+
+                        {/* Global All Batches Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setTempBatch('All Batches');
+                                setBatchInput('');
+                            }}
+                            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 border cursor-pointer ${
+                                tempBatch === 'All Batches' && !batchInput
+                                    ? 'bg-secondary text-on-secondary border-secondary shadow-xs'
+                                    : 'bg-surface text-on-surface border-outline-variant hover:bg-surface-container'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-[16px]">groups</span>
+                            All Batches (Global View)
+                        </button>
+
+                        {/* Available Batches Quick Suggestions */}
+                        {availableBatches && availableBatches.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                                {availableBatches.map((b) => {
+                                    const isSelected = tempBatch === b && !batchInput;
+                                    return (
+                                        <button
+                                            key={b}
+                                            type="button"
+                                            onClick={() => {
+                                                setTempBatch(b);
+                                                setBatchInput('');
+                                            }}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-secondary/20 text-secondary border-secondary font-bold shadow-xs'
+                                                    : 'bg-surface text-on-surface-variant border-outline-variant/70 hover:bg-surface-container'
+                                            }`}
+                                        >
+                                            {b}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Custom Batch Input */}
+                        <div className="flex gap-2 pt-1">
+                            <input
+                                type="text"
+                                value={batchInput}
+                                onChange={(e) => {
+                                    setBatchInput(e.target.value);
+                                    if (e.target.value.trim()) setTempBatch(e.target.value.trim());
+                                }}
+                                placeholder="Or enter batch (e.g. Batch - 1)"
+                                className="flex-grow h-[36px] px-3 bg-surface border border-outline-variant rounded-lg focus:outline-none focus:border-secondary text-xs"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                        >
+                            Cancel
+                        </button>
                         <button
                             type="submit"
-                            disabled={!batchInput.trim()}
-                            className="h-[40px] px-4 bg-primary text-white rounded-lg font-medium disabled:opacity-50 transition-colors"
+                            className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
                         >
-                            Enter
+                            <span className="material-symbols-outlined text-[18px]">check</span>
+                            <span>Apply & Enter</span>
                         </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
     );

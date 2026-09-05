@@ -229,6 +229,7 @@ class SensiCreate(BaseModel):
     email: str
     password: str
     level: Optional[str] = None
+    levels: Optional[List[str]] = None
     batch: Optional[str] = None
     batches: Optional[List[str]] = None
 
@@ -237,6 +238,7 @@ class SensiUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     level: Optional[str] = None
+    levels: Optional[List[str]] = None
     batch: Optional[str] = None
     batches: Optional[List[str]] = None
 
@@ -258,7 +260,8 @@ async def get_sensi(current_user: models.User = Depends(get_current_user)):
             "name": s.name,
             "email": s.email,
             "role": "sensi",
-            "level": s.level,
+            "level": s.level or (s.levels[0] if getattr(s, "levels", None) else None),
+            "levels": s.levels if getattr(s, "levels", None) else ([s.level] if getattr(s, "level", None) else []),
             "batch": s.batch or (s.batches[0] if getattr(s, "batches", None) else None),
             "batches": s.batches if getattr(s, "batches", None) else ([s.batch] if getattr(s, "batch", None) else [])
         } for s in sensi_members
@@ -280,13 +283,16 @@ async def create_sensi(
         
     sensi_batches = sensi_data.batches or ([sensi_data.batch] if sensi_data.batch else [])
     primary_batch = sensi_data.batch or (sensi_batches[0] if sensi_batches else None)
+    sensi_levels = sensi_data.levels or ([sensi_data.level] if sensi_data.level else [])
+    primary_level = sensi_data.level or (sensi_levels[0] if sensi_levels else None)
 
     new_sensi = models.User(
         name=sensi_data.name,
         email=sensi_data.email.strip().lower(),
         password=sensi_data.password,
         role="sensi",
-        level=sensi_data.level,
+        level=primary_level,
+        levels=sensi_levels,
         batch=primary_batch,
         batches=sensi_batches
     )
@@ -315,8 +321,14 @@ async def update_sensi(
         sensi.email = sensi_data.email.strip().lower()
     if sensi_data.password is not None:
         sensi.password = sensi_data.password
+    if sensi_data.levels is not None:
+        sensi.levels = sensi_data.levels
+        if not sensi_data.level and sensi_data.levels:
+            sensi.level = sensi_data.levels[0]
     if sensi_data.level is not None:
         sensi.level = sensi_data.level
+        if not sensi_data.levels:
+            sensi.levels = [sensi_data.level] if sensi_data.level else []
     if sensi_data.batches is not None:
         sensi.batches = sensi_data.batches
         if not sensi_data.batch and sensi_data.batches:
@@ -392,12 +404,12 @@ async def get_classroom_members(
     student_query = {"$and": student_conditions}
 
     # 2. Staff / Instructor matching
-    staff_conditions = [{"role": {"$in": ["staff", "Staff", "ceo", "CEO", "admin", "Admin"]}}]
+    staff_conditions = [{"role": {"$in": ["sensi", "Sensi", "staff", "Staff", "ceo", "CEO", "admin", "Admin"]}}]
     if level and level.strip().lower() not in ["all", "all levels"]:
         clean_level = level.strip()
         staff_conditions.append({
             "$or": [
-                {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                {"level": {"$regex": f"^{re.escape(clean_level)}$", "$options": "i"}},
                 {"level": {"$regex": "^all levels$", "$options": "i"}},
                 {"level": {"$regex": "^all$", "$options": "i"}},
                 {"level": None},
@@ -406,9 +418,11 @@ async def get_classroom_members(
         })
     if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
         clean_batch = batch.strip()
+        escaped_batch = re.escape(clean_batch)
         staff_conditions.append({
             "$or": [
-                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batch": {"$regex": f"^{escaped_batch}$", "$options": "i"}},
+                {"batches": {"$elemMatch": {"$regex": f"^{escaped_batch}$", "$options": "i"}}},
                 {"batches": {"$in": [clean_batch]}},
                 {"batch": {"$regex": "^all batches$", "$options": "i"}},
                 {"batch": {"$regex": "^all$", "$options": "i"}},
@@ -470,4 +484,31 @@ async def get_available_batches(current_user: models.User = Depends(get_current_
 
     sorted_batches = sorted(list(batches), key=sort_key)
     return sorted_batches
+
+
+@router.get("/available-levels", response_model=List[str])
+async def get_available_levels(current_user: models.User = Depends(get_current_user)):
+    """Fetch distinct available level names across users, schedules, and materials, with standard JLPT level order"""
+    standard_levels = ["Level 5", "Level 4", "Level 3", "Level 2", "Level 1"]
+    levels = set()
+
+    # Collect levels from users
+    users = await models.User.find_all().to_list()
+    for u in users:
+        lvl = getattr(u, "level", None)
+        if lvl and lvl.strip() and lvl.strip().lower() not in ["all", "all levels", "global"]:
+            levels.add(lvl.strip())
+
+    # Include any custom levels while preserving standard hierarchy
+    for std in standard_levels:
+        levels.add(std)
+
+    def sort_level_key(item: str):
+        # Prefer Level 5 down to Level 1, then custom
+        if item in standard_levels:
+            return standard_levels.index(item)
+        return 999
+
+    sorted_levels = sorted(list(levels), key=sort_level_key)
+    return sorted_levels
 

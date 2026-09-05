@@ -1,6 +1,7 @@
 import SensiNavbar from '@/app/components/SensiNavbar';
 import SensiTopNav from '@/app/components/SensiTopNav';
 import AuthGuard from '@/app/components/AuthGuard';
+import SensiBatchSelectionModal from '@/app/components/SensiBatchSelectionModal';
 import { SensiProvider } from './SensiContext';
 
 export const metadata = {
@@ -11,6 +12,7 @@ export default function SensiLayout({ children }) {
     return (
         <AuthGuard requiredRole={["sensi", "staff", "admin", "ceo"]}>
             <SensiProvider>
+                <SensiBatchSelectionModal />
                 <div className="flex min-h-screen bg-background text-on-surface font-body-md w-full max-w-full overflow-x-hidden">
                     <SensiNavbar />
                     

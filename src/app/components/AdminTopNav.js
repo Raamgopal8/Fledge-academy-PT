@@ -11,6 +11,8 @@ export default function AdminTopNav() {
     const setIsMobileNavOpen = context?.setIsMobileNavOpen || (() => {});
     const selectedBatch = context?.selectedBatch;
     const setSelectedBatch = context?.setSelectedBatch || (() => {});
+    const selectedLevel = context?.selectedLevel || 'All Levels';
+    const setIsBatchModalOpen = context?.setIsBatchModalOpen || (() => {});
     const [profile, setProfile] = useState(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -59,12 +61,14 @@ export default function AdminTopNav() {
                 
                 <div className="flex items-center gap-1.5 sm:gap-md text-white min-w-0">
                     <button 
-                        onClick={() => setSelectedBatch(null)}
-                        className="bg-white/20 hover:bg-white/30 px-2 py-1 sm:px-sm sm:py-xs rounded-lg font-label-md transition-colors flex items-center gap-1 text-xs sm:text-sm max-w-[130px] sm:max-w-none truncate"
-                        title="Change Batch"
+                        onClick={() => setIsBatchModalOpen(true)}
+                        className="bg-white/20 hover:bg-white/30 px-2.5 py-1 sm:px-sm sm:py-xs rounded-lg font-label-md transition-colors flex items-center gap-1.5 text-xs sm:text-sm border border-white/20 hover:border-white/40 shadow-xs cursor-pointer active:scale-95 max-w-[200px] sm:max-w-none truncate"
+                        title="Change Level & Batch Scope"
                     >
-                        <span className="material-symbols-outlined text-[14px] sm:text-[16px] shrink-0">domain</span>
-                        <span className="truncate">{selectedBatch === 'All Batches' ? 'Global' : (selectedBatch || 'Batch')}</span>
+                        <span className="material-symbols-outlined text-[15px] sm:text-[16px] shrink-0">tune</span>
+                        <span className="truncate">
+                            {selectedLevel === 'All Levels' ? 'Global Lvl' : selectedLevel} • {selectedBatch === 'All Batches' ? 'Global Batch' : (selectedBatch || 'Batch')}
+                        </span>
                     </button>
                     <NotificationBell />
                     <ThemeToggle />

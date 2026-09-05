@@ -14,8 +14,12 @@ export default function SensiTopNav() {
     const setIsMobileNavOpen = context?.setIsMobileNavOpen || (() => {});
     const selectedBatch = context?.selectedBatch;
     const setSelectedBatch = context?.setSelectedBatch || (() => {});
+    const selectedLevel = context?.selectedLevel;
+    const setSelectedLevel = context?.setSelectedLevel || (() => {});
     const staffBatches = context?.staffBatches || context?.sensiBatches || [];
     const setStaffBatches = context?.setStaffBatches || context?.setSensiBatches || (() => {});
+    const sensiLevels = context?.sensiLevels || [];
+    const setSensiLevels = context?.setSensiLevels || (() => {});
     const setIsBatchModalOpen = context?.setIsBatchModalOpen || (() => {});
 
     useEffect(() => {
@@ -33,6 +37,10 @@ export default function SensiTopNav() {
                         ? data.batches 
                         : (data.batch ? [data.batch] : []);
                     setStaffBatches(bList);
+                    const lvlList = data.levels && data.levels.length > 0
+                        ? data.levels
+                        : (data.level ? [data.level] : ['Level 5']);
+                    setSensiLevels(lvlList);
                 }
             } catch (err) {
                 console.error(err);
@@ -65,15 +73,17 @@ export default function SensiTopNav() {
                     <img src="/fledgeacad.png" alt="Logo" className="h-18 w-auto object-contain shrink-0 hidden md:block brightness-0 invert" />
                 </div>
                 
-                <div className="flex items-center gap-2 md:gap-md text-white">
-                    {/* Batch Switcher Button */}
+                <div className="flex items-center gap-1.5 sm:gap-2 md:gap-md text-white min-w-0">
+                    {/* Level & Batch Switcher Button */}
                     <button 
                         onClick={() => setIsBatchModalOpen(true)}
-                        className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-xl font-label-md transition-colors flex items-center gap-1.5 text-xs sm:text-sm border border-white/20 hover:border-white/40 shadow-xs cursor-pointer active:scale-95 max-w-[140px] sm:max-w-none"
-                        title="Switch Batch"
+                        className="bg-white/20 hover:bg-white/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl font-label-md transition-colors flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm border border-white/20 hover:border-white/40 shadow-xs cursor-pointer active:scale-95 max-w-[130px] xs:max-w-[170px] sm:max-w-none truncate shrink min-w-0"
+                        title="Switch Assigned Level & Batch"
                     >
-                        <span className="material-symbols-outlined text-[18px] shrink-0">swap_horiz</span>
-                        <span className="truncate">{selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}</span>
+                        <span className="material-symbols-outlined text-[15px] sm:text-[17px] shrink-0">swap_horiz</span>
+                        <span className="truncate">
+                            {selectedLevel || (sensiLevels && sensiLevels.length > 0 ? sensiLevels[0] : 'Level 5')} • {selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}
+                        </span>
                     </button>
 
                     <NotificationBell />

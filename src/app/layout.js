@@ -4,6 +4,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { NotificationProvider } from "./context/NotificationContext";
 import NotificationPopup from "./components/NotificationPopup";
 import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
+import SecurityShield from "./components/SecurityShield";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -73,6 +74,7 @@ export default function RootLayout({ children }) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <NotificationProvider>
             <ServiceWorkerRegister />
+            <SecurityShield />
             {children}
             <NotificationPopup />
           </NotificationProvider>

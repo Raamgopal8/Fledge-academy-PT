@@ -51,22 +51,22 @@ export default function SensiNavbar() {
                     </button>
                 </div>
 
-                {/* Active Batch Switcher in Sidebar */}
+                {/* Active Level & Batch Switcher in Sidebar */}
                 <div className="px-3 mb-3">
                     <button
                         onClick={() => {
                             setIsBatchModalOpen(true);
                             setIsMobileNavOpen(false);
                         }}
-                        className="w-full bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 rounded-xl px-3 py-2 text-left flex items-center justify-between transition-all group shadow-2xs"
-                        title="Switch Batch"
+                        className="w-full bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 rounded-xl px-3 py-2 text-left flex items-center justify-between transition-all group shadow-2xs cursor-pointer"
+                        title="Switch Level & Batch"
                     >
                         <div className="flex items-center gap-2 min-w-0">
-                            <span className="material-symbols-outlined text-primary text-[18px] shrink-0">domain</span>
+                            <span className="material-symbols-outlined text-primary text-[18px] shrink-0">tune</span>
                             <div className="truncate">
-                                <p className="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider leading-none mb-0.5">Active Batch</p>
+                                <p className="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider leading-none mb-0.5">Assigned Scope</p>
                                 <p className="font-label-md text-on-surface font-semibold truncate text-xs">
-                                    {selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}
+                                    {context?.selectedLevel || (context?.sensiLevels && context.sensiLevels.length > 0 ? context.sensiLevels[0] : 'Level 5')} • {selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}
                                 </p>
                             </div>
                         </div>

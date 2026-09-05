@@ -134,6 +134,10 @@ class FinancialTransaction(Document):
 class CommunityMessage(Document):
     content: Optional[str] = None
     audio_url: Optional[str] = None
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None  # "image", "document", "audio"
+    file_name: Optional[str] = None
+    file_size: Optional[int] = None
     author_id: str
     author_name: str
     author_image: Optional[str] = None

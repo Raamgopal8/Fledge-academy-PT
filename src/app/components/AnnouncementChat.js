@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 
-export default function AnnouncementChat({ role, overrideBatch }) {
+export default function AnnouncementChat({ role, overrideBatch, overrideLevel }) {
     const [announcements, setAnnouncements] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -20,43 +20,124 @@ export default function AnnouncementChat({ role, overrideBatch }) {
 
     const isAdmin = (role || '').toLowerCase() === 'admin' || (role || '').toLowerCase() === 'ceo';
 
-    const [userLevel, setUserLevel] = useState('Level 5');
-    const [userBatch, setUserBatch] = useState('');
-
-    useEffect(() => {
-        // Run only on client side
+    const [userLevel, setUserLevel] = useState(() => {
+        if (overrideLevel !== undefined) {
+            return (overrideLevel === 'All Levels' || overrideLevel === 'All') ? '' : (overrideLevel || '');
+        }
         if (typeof window !== 'undefined') {
-            const level = localStorage.getItem('level') || 'Level 5';
-            const batch = overrideBatch !== undefined ? overrideBatch : (localStorage.getItem('batch') || '');
+            const l = localStorage.getItem('adminSelectedLevel') || localStorage.getItem('sensiSelectedLevel') || localStorage.getItem('level') || 'Level 5';
+            return (l === 'All Levels' || l === 'All') ? '' : l;
+        }
+        return 'Level 5';
+    });
+
+    const [userBatch, setUserBatch] = useState(() => {
+        if (overrideBatch !== undefined) {
+            return (overrideBatch === 'All Batches' || overrideBatch === 'All Assigned Batches') ? '' : (overrideBatch || '');
+        }
+        if (typeof window !== 'undefined') {
+            const b = localStorage.getItem('adminSelectedBatch') || localStorage.getItem('sensiSelectedBatch') || localStorage.getItem('batch') || '';
+            return (b === 'All Batches' || b === 'All Assigned Batches') ? '' : b;
+        }
+        return '';
+    });
+
+    // Sync overrideBatch / overrideLevel if prop changes or on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            let level = userLevel;
+            if (overrideLevel !== undefined) {
+                level = (overrideLevel === 'All Levels' || overrideLevel === 'All') ? '' : (overrideLevel || '');
+            } else {
+                const l = localStorage.getItem('adminSelectedLevel') || localStorage.getItem('sensiSelectedLevel') || localStorage.getItem('level') || 'Level 5';
+                level = (l === 'All Levels' || l === 'All') ? '' : l;
+            }
+            let batch = userBatch;
+            if (overrideBatch !== undefined) {
+                batch = (overrideBatch === 'All Batches' || overrideBatch === 'All Assigned Batches') ? '' : (overrideBatch || '');
+            } else {
+                const b = localStorage.getItem('adminSelectedBatch') || localStorage.getItem('sensiSelectedBatch') || localStorage.getItem('batch') || '';
+                batch = (b === 'All Batches' || b === 'All Assigned Batches') ? '' : b;
+            }
             setUserBatch(batch);
             setUserLevel(level);
         }
-    }, [overrideBatch]);
+    }, [overrideBatch, overrideLevel]);
 
-    const fetchAnnouncements = async () => {
+    const fetchAnnouncements = async (lvlParam, batchParam) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+            let currentLevel = lvlParam !== undefined ? lvlParam : userLevel;
+            let currentBatch = batchParam !== undefined ? batchParam : (overrideBatch !== undefined ? overrideBatch : userBatch);
+
+            // Normalize batch
+            if (currentBatch === 'All Batches' || currentBatch === 'All Assigned Batches') {
+                currentBatch = '';
+            }
+
+            // Fallback for student/sensi if level or batch are missing from localStorage
+            if (!isAdmin && typeof window !== 'undefined' && (!currentLevel || !localStorage.getItem('level')) && token) {
+                try {
+                    const profRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (profRes.ok) {
+                        const prof = await profRes.json();
+                        if (prof.level) {
+                            currentLevel = prof.level;
+                            localStorage.setItem('level', prof.level);
+                            setUserLevel(prof.level);
+                        }
+                        if (overrideBatch === undefined && prof.batch) {
+                            currentBatch = (prof.batch === 'All Batches' || prof.batch === 'All Assigned Batches') ? '' : prof.batch;
+                            localStorage.setItem('batch', prof.batch);
+                            setUserBatch(currentBatch);
+                        }
+                    }
+                } catch (pe) {
+                    console.warn("Profile fetch fallback warning:", pe);
+                }
+            }
+
+            currentLevel = currentLevel || 'Level 5';
+            currentBatch = currentBatch || '';
+
             const annApiBase = process.env.NEXT_PUBLIC_ANNOUNCEMENT_API_URL || '';
-            const res = await fetch(`${annApiBase}/api/announcement?level=${encodeURIComponent(userLevel)}&batch=${encodeURIComponent(userBatch)}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const queryParams = new URLSearchParams();
+            if (currentLevel) queryParams.append('level', currentLevel);
+            if (currentBatch) queryParams.append('batch', currentBatch);
+            queryParams.append('t', Date.now().toString());
+
+            const res = await fetch(`${annApiBase}/api/announcement?${queryParams.toString()}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             });
-            if (!res.ok) throw new Error('Failed to fetch announcements');
+
+            if (!res.ok) {
+                // If 401 or backend error, log warning instead of crashing UI
+                console.warn(`Announcement API returned status ${res.status}`);
+                return;
+            }
+
             const data = await res.json();
-            // Backend returns newest first. Reverse for chat layout (oldest at top).
-            setAnnouncements(data.reverse());
+            if (Array.isArray(data)) {
+                // Backend returns newest first. Reverse for chat layout (oldest at top).
+                setAnnouncements([...data].reverse());
+                setError(null);
+            }
         } catch (err) {
             console.error("Error fetching announcements:", err);
-            setError(err.message);
+            // Only set error if we don't already have announcements displayed
+            if (announcements.length === 0) {
+                setError(err.message);
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        if (userLevel && userBatch !== undefined) {
-            fetchAnnouncements();
-        }
-    }, [userLevel, userBatch]);
+        fetchAnnouncements();
+    }, [userLevel, userBatch, overrideBatch]);
 
     useEffect(() => {
         // Auto scroll to bottom when new messages arrive
@@ -184,6 +265,13 @@ export default function AnnouncementChat({ role, overrideBatch }) {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => fetchAnnouncements()}
+                        className="text-on-surface-variant hover:text-primary p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer active:scale-95"
+                        title="Refresh Announcements"
+                    >
+                        <span className="material-symbols-outlined text-[22px]">refresh</span>
+                    </button>
                     <span className="material-symbols-outlined text-primary text-3xl">campaign</span>
                 </div>
             </div>

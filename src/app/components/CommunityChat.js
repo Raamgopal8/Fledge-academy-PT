@@ -31,6 +31,20 @@ export default function CommunityChat({ role, overrideBatch }) {
     const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [deletingMessageId, setDeletingMessageId] = useState(null);
 
+    // WhatsApp-Style Document / Image Attachment States
+    const [showAttachMenu, setShowAttachMenu] = useState(false);
+    const [selectedAttachment, setSelectedAttachment] = useState(null); // { file, previewUrl, type: 'image'|'document', name, size }
+    const [attachmentCaption, setAttachmentCaption] = useState('');
+    const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+    const [lightboxImage, setLightboxImage] = useState(null);
+
+    // Clear All Messages (Sensi & Admin) States
+    const [isClearingMessages, setIsClearingMessages] = useState(false);
+    const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
+
+    const imageInputRef = useRef(null);
+    const docInputRef = useRef(null);
+    const attachMenuRef = useRef(null);
     const chatScrollRef = useRef(null);
 
     const formatRole = (r) => {
@@ -321,6 +335,175 @@ export default function CommunityChat({ role, overrideBatch }) {
         }
     };
 
+    // 6. WhatsApp-Style File Attachment Handling
+    const handleFileSelect = (file, typeHint) => {
+        if (!file) return;
+
+        // Check file size (limit to 25MB)
+        const maxBytes = 25 * 1024 * 1024;
+        if (file.size > maxBytes) {
+            alert("File size exceeds 25MB limit. Please choose a smaller file.");
+            return;
+        }
+
+        const isImg = file.type.startsWith('image/') || typeHint === 'image';
+        const preview = isImg ? URL.createObjectURL(file) : null;
+
+        setSelectedAttachment({
+            file,
+            previewUrl: preview,
+            type: isImg ? 'image' : 'document',
+            name: file.name,
+            size: file.size
+        });
+        setAttachmentCaption('');
+        setShowAttachMenu(false);
+    };
+
+    const clearSelectedAttachment = () => {
+        if (selectedAttachment?.previewUrl) {
+            URL.revokeObjectURL(selectedAttachment.previewUrl);
+        }
+        setSelectedAttachment(null);
+        setAttachmentCaption('');
+        if (imageInputRef.current) imageInputRef.current.value = '';
+        if (docInputRef.current) docInputRef.current.value = '';
+    };
+
+    // Send Document / Image to Cloudflare R2
+    const sendMediaAttachment = async () => {
+        if (!selectedAttachment?.file) return;
+
+        setIsUploadingMedia(true);
+        try {
+            const effectiveRole = role || formatRole(userRole);
+            const formData = new FormData();
+            formData.append('file', selectedAttachment.file);
+            if (attachmentCaption.trim()) {
+                formData.append('caption', attachmentCaption.trim());
+                formData.append('content', attachmentCaption.trim());
+            }
+            formData.append('author_id', userEmail);
+            formData.append('author_name', userName);
+            formData.append('author_image', userProfileImage || localStorage.getItem('userProfileImage') || '');
+            formData.append('role', formatRole(effectiveRole));
+            formData.append('level', userLevel);
+            if (userBatch) formData.append('batch', userBatch);
+
+            const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
+            const res = await fetch(`${communityApiBase}/api/community/messages/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                clearSelectedAttachment();
+                fetchMessages();
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || "Failed to upload file to Cloudflare storage");
+            }
+        } catch (error) {
+            console.error("Media upload error:", error);
+            alert(`Failed to send attachment: ${error.message || 'Please try again.'}`);
+        } finally {
+            setIsUploadingMedia(false);
+        }
+    };
+
+    // Paste Image from Clipboard (Ctrl+V / Cmd+V)
+    useEffect(() => {
+        const handlePaste = (e) => {
+            if (e.clipboardData && e.clipboardData.items) {
+                for (const item of e.clipboardData.items) {
+                    if (item.type.indexOf('image') !== -1) {
+                        const file = item.getAsFile();
+                        if (file) {
+                            handleFileSelect(file, 'image');
+                            e.preventDefault();
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('paste', handlePaste);
+        return () => window.removeEventListener('paste', handlePaste);
+    }, [userLevel, userBatch, userEmail, userName]);
+
+    // Close attachment dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (attachMenuRef.current && !attachMenuRef.current.contains(e.target)) {
+                setShowAttachMenu(false);
+            }
+        };
+        if (showAttachMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showAttachMenu]);
+
+    const formatBytes = (bytes) => {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
+    const getDocIcon = (filename) => {
+        if (!filename) return { icon: 'description', color: 'text-blue-500 bg-blue-500/15' };
+        const ext = filename.split('.').pop().toLowerCase();
+        if (['pdf'].includes(ext)) return { icon: 'picture_as_pdf', color: 'text-red-500 bg-red-500/15' };
+        if (['doc', 'docx', 'txt', 'rtf'].includes(ext)) return { icon: 'article', color: 'text-blue-500 bg-blue-500/15' };
+        if (['xls', 'xlsx', 'csv'].includes(ext)) return { icon: 'table_view', color: 'text-emerald-500 bg-emerald-500/15' };
+        if (['ppt', 'pptx'].includes(ext)) return { icon: 'slideshow', color: 'text-amber-500 bg-amber-500/15' };
+        if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return { icon: 'folder_zip', color: 'text-purple-500 bg-purple-500/15' };
+        return { icon: 'description', color: 'text-primary bg-primary/15' };
+    };
+
+    // 7. Clear All Messages & Cloudflare R2 Media (Sensi & Admin)
+    const canClearAll = ['admin', 'ceo', 'sensi', 'staff'].includes(userRole?.toLowerCase()) || ['Admin', 'Sensi'].includes(role);
+
+    const handleClearAllMessages = async () => {
+        setIsClearingMessages(true);
+        try {
+            const currentLevel = userLevel || (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5');
+            const currentBatch = userBatch !== undefined && userBatch !== '' 
+                ? userBatch 
+                : (overrideBatch !== undefined ? overrideBatch : (typeof window !== 'undefined' ? (localStorage.getItem('batch') || '') : ''));
+            const effectiveRole = role || formatRole(userRole);
+
+            const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
+            const queryParams = new URLSearchParams();
+            if (currentLevel) queryParams.append('level', currentLevel);
+            if (currentBatch) queryParams.append('batch', currentBatch);
+            queryParams.append('role', formatRole(effectiveRole));
+            if (userEmail) queryParams.append('user_id', userEmail);
+
+            const res = await fetch(`${communityApiBase}/api/community/messages?${queryParams.toString()}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setMessages([]);
+                setShowClearConfirmModal(false);
+                fetchMessages();
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                alert(errData.detail || "Failed to clear community messages.");
+            }
+        } catch (error) {
+            console.error("Clear all error:", error);
+            alert("An error occurred while clearing messages.");
+        } finally {
+            setIsClearingMessages(false);
+        }
+    };
+
     const formatTimer = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -330,30 +513,44 @@ export default function CommunityChat({ role, overrideBatch }) {
     return (
         <div className="flex flex-col h-full flex-1 min-h-0 bg-surface-container-lowest dark:bg-slate-950 rounded-3xl border border-outline-variant/80 overflow-hidden shadow-elevation-2 w-full">
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-outline-variant/60 bg-surface-container-low dark:bg-slate-900 flex justify-between items-center z-10 shadow-xs">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary to-blue-500 text-on-primary flex items-center justify-center font-bold shadow-xs">
-                        <span className="material-symbols-outlined text-[24px]">forum</span>
+            <div className="p-3 sm:p-5 border-b border-outline-variant/60 bg-surface-container-low dark:bg-slate-900 flex justify-between items-center z-10 shadow-xs gap-2">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-primary to-blue-500 text-on-primary flex items-center justify-center font-bold shadow-xs shrink-0">
+                        <span className="material-symbols-outlined text-[18px] sm:text-[24px]">forum</span>
                     </div>
-                    <div>
-                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text">
+                    <div className="min-w-0">
+                        <h2 className="text-base sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text truncate">
                             Community Discussion
                         </h2>
-                        <p className="font-body-xs text-on-surface-variant">
-                            Live discussion and collaboration with peers
+                        <p className="hidden xs:block text-[10px] sm:text-xs text-on-surface-variant truncate">
+                            Live discussion & collaboration with peers
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* Clear All Messages Button (Sensi & Admin only) */}
+                    {canClearAll && (
+                        <button
+                            type="button"
+                            onClick={() => setShowClearConfirmModal(true)}
+                            disabled={isClearingMessages || messages.length === 0}
+                            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-error/10 hover:bg-error/20 text-error border border-error/20 font-bold text-xs flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer active:scale-95 disabled:opacity-40 disabled:pointer-events-none shadow-2xs"
+                            title="Clear all messages and purge images from Cloudflare"
+                        >
+                            <span className="material-symbols-outlined text-[16px] sm:text-[17px]">delete_sweep</span>
+                            <span className="hidden md:inline">Clear Chat</span>
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         onClick={handleRefresh}
                         disabled={isRefreshing}
-                        className="w-9 h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-75"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-75 shrink-0"
                         title="Refresh Messages"
                     >
-                        <span className={`material-symbols-outlined text-[18px] ${isRefreshing ? 'animate-spin text-primary' : ''}`}>
+                        <span className={`material-symbols-outlined text-[16px] sm:text-[18px] ${isRefreshing ? 'animate-spin text-primary' : ''}`}>
                             sync
                         </span>
                     </button>
@@ -363,7 +560,7 @@ export default function CommunityChat({ role, overrideBatch }) {
             {/* Chat Scroll Area */}
             <div 
                 ref={chatScrollRef}
-                className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 custom-scrollbar bg-surface/50 dark:bg-slate-950/60"
+                className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar bg-surface/50 dark:bg-slate-950/60"
             >
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant gap-2">
@@ -402,10 +599,10 @@ export default function CommunityChat({ role, overrideBatch }) {
                     return (
                         <div 
                             key={msgId} 
-                            className={`group relative flex gap-2 sm:gap-3 max-w-[94%] sm:max-w-[80%] ${isYou ? 'ml-auto flex-row-reverse' : 'mr-auto flex-row'}`}
+                            className={`group relative flex gap-1.5 sm:gap-3 max-w-[92%] sm:max-w-[80%] ${isYou ? 'ml-auto flex-row-reverse' : 'mr-auto flex-row'}`}
                         >
                             {/* Avatar */}
-                            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-xs font-bold shadow-xs mt-0.5 ${
+                            <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[10px] sm:text-xs font-bold shadow-xs mt-0.5 ${
                                 isYou 
                                     ? 'bg-primary/20 text-primary border border-primary/30' 
                                     : 'bg-surface-container-highest text-on-surface-variant border border-outline-variant/60'
@@ -426,7 +623,7 @@ export default function CommunityChat({ role, overrideBatch }) {
                             <div className={`flex flex-col ${isYou ? 'items-end' : 'items-start'} flex-1 min-w-0 max-w-full`}>
                                 {/* Header / Sender Info */}
                                 <div className="flex items-center gap-1.5 sm:gap-2 mb-1 px-1 flex-wrap">
-                                    <span className="font-label-sm font-bold text-on-surface text-xs truncate">
+                                    <span className="font-label-sm font-bold text-on-surface text-xs truncate max-w-[120px] sm:max-w-none">
                                         {isYou ? 'You' : msg.author_name}
                                     </span>
                                     <span className={`text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full uppercase ${
@@ -448,7 +645,7 @@ export default function CommunityChat({ role, overrideBatch }) {
 
                                 {/* Message Content / Edit Mode */}
                                 {isCurrentlyEditing ? (
-                                    <div className="w-full min-w-[240px] sm:min-w-[260px] bg-surface-container-lowest dark:bg-slate-900 p-3 rounded-2xl border border-primary/40 shadow-lg space-y-2">
+                                    <div className="w-full min-w-[200px] sm:min-w-[260px] bg-surface-container-lowest dark:bg-slate-900 p-3 rounded-2xl border border-primary/40 shadow-lg space-y-2">
                                         <textarea
                                             value={editingContent}
                                             onChange={(e) => setEditingContent(e.target.value)}
@@ -489,13 +686,14 @@ export default function CommunityChat({ role, overrideBatch }) {
                                             ? 'bg-primary text-on-primary rounded-tr-xs' 
                                             : 'bg-surface-container-high dark:bg-slate-900 text-on-surface rounded-tl-xs border border-outline-variant/40'
                                     }`}>
-                                        {msg.audio_url ? (
+                                        {/* 1. Voice Message */}
+                                        {msg.audio_url && (
                                             <div className="flex flex-col gap-1 py-0.5 max-w-full">
                                                 <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold opacity-90">
                                                     <span className="material-symbols-outlined text-[15px] sm:text-[18px]">graphic_eq</span>
                                                     <span>Voice Message</span>
                                                 </div>
-                                                <div className="w-full max-w-[190px] xs:max-w-[210px] sm:max-w-[260px]">
+                                                <div className="w-full max-w-[170px] xs:max-w-[210px] sm:max-w-[260px]">
                                                     <audio 
                                                         controls 
                                                         src={msg.audio_url} 
@@ -503,8 +701,75 @@ export default function CommunityChat({ role, overrideBatch }) {
                                                     />
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <span className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</span>
+                                        )}
+
+                                        {/* 2. WhatsApp-Style Image Message */}
+                                        {msg.media_type === 'image' && msg.media_url && (
+                                            <div className="flex flex-col gap-2 max-w-full">
+                                                <div 
+                                                    onClick={() => setLightboxImage(msg.media_url)}
+                                                    className="relative rounded-2xl overflow-hidden cursor-pointer group/img max-w-[260px] xs:max-w-[320px] sm:max-w-[380px] bg-black/5 shadow-xs border border-black/10 dark:border-white/10"
+                                                >
+                                                    <img 
+                                                        src={msg.media_url} 
+                                                        alt={msg.file_name || 'Community Image'} 
+                                                        className="w-full max-h-[260px] sm:max-h-[300px] object-cover rounded-2xl transition-transform duration-300 group-hover/img:scale-[1.02]"
+                                                        loading="lazy"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <div className="w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-xs">
+                                                            <span className="material-symbols-outlined text-[20px]">zoom_in</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {msg.content && (
+                                                    <p className="text-xs sm:text-sm whitespace-pre-wrap px-0.5 leading-relaxed">{msg.content}</p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* 3. WhatsApp-Style Document Message */}
+                                        {msg.media_type === 'document' && msg.media_url && (
+                                            <div className="flex flex-col gap-2 max-w-full min-w-[190px] xs:min-w-[220px] sm:min-w-[270px]">
+                                                {(() => {
+                                                    const docInfo = getDocIcon(msg.file_name);
+                                                    return (
+                                                        <a
+                                                            href={msg.media_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`p-2.5 sm:p-3 rounded-2xl flex items-center gap-2.5 sm:gap-3 transition-all ${
+                                                                isYou 
+                                                                    ? 'bg-black/15 hover:bg-black/25 text-white' 
+                                                                    : 'bg-surface-container hover:bg-surface-container-highest text-on-surface'
+                                                            } border border-white/15 dark:border-white/10 group/doc shadow-2xs`}
+                                                        >
+                                                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 ${docInfo.color}`}>
+                                                                <span className="material-symbols-outlined text-[19px] sm:text-[22px]">{docInfo.icon}</span>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 pr-1">
+                                                                <h5 className="text-xs font-bold truncate group-hover/doc:underline">
+                                                                    {msg.file_name || 'Document'}
+                                                                </h5>
+                                                                <span className="text-[10px] opacity-75 font-medium">
+                                                                    {formatBytes(msg.file_size)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/20 dark:bg-slate-800 flex items-center justify-center shrink-0 group-hover/doc:scale-110 transition-transform">
+                                                                <span className="material-symbols-outlined text-[14px] sm:text-[16px]">download</span>
+                                                            </div>
+                                                        </a>
+                                                    );
+                                                })()}
+                                                {msg.content && (
+                                                    <p className="text-xs sm:text-sm whitespace-pre-wrap px-0.5 leading-relaxed">{msg.content}</p>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* 4. Regular Text Message */}
+                                        {!msg.audio_url && !msg.media_type && (
+                                            <span className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.content}</span>
                                         )}
                                     </div>
                                 )}
@@ -543,15 +808,15 @@ export default function CommunityChat({ role, overrideBatch }) {
 
             {/* Audio Message Studio Preview Card (if audio is recorded and ready to send) */}
             {audioUrl && (
-                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 flex flex-col gap-3">
+                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 flex flex-col gap-2.5 sm:gap-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-[18px]">mic</span>
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">mic</span>
                             </div>
                             <div>
                                 <h4 className="text-xs font-bold text-on-surface">Audio Message Studio</h4>
-                                <p className="text-[10px] text-on-surface-variant">Preview your voice note before sending</p>
+                                <p className="text-[10px] text-on-surface-variant">Preview your voice note</p>
                             </div>
                         </div>
 
@@ -565,29 +830,29 @@ export default function CommunityChat({ role, overrideBatch }) {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <audio src={audioUrl} controls className="flex-1 h-10 rounded-xl" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
+                        <audio src={audioUrl} controls className="w-full sm:flex-1 h-9 sm:h-10 rounded-xl" />
                         
-                        <div className="flex items-center gap-2 shrink-0">
-                            <button
-                                type="button"
-                                onClick={sendAudioMessage}
-                                disabled={isSendingAudio}
-                                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                            >
-                                <span className={`material-symbols-outlined text-[16px] ${isSendingAudio ? 'animate-spin' : ''}`}>
-                                    {isSendingAudio ? 'sync' : 'send'}
-                                </span>
-                                <span>{isSendingAudio ? 'Sending...' : 'Send Message'}</span>
-                            </button>
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 w-full sm:w-auto justify-end">
                             <button
                                 type="button"
                                 onClick={resetRecorder}
                                 disabled={isSendingAudio}
-                                className="px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer"
+                                className="flex-1 sm:flex-none px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[16px]">delete</span>
                                 <span>Discard</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={sendAudioMessage}
+                                disabled={isSendingAudio}
+                                className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                                <span className={`material-symbols-outlined text-[16px] ${isSendingAudio ? 'animate-spin' : ''}`}>
+                                    {isSendingAudio ? 'sync' : 'send'}
+                                </span>
+                                <span>{isSendingAudio ? 'Sending...' : 'Send'}</span>
                             </button>
                         </div>
                     </div>
@@ -596,50 +861,320 @@ export default function CommunityChat({ role, overrideBatch }) {
 
             {/* Recording Active Bar */}
             {isRecording && (
-                <div className="p-3 bg-error/10 border-t border-error/30 flex items-center justify-between animate-pulse">
-                    <div className="flex items-center gap-3">
-                        <span className="w-3 h-3 rounded-full bg-error animate-ping"></span>
-                        <span className="text-xs font-bold text-error">Recording voice message... ({formatTimer(recordingTime)})</span>
+                <div className="p-2.5 sm:p-3 bg-error/10 border-t border-error/30 flex items-center justify-between gap-2 animate-pulse">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full bg-error animate-ping shrink-0"></span>
+                        <span className="text-xs font-bold text-error truncate">Recording ({formatTimer(recordingTime)})</span>
                     </div>
                     <button
                         type="button"
                         onClick={stopRecording}
-                        className="px-4 py-1.5 rounded-xl bg-error text-white text-xs font-bold hover:bg-error/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        className="px-3 sm:px-4 py-1.5 rounded-xl bg-error text-white text-xs font-bold hover:bg-error/90 transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
                     >
                         <span className="material-symbols-outlined text-[16px]">stop</span>
-                        <span>Stop Recording</span>
+                        <span>Stop</span>
                     </button>
                 </div>
             )}
 
-            {/* Main Chat Input Bar */}
-            {!audioUrl && !isRecording && (
-                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80">
-                    <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            {/* WhatsApp-Style Media Attachment Preview & Caption Dialog */}
+            {selectedAttachment && (
+                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 flex flex-col gap-2.5 sm:gap-3 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
+                                    {selectedAttachment.type === 'image' ? 'photo_camera' : 'upload_file'}
+                                </span>
+                            </div>
+                            <div>
+                                <h4 className="text-xs font-bold text-on-surface">
+                                    {selectedAttachment.type === 'image' ? 'Send Photo' : 'Send Document'}
+                                </h4>
+                                <p className="text-[10px] text-on-surface-variant">Cloudflare storage</p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={clearSelectedAttachment}
+                            disabled={isUploadingMedia}
+                            className="text-on-surface-variant hover:text-error p-1 rounded-full hover:bg-surface-container transition-colors cursor-pointer"
+                            title="Discard Attachment"
+                        >
+                            <span className="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                    </div>
+
+                    {/* Preview Body */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 bg-surface-container-lowest dark:bg-slate-950 p-2.5 sm:p-3 rounded-2xl border border-outline-variant/60 w-full">
+                        {selectedAttachment.type === 'image' && selectedAttachment.previewUrl ? (
+                            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden bg-black/5 shrink-0 border border-outline-variant/40">
+                                <img 
+                                    src={selectedAttachment.previewUrl} 
+                                    alt="Preview" 
+                                    className="w-full h-full object-cover" 
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-3 bg-surface-container-high rounded-xl shrink-0 w-full sm:w-auto min-w-0 sm:min-w-[200px]">
+                                {(() => {
+                                    const docInfo = getDocIcon(selectedAttachment.name);
+                                    return (
+                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 ${docInfo.color}`}>
+                                            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">{docInfo.icon}</span>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="flex-1 min-w-0 pr-2">
+                                    <h5 className="text-xs font-bold text-on-surface truncate">{selectedAttachment.name}</h5>
+                                    <span className="text-[10px] text-on-surface-variant font-medium">
+                                        {formatBytes(selectedAttachment.size)}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Caption input and action buttons */}
+                        <div className="flex-1 flex flex-col gap-2 w-full">
+                            <input
+                                type="text"
+                                value={attachmentCaption}
+                                onChange={(e) => setAttachmentCaption(e.target.value)}
+                                placeholder="Add a caption... (optional)"
+                                disabled={isUploadingMedia}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        sendMediaAttachment();
+                                    }
+                                }}
+                                className="w-full bg-surface-container-low dark:bg-slate-900 rounded-xl px-3 py-2 border border-outline-variant text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
+                            />
+
+                            <div className="flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={clearSelectedAttachment}
+                                    disabled={isUploadingMedia}
+                                    className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold text-xs transition-all cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={sendMediaAttachment}
+                                    disabled={isUploadingMedia}
+                                    className="px-3.5 sm:px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                >
+                                    <span className={`material-symbols-outlined text-[16px] ${isUploadingMedia ? 'animate-spin' : ''}`}>
+                                        {isUploadingMedia ? 'sync' : 'send'}
+                                    </span>
+                                    <span>{isUploadingMedia ? 'Uploading...' : 'Send'}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Chat Input Bar with WhatsApp Attachment Menu */}
+            {!audioUrl && !isRecording && !selectedAttachment && (
+                <div className="p-2.5 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 relative">
+                    {/* Hidden Native File Inputs */}
+                    <input
+                        type="file"
+                        ref={imageInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                handleFileSelect(e.target.files[0], 'image');
+                            }
+                        }}
+                    />
+                    <input
+                        type="file"
+                        ref={docInputRef}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                handleFileSelect(e.target.files[0], 'document');
+                            }
+                        }}
+                    />
+
+                    {/* WhatsApp-Style Attachment Popup Menu */}
+                    {showAttachMenu && (
+                        <div 
+                            ref={attachMenuRef}
+                            className="absolute bottom-14 sm:bottom-16 left-2 sm:left-6 bg-surface-container-lowest dark:bg-slate-900 rounded-2xl p-2 border border-outline-variant/80 shadow-2xl flex flex-col gap-1 z-30 min-w-[180px] sm:min-w-[190px] animate-scale-up"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowAttachMenu(false);
+                                    if (imageInputRef.current) imageInputRef.current.click();
+                                }}
+                                className="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-surface-container text-left transition-colors cursor-pointer group/opt"
+                            >
+                                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover/opt:scale-110 transition-transform shrink-0">
+                                    <span className="material-symbols-outlined text-[18px] sm:text-[20px]">image</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-xs font-bold text-on-surface">Photos & Images</div>
+                                    <div className="text-[10px] text-on-surface-variant">PNG, JPG, WebP, GIF</div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowAttachMenu(false);
+                                    if (docInputRef.current) docInputRef.current.click();
+                                }}
+                                className="flex items-center gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-xl hover:bg-surface-container text-left transition-colors cursor-pointer group/opt"
+                            >
+                                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover/opt:scale-110 transition-transform shrink-0">
+                                    <span className="material-symbols-outlined text-[18px] sm:text-[20px]">description</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-xs font-bold text-on-surface">Document</div>
+                                    <div className="text-[10px] text-on-surface-variant">PDF, DOCX, XLSX, ZIP</div>
+                                </div>
+                            </button>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
+                        {/* Voice Note Button */}
                         <button 
                             type="button"
                             onClick={startRecording}
-                            className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all bg-surface-container-high hover:bg-primary hover:text-white text-on-surface-variant cursor-pointer active:scale-95 shadow-xs shrink-0"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-surface-container-high hover:bg-primary hover:text-white text-on-surface-variant cursor-pointer active:scale-95 shadow-xs shrink-0"
                             title="Record Voice Note"
                         >
-                            <span className="material-symbols-outlined text-[20px]">mic</span>
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">mic</span>
                         </button>
+
+                        {/* WhatsApp-Style Attachment Paperclip Button */}
+                        <button 
+                            type="button"
+                            onClick={() => setShowAttachMenu(prev => !prev)}
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 ${
+                                showAttachMenu 
+                                    ? 'bg-primary text-white' 
+                                    : 'bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant'
+                            }`}
+                            title="Attach Document or Image"
+                        >
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px] transform rotate-45">attach_file</span>
+                        </button>
+
                         <input
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Type a message"
-                            className="flex-1 bg-surface-container-lowest dark:bg-slate-950 rounded-2xl px-4 py-2.5 border border-outline-variant focus:outline-none focus:border-primary font-body-md text-on-surface text-xs sm:text-sm transition-all shadow-xs"
+                            placeholder="Type a message..."
+                            className="flex-1 min-w-0 bg-surface-container-lowest dark:bg-slate-950 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 border border-outline-variant focus:outline-none focus:border-primary font-body-md text-on-surface text-xs sm:text-sm transition-all shadow-xs"
                         />
                         <button 
                             type="submit"
                             disabled={!newMessage.trim()}
-                            className="w-10 h-10 rounded-2xl bg-primary text-on-primary flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-primary text-on-primary flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
                             title="Send Message"
                         >
-                            <span className="material-symbols-outlined text-[20px]">send</span>
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">send</span>
                         </button>
                     </form>
+                </div>
+            )}
+
+            {/* WhatsApp-Style Fullscreen Lightbox for Image Zoom */}
+            {lightboxImage && (
+                <div 
+                    onClick={() => setLightboxImage(null)}
+                    className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none"
+                >
+                    <button 
+                        type="button"
+                        onClick={() => setLightboxImage(null)}
+                        className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition cursor-pointer z-10"
+                        title="Close image"
+                    >
+                        <span className="material-symbols-outlined text-2xl">close</span>
+                    </button>
+                    <a
+                        href={lightboxImage}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-5 right-18 px-3 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer z-10"
+                        title="Open Original"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                        <span>Open Original</span>
+                    </a>
+                    <img 
+                        src={lightboxImage} 
+                        alt="Community attachment fullscreen" 
+                        className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl" 
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
+
+            {/* Clear All Messages Confirmation Modal (Sensi & Admin) */}
+            {showClearConfirmModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4 animate-scale-up">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-error/15 text-error flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-2xl">delete_sweep</span>
+                            </div>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-bold text-on-surface">
+                                    Clear All Messages?
+                                </h3>
+                                <p className="text-xs text-on-surface-variant mt-0.5">
+                                    This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-3.5 bg-error/5 dark:bg-error/10 border border-error/20 rounded-2xl text-xs text-on-surface-variant leading-relaxed space-y-1.5">
+                            <p className="font-semibold text-error flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[16px]">warning</span>
+                                <span>Permanent Data & Cloudflare Purge</span>
+                            </p>
+                            <p>
+                                All text messages, voice notes, and <strong>uploaded images/documents in your Cloudflare storage account</strong> for this batch will be permanently deleted.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2.5 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setShowClearConfirmModal(false)}
+                                disabled={isClearingMessages}
+                                className="px-4 py-2 rounded-xl border border-outline-variant/60 hover:bg-surface-container text-on-surface font-semibold text-xs transition-all cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleClearAllMessages}
+                                disabled={isClearingMessages}
+                                className="px-4 py-2 rounded-xl bg-error hover:bg-error/90 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                                <span className={`material-symbols-outlined text-[16px] ${isClearingMessages ? 'animate-spin' : ''}`}>
+                                    {isClearingMessages ? 'sync' : 'delete_forever'}
+                                </span>
+                                <span>{isClearingMessages ? 'Purging Cloudflare & Messages...' : 'Yes, Clear All'}</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

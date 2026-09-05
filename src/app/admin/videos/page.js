@@ -45,6 +45,7 @@ export default function CEOVideos() {
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const [mobileTab, setMobileTab] = useState('overview'); // 'overview' | 'playlist'
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isMobileLandscape, setIsMobileLandscape] = useState(false);
 
     // YouTube-style Mobile Video Player States for HTML5 videos
     const videoRef = useRef(null);
@@ -86,6 +87,14 @@ export default function CEOVideos() {
                 document.msFullscreenElement
             );
             setIsFullscreen(isFs);
+            if (!isFs) {
+                setIsMobileLandscape(false);
+                try {
+                    if (screen.orientation && screen.orientation.unlock) {
+                        screen.orientation.unlock();
+                    }
+                } catch (e) { }
+            }
         };
 
         document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -265,27 +274,29 @@ export default function CEOVideos() {
             return cleanUrl;
         }
 
-        // 2. YouTube Links (using privacy-enhanced youtube-nocookie with parameters)
+        // 2. YouTube Links (using www.youtube.com with origin and privacy parameters)
+        const originParam = typeof window !== 'undefined' && window.location?.origin ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
         if (cleanUrl.includes('youtube.com/watch')) {
             const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
             }
         }
         if (cleanUrl.includes('youtu.be/')) {
             const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
             }
         }
         if (cleanUrl.includes('youtube.com/embed/')) {
-            const separator = cleanUrl.includes('?') ? '&' : '?';
-            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+            const cleanEmbed = cleanUrl.replace('youtube-nocookie.com', 'youtube.com');
+            const separator = cleanEmbed.includes('?') ? '&' : '?';
+            return `${cleanEmbed}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
         }
         if (cleanUrl.includes('youtube.com/shorts/')) {
             const match = cleanUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
             }
         }
 
@@ -375,6 +386,52 @@ export default function CEOVideos() {
             } catch (err) {
                 console.warn("Exit fullscreen error:", err);
             }
+        }
+    };
+
+    const toggleMobileLandscapeFullscreen = async () => {
+        const elem = playerContainerRef.current || document.getElementById('ceo-video-player-stage');
+        if (isMobileLandscape) {
+            // Exit mobile landscape mode
+            setIsMobileLandscape(false);
+            try {
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+            } catch (e) { }
+
+            const isNativeFs = Boolean(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement
+            );
+            if (isNativeFs) {
+                try {
+                    if (document.exitFullscreen) await document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+                } catch (e) { }
+            }
+        } else {
+            // Enter mobile landscape mode
+            setIsMobileLandscape(true);
+            if (elem) {
+                try {
+                    if (elem.requestFullscreen) {
+                        await elem.requestFullscreen();
+                    } else if (elem.webkitRequestFullscreen) {
+                        await elem.webkitRequestFullscreen();
+                    }
+                } catch (e) {
+                    console.warn("Native fullscreen request warning:", e);
+                }
+            }
+
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape').catch(() => {});
+                }
+            } catch (e) { }
         }
     };
 
@@ -618,6 +675,26 @@ export default function CEOVideos() {
                                 <span className="material-symbols-outlined text-[16px]">theaters</span>
                                 <span className="hidden sm:inline">Cinema View</span>
                             </button>
+
+                            {/* Mobile Landscape Fullscreen Button near Cinema View (Mobile only) */}
+                            {viewMode === 'cinema' && activeVideo && (
+                                <button
+                                    type="button"
+                                    onClick={toggleMobileLandscapeFullscreen}
+                                    className={`lg:hidden px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                        isMobileLandscape
+                                            ? 'bg-primary text-on-primary shadow-xs font-bold'
+                                            : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                                    }`}
+                                    title="Landscape Fullscreen"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">
+                                        {isMobileLandscape ? 'fullscreen_exit' : 'screen_rotation'}
+                                    </span>
+                                    <span>{isMobileLandscape ? 'Exit Full' : 'Fullscreen'}</span>
+                                </button>
+                            )}
+
                             <button
                                 type="button"
                                 onClick={() => setViewMode('grid')}
@@ -709,8 +786,26 @@ export default function CEOVideos() {
                                                 ref={playerContainerRef}
                                                 id="ceo-video-player-stage"
                                                 onClick={handleVideoTap}
-                                                className="aspect-video w-full bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative select-none flex items-center justify-center border border-outline-variant/40 ring-1 ring-white/10 group cursor-pointer"
+                                                className={`aspect-video w-full bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative select-none flex items-center justify-center border border-outline-variant/40 ring-1 ring-white/10 group cursor-pointer ${
+                                                    isMobileLandscape ? 'mobile-landscape-fullscreen' : ''
+                                                }`}
                                             >
+                                                {/* Mobile Landscape Floating Exit Button */}
+                                                {isMobileLandscape && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleMobileLandscapeFullscreen();
+                                                        }}
+                                                        className="absolute top-4 left-4 z-50 p-2.5 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 backdrop-blur-md shadow-xl flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition"
+                                                        title="Exit Fullscreen"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">fullscreen_exit</span>
+                                                        <span>Exit</span>
+                                                    </button>
+                                                )}
+
                                                 {/* Player Embed or HTML5 Video Player */}
                                                 {isIframeEmbed(activeVideo.video_url) ? (
                                                     <div className="player-embed-wrapper relative w-full h-full overflow-hidden">
@@ -997,11 +1092,26 @@ export default function CEOVideos() {
                                                     <span>{isTheaterMode ? 'Default View' : 'Theater View'}</span>
                                                 </button>
 
-                                                {/* Fullscreen Button */}
+                                                {/* Mobile Landscape Fullscreen Button near Theater button (Mobile only) */}
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleMobileLandscapeFullscreen}
+                                                    className={`lg:hidden px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer ${
+                                                        isMobileLandscape ? 'bg-primary/10 text-primary border-primary/30 font-bold' : 'text-on-surface-variant'
+                                                    }`}
+                                                    title="Landscape Fullscreen"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">
+                                                        {isMobileLandscape ? 'fullscreen_exit' : 'screen_rotation'}
+                                                    </span>
+                                                    <span>{isMobileLandscape ? 'Exit Full' : 'Fullscreen'}</span>
+                                                </button>
+
+                                                {/* Fullscreen Button (Desktop) */}
                                                 <button
                                                     type="button"
                                                     onClick={toggleFullscreen}
-                                                    className="p-1.5 rounded-xl border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer"
+                                                    className="hidden lg:flex p-1.5 rounded-xl border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer"
                                                     title="Fullscreen (F)"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">

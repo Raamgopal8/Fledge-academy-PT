@@ -23,8 +23,9 @@ export default function StudentVideos() {
     const [viewMode, setViewMode] = useState('cinema'); // 'cinema' | 'grid'
     const [isTheaterMode, setIsTheaterMode] = useState(false);
     const [mobileTab, setMobileTab] = useState('overview'); // 'overview' | 'playlist'
-    const [watchedVideos, setWatchedVideos] = useState({});
+
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isMobileLandscape, setIsMobileLandscape] = useState(false);
 
     // YouTube-style Mobile Video Player States
     const videoRef = useRef(null);
@@ -35,7 +36,11 @@ export default function StudentVideos() {
     const [isMuted, setIsMuted] = useState(false);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
+    const [selectedQuality, setSelectedQuality] = useState('Auto');
+    const [showQualityMenu, setShowQualityMenu] = useState(false);
     const [doubleTapFeedback, setDoubleTapFeedback] = useState(null); // 'left' | 'right' | null
+
+    const qualityMenuRef = useRef(null);
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -47,14 +52,6 @@ export default function StudentVideos() {
 
     useEffect(() => {
         fetchStudentInfoAndVideos();
-
-        // Load watched history from localStorage
-        try {
-            const savedWatched = localStorage.getItem('fledge_watched_videos');
-            if (savedWatched) {
-                setWatchedVideos(JSON.parse(savedWatched));
-            }
-        } catch (e) { }
 
         // 1. Disable right-click
         const handleContextMenu = (e) => e.preventDefault();
@@ -153,12 +150,28 @@ export default function StudentVideos() {
                 document.msFullscreenElement
             );
             setIsFullscreen(isFs);
+            if (!isFs) {
+                setIsMobileLandscape(false);
+                try {
+                    if (screen.orientation && screen.orientation.unlock) {
+                        screen.orientation.unlock();
+                    }
+                } catch (e) { }
+            }
         };
 
         document.addEventListener('fullscreenchange', handleFullscreenChange);
         document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        // 8. Outside click listener for quality dropdown
+        const handleClickOutside = (e) => {
+            if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target)) {
+                setShowQualityMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
@@ -174,6 +187,7 @@ export default function StudentVideos() {
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+            document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
 
@@ -252,26 +266,28 @@ export default function StudentVideos() {
         }
 
         // 2. YouTube Links
+        const originParam = typeof window !== 'undefined' && window.location?.origin ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
         if (cleanUrl.includes('youtube.com/watch')) {
             const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
             }
         }
         if (cleanUrl.includes('youtu.be/')) {
             const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
             }
         }
         if (cleanUrl.includes('youtube.com/embed/')) {
-            const separator = cleanUrl.includes('?') ? '&' : '?';
-            return `${cleanUrl}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+            const cleanEmbed = cleanUrl.replace('youtube-nocookie.com', 'youtube.com');
+            const separator = cleanEmbed.includes('?') ? '&' : '?';
+            return `${cleanEmbed}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
         }
         if (cleanUrl.includes('youtube.com/shorts/')) {
             const match = cleanUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
             }
         }
 
@@ -364,16 +380,52 @@ export default function StudentVideos() {
         }
     };
 
-    const toggleWatched = (videoId) => {
-        setWatchedVideos(prev => {
-            const updated = { ...prev, [videoId]: !prev[videoId] };
+    const toggleMobileLandscapeFullscreen = async () => {
+        const elem = playerContainerRef.current || document.getElementById('student-video-player-stage');
+        if (isMobileLandscape) {
+            // Exit mobile landscape mode
+            setIsMobileLandscape(false);
             try {
-                localStorage.setItem('fledge_watched_videos', JSON.stringify(updated));
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
             } catch (e) { }
-            return updated;
-        });
-    };
 
+            const isNativeFs = Boolean(
+                document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement
+            );
+            if (isNativeFs) {
+                try {
+                    if (document.exitFullscreen) await document.exitFullscreen();
+                    else if (document.webkitExitFullscreen) await document.webkitExitFullscreen();
+                } catch (e) { }
+            }
+        } else {
+            // Enter mobile landscape mode
+            setIsMobileLandscape(true);
+            if (elem) {
+                try {
+                    if (elem.requestFullscreen) {
+                        await elem.requestFullscreen();
+                    } else if (elem.webkitRequestFullscreen) {
+                        await elem.webkitRequestFullscreen();
+                    }
+                } catch (e) {
+                    console.warn("Native fullscreen request warning:", e);
+                }
+            }
+
+            try {
+                if (screen.orientation && screen.orientation.lock) {
+                    await screen.orientation.lock('landscape').catch(() => {});
+                }
+            } catch (e) { }
+        }
+    };
+    
     const getLevelBadgeClass = (lvl) => {
         return LEVEL_COLORS[lvl] || 'bg-primary/10 text-primary border-primary/20';
     };
@@ -480,6 +532,42 @@ export default function StudentVideos() {
         setShowSettings(false);
     };
 
+    const handleQualityChange = (qualityLabel) => {
+        setSelectedQuality(qualityLabel);
+        setShowQualityMenu(false);
+
+        // Quality mapping for YouTube embed
+        const qualityMap = {
+            'Auto': 'default',
+            '1080p': 'hd1080',
+            '720p': 'hd720',
+            '480p': 'large',
+            '360p': 'medium'
+        };
+
+        const targetQuality = qualityMap[qualityLabel] || 'default';
+
+        // Send postMessage to YouTube iframe if available
+        try {
+            const iframe = playerContainerRef.current?.querySelector('iframe');
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(JSON.stringify({
+                    event: 'command',
+                    func: 'setPlaybackQuality',
+                    args: [targetQuality]
+                }), '*');
+
+                iframe.contentWindow.postMessage(JSON.stringify({
+                    event: 'command',
+                    func: 'setPlaybackQualityRange',
+                    args: [targetQuality, targetQuality]
+                }), '*');
+            }
+        } catch (err) {
+            console.warn("Quality change postMessage error:", err);
+        }
+    };
+
     // YouTube Double-Tap to Skip Logic (10s back / 10s forward)
     const handleVideoTap = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -528,8 +616,6 @@ export default function StudentVideos() {
             handleSelectVideo(filteredVideos[currentActiveIndex + 1]);
         }
     };
-
-    const isCurrentWatched = activeVideo ? Boolean(watchedVideos[activeVideo.id || activeVideo._id]) : false;
 
     return (
         <>
@@ -654,6 +740,26 @@ export default function StudentVideos() {
                                 <span className="material-symbols-outlined text-[16px]">theaters</span>
                                 <span className="hidden sm:inline">Cinema View</span>
                             </button>
+
+                            {/* Mobile Landscape Fullscreen Button near Cinema View (Mobile only) */}
+                            {viewMode === 'cinema' && activeVideo && (
+                                <button
+                                    type="button"
+                                    onClick={toggleMobileLandscapeFullscreen}
+                                    className={`lg:hidden px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                        isMobileLandscape
+                                            ? 'bg-primary text-on-primary shadow-xs font-bold'
+                                            : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                                    }`}
+                                    title="Landscape Fullscreen"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">
+                                        {isMobileLandscape ? 'fullscreen_exit' : 'screen_rotation'}
+                                    </span>
+                                    <span>{isMobileLandscape ? 'Exit Full' : 'Fullscreen'}</span>
+                                </button>
+                            )}
+
                             <button
                                 type="button"
                                 onClick={() => setViewMode('grid')}
@@ -728,8 +834,26 @@ export default function StudentVideos() {
                                                 id="student-video-player-stage"
                                                 onContextMenu={(e) => e.preventDefault()}
                                                 onClick={handleVideoTap}
-                                                className="aspect-video w-full bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative select-none flex items-center justify-center border border-outline-variant/40 ring-1 ring-white/10 group cursor-pointer"
+                                                className={`aspect-video w-full bg-black rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative select-none flex items-center justify-center border border-outline-variant/40 ring-1 ring-white/10 group cursor-pointer ${
+                                                    isMobileLandscape ? 'mobile-landscape-fullscreen' : ''
+                                                }`}
                                             >
+                                                {/* Mobile Landscape Floating Exit Button */}
+                                                {isMobileLandscape && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleMobileLandscapeFullscreen();
+                                                        }}
+                                                        className="absolute top-4 left-4 z-50 p-2.5 rounded-full bg-black/70 hover:bg-black/90 text-white border border-white/20 backdrop-blur-md shadow-xl flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition"
+                                                        title="Exit Fullscreen"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">fullscreen_exit</span>
+                                                        <span>Exit</span>
+                                                    </button>
+                                                )}
+
                                                 {/* Player Embed or YouTube-Style HTML5 Video Player */}
                                                 {isIframeEmbed(activeVideo.video_url) ? (
                                                     <div className="player-embed-wrapper relative w-full h-full overflow-hidden">
@@ -763,6 +887,45 @@ export default function StudentVideos() {
                                                         {/* Transparent Shield & Mask Overlay to hide/block YouTube & Share buttons in normal & fullscreen */}
                                                         {isYouTubeEmbed(activeVideo.video_url) && (
                                                             <>
+                                                                {/* Top Header Shield: covers top bar, channel avatar, title, and settings button at top right, while leaving CC and audio unblocked */}
+                                                                {/* Audio icon is at top left: ~36px wide (left: 8px to ~44px). */}
+                                                                {/* CC icon is at top right: next to settings (around right: 48px to 90px). */}
+                                                                {/* Settings icon is at the far top right: right: 0 to 48px. */}
+
+                                                                {/* Top-Right: Settings Shield - blocks the settings gear button completely */}
+                                                                <div
+                                                                    className="absolute top-0 right-0 w-12 sm:w-14 h-12 sm:h-14 pointer-events-auto cursor-default select-none z-30"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onMouseDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchStart={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                />
+
+                                                                {/* Top Header Channel & Title Shield: covers channel avatar, name, and redirect links, leaving audio button on the left and CC button on the right accessible */}
+                                                                <div
+                                                                    className="absolute top-0 left-12 sm:left-14 right-24 sm:right-28 lg:right-32 h-14 sm:h-16 lg:h-20 pointer-events-auto cursor-default select-none z-30"
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onMouseDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchStart={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                />
+
                                                                 {/* Bottom Bar Transparent Shield Mask covering Watch on YouTube & Share/Watch Later */}
                                                                 <div
                                                                     className="absolute bottom-0 left-0 right-0 h-16 sm:h-20 lg:h-24 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1 sm:pb-2"
@@ -783,7 +946,7 @@ export default function StudentVideos() {
                                                                             e.stopPropagation();
                                                                         }}
                                                                     />
-                                                                    {/* Right transparent shield covering 'Watch on YouTube' button */}
+                                                                    {/* Right transparent shield covering 'Watch on YouTube' button and bottom-right settings if rendered in desktop bottom bar */}
                                                                     <div
                                                                         className="w-48 sm:w-64 lg:w-80 h-12 sm:h-16 bg-transparent pointer-events-auto cursor-default select-none"
                                                                         onClick={(e) => {
@@ -800,23 +963,6 @@ export default function StudentVideos() {
                                                                         }}
                                                                     />
                                                                 </div>
-
-                                                                {/* Top-Right Transparent Share button shield mask if present in paused state */}
-                                                                <div
-                                                                    className="absolute top-0 right-0 w-20 sm:w-28 h-14 sm:h-18 bg-transparent pointer-events-auto cursor-default select-none z-20"
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                    onMouseDown={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                    onTouchStart={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                />
                                                             </>
                                                         )}
                                                     </div>
@@ -1027,21 +1173,52 @@ export default function StudentVideos() {
 
                                             {/* Mode & Utility Toggles */}
                                             <div className="flex items-center gap-2">
-                                                {/* Mark as Watched Toggle */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleWatched(activeVideo.id || activeVideo._id)}
-                                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${isCurrentWatched
-                                                            ? 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30'
-                                                            : 'bg-surface-container-low text-on-surface-variant border-outline-variant/60 hover:bg-surface-container'
+
+                                                {/* Video Quality Changer Button & Dropdown */}
+                                                <div className="relative" ref={qualityMenuRef}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowQualityMenu(prev => !prev)}
+                                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer ${
+                                                            showQualityMenu ? 'bg-primary/10 text-primary border-primary/30 font-bold' : ''
                                                         }`}
-                                                    title="Mark lesson as completed"
-                                                >
-                                                    <span className="material-symbols-outlined text-[16px]">
-                                                        {isCurrentWatched ? 'check_circle' : 'radio_button_unchecked'}
-                                                    </span>
-                                                    <span className="hidden sm:inline">{isCurrentWatched ? 'Completed' : 'Mark Watched'}</span>
-                                                </button>
+                                                        title="Change Video Quality"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">
+                                                            {selectedQuality === '1080p' || selectedQuality === '720p' ? 'hd' : 'high_quality'}
+                                                        </span>
+                                                        <span>{selectedQuality}</span>
+                                                        <span className="material-symbols-outlined text-[14px]">
+                                                            {showQualityMenu ? 'expand_less' : 'expand_more'}
+                                                        </span>
+                                                    </button>
+
+                                                    {/* Quality Selection Dropdown Menu */}
+                                                    {showQualityMenu && (
+                                                        <div className="absolute right-0 bottom-full mb-2 w-36 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-1.5 shadow-xl z-50 animate-scale-up">
+                                                            <div className="px-2 py-1 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/30 mb-1">
+                                                                Video Quality
+                                                            </div>
+                                                            {['Auto', '1080p', '720p', '480p', '360p'].map((q) => (
+                                                                <button
+                                                                    key={q}
+                                                                    type="button"
+                                                                    onClick={() => handleQualityChange(q)}
+                                                                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                                                                        selectedQuality === q
+                                                                            ? 'bg-primary/10 text-primary font-bold'
+                                                                            : 'text-on-surface hover:bg-surface-container'
+                                                                    }`}
+                                                                >
+                                                                    <span>{q}</span>
+                                                                    {selectedQuality === q && (
+                                                                        <span className="material-symbols-outlined text-[14px] text-primary">check</span>
+                                                                    )}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                  {/* Theater Mode Toggle (Desktop only) */}
                                                 <button
@@ -1055,6 +1232,21 @@ export default function StudentVideos() {
                                                         {isTheaterMode ? 'fit_screen' : 'crop_landscape'}
                                                     </span>
                                                     <span>{isTheaterMode ? 'Default View' : 'Theater View'}</span>
+                                                </button>
+
+                                                {/* Mobile Landscape Fullscreen Button near Theater button (Mobile only) */}
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleMobileLandscapeFullscreen}
+                                                    className={`lg:hidden px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer ${
+                                                        isMobileLandscape ? 'bg-primary/10 text-primary border-primary/30 font-bold' : 'text-on-surface-variant'
+                                                    }`}
+                                                    title="Landscape Fullscreen"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">
+                                                        {isMobileLandscape ? 'fullscreen_exit' : 'screen_rotation'}
+                                                    </span>
+                                                    <span>{isMobileLandscape ? 'Exit Full' : 'Fullscreen'}</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -1161,7 +1353,7 @@ export default function StudentVideos() {
                                                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant">search</span>
                                                     <input
                                                         type="text"
-                                                        placeholder="Search lessons..."
+                                                        placeholder="Search lessons"
                                                         value={searchQuery}
                                                         onChange={(e) => setSearchQuery(e.target.value)}
                                                         className="w-full pl-8 pr-3 py-1.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
@@ -1200,7 +1392,7 @@ export default function StudentVideos() {
                                             <div className="overflow-y-auto space-y-2 pr-1 custom-scrollbar flex-1 max-h-[580px]">
                                                 {filteredVideos.map((video, idx) => {
                                                     const isSelected = activeVideo && (video.id || video._id) === (activeVideo.id || activeVideo._id);
-                                                    const isWatched = Boolean(watchedVideos[video.id || video._id]);
+
                                                     const ytThumb = getYouTubeThumbnail(video.video_url);
 
                                                     return (
@@ -1249,11 +1441,7 @@ export default function StudentVideos() {
                                                                             {video.level}
                                                                         </span>
                                                                     )}
-                                                                    {isWatched && (
-                                                                        <span className="material-symbols-outlined text-green-600 dark:text-green-400 text-[14px]" title="Completed">
-                                                                            check_circle
-                                                                        </span>
-                                                                    )}
+
                                                                 </div>
 
                                                                 <h4 className={`text-xs font-bold line-clamp-2 transition-colors ${isSelected ? 'text-primary font-extrabold' : 'text-on-surface group-hover:text-primary'
@@ -1322,7 +1510,7 @@ export default function StudentVideos() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                                     {filteredVideos.map((video, idx) => {
                                         const ytThumb = getYouTubeThumbnail(video.video_url);
-                                        const isWatched = Boolean(watchedVideos[video.id || video._id]);
+
 
                                         return (
                                             <div
@@ -1368,11 +1556,7 @@ export default function StudentVideos() {
                                                         )}
                                                     </div>
 
-                                                    {isWatched && (
-                                                        <div className="absolute top-2.5 right-2.5 z-10 bg-green-500 text-white p-1 rounded-full shadow-md flex items-center justify-center" title="Lesson Completed">
-                                                            <span className="material-symbols-outlined text-[14px]">check</span>
-                                                        </div>
-                                                    )}
+
                                                 </div>
 
                                                 {/* Card Content Details */}

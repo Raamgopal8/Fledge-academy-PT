@@ -36,17 +36,49 @@ class AnnouncementResponse(BaseModel):
         populate_by_name = True
         from_attributes = True
 
+import re
+
 @router.get("", response_model=List[AnnouncementResponse])
 async def get_announcements(
     level: Optional[str] = None,
     batch: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    query = {}
-    if level:
-        query["level"] = level
-    if batch:
-        query["batch"] = batch
+    conditions = []
+    
+    # 1. Level Filter: match specific level OR global announcements
+    if level and level.strip().lower() not in ["all", "all levels"]:
+        clean_level = level.strip()
+        escaped_level = re.escape(clean_level)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_level}$", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+
+    # 2. Batch Filter: match specific batch OR global batch announcements
+    if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        clean_batch = batch.strip()
+        escaped_batch = re.escape(clean_batch)
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{escaped_batch}$", "$options": "i"}},
+                {"batches": {"$elemMatch": {"$regex": f"^{escaped_batch}$", "$options": "i"}}},
+                {"batches": {"$in": [clean_batch]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
+
+    query = {"$and": conditions} if conditions else {}
     announcements = await models.Announcement.find(query).sort("-created_at").to_list()
     
     # Get views for the current user
