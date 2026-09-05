@@ -24,21 +24,69 @@ export default function SensiBatchSelectionModal() {
         : (selectedLevel && selectedLevel !== 'All Levels' ? [selectedLevel] : ['Level 5']);
 
     const [tempLevel, setTempLevel] = useState(selectedLevel || validLevels[0] || 'Level 5');
-    const [tempBatch, setTempBatch] = useState(selectedBatch || validBatches[0] || '');
+    const [tempBatch, setTempBatch] = useState(selectedBatch || '');
+    const [levelBatches, setLevelBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
 
     useEffect(() => {
         if (isBatchModalOpen) {
-            setTempLevel(selectedLevel || validLevels[0] || 'Level 5');
-            setTempBatch(selectedBatch || validBatches[0] || '');
+            const initialLevel = selectedLevel || validLevels[0] || 'Level 5';
+            setTempLevel(initialLevel);
+            setTempBatch(selectedBatch || '');
         }
     }, [isBatchModalOpen, selectedLevel, selectedBatch]);
+
+    // Fetch batches available under tempLevel from DB
+    useEffect(() => {
+        if (!isBatchModalOpen) return;
+        let isCancelled = false;
+        const loadBatches = async () => {
+            setIsLoadingBatches(true);
+            try {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                const levelParam = tempLevel ? `?level=${encodeURIComponent(tempLevel)}` : '';
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/available-batches${levelParam}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!isCancelled) {
+                        const dbBatches = Array.isArray(data) ? data : [];
+                        const available = validBatches.length > 0
+                            ? dbBatches.filter(b => validBatches.includes(b))
+                            : dbBatches;
+                        setLevelBatches(available);
+                        if (available.length > 0) {
+                            if (!tempBatch || !available.includes(tempBatch)) {
+                                setTempBatch(available[0]);
+                            }
+                        } else {
+                            setTempBatch('');
+                        }
+                    }
+                } else if (!isCancelled) {
+                    setLevelBatches([]);
+                    setTempBatch('');
+                }
+            } catch (e) {
+                if (!isCancelled) {
+                    setLevelBatches([]);
+                    setTempBatch('');
+                }
+            } finally {
+                if (!isCancelled) setIsLoadingBatches(false);
+            }
+        };
+        loadBatches();
+        return () => { isCancelled = true; };
+    }, [tempLevel, isBatchModalOpen]);
 
     if (!isBatchModalOpen) return null;
 
     const handleApply = (e) => {
         if (e) e.preventDefault();
         const finalLevel = tempLevel || validLevels[0] || 'Level 5';
-        const finalBatch = tempBatch || validBatches[0] || '';
+        const finalBatch = tempBatch || '';
         
         setSelectedLevel(finalLevel);
         setSelectedBatch(finalBatch);
@@ -46,9 +94,7 @@ export default function SensiBatchSelectionModal() {
     };
 
     const handleClose = () => {
-        // Fallback to active or first assigned if not set
         if (!selectedLevel && validLevels.length > 0) setSelectedLevel(validLevels[0]);
-        if (!selectedBatch && validBatches.length > 0) setSelectedBatch(validBatches[0]);
         setIsBatchModalOpen(false);
     };
 
@@ -133,35 +179,40 @@ export default function SensiBatchSelectionModal() {
                         </p>
 
                         <div className="space-y-2 pt-1 max-h-[35vh] overflow-y-auto custom-scrollbar">
-                            {validBatches.map((batchItem) => {
-                                const isSelected = tempBatch === batchItem;
-                                return (
-                                    <button
-                                        key={batchItem}
-                                        type="button"
-                                        onClick={() => setTempBatch(batchItem)}
-                                        className={`w-full py-2.5 px-3.5 rounded-xl font-medium transition-all flex items-center justify-between border cursor-pointer ${
-                                            isSelected
-                                                ? 'bg-secondary/15 text-secondary border-secondary font-bold shadow-xs'
-                                                : 'bg-surface text-on-surface border-outline-variant hover:bg-surface-container'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2.5">
-                                            <span className="material-symbols-outlined text-[18px]">domain</span>
-                                            <span className="text-xs sm:text-sm">{batchItem}</span>
-                                        </div>
-                                        {isSelected && (
-                                            <span className="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-
-                            {validBatches.length === 0 && (
-                                <div className="py-5 text-center text-on-surface-variant">
-                                    <span className="material-symbols-outlined text-[32px] opacity-40 block mb-1">assignment_late</span>
-                                    <p className="text-xs font-medium">No batches currently assigned.</p>
-                                    <p className="text-[11px] opacity-75 mt-0.5">Please ask your Admin to assign batches to your account.</p>
+                            {isLoadingBatches ? (
+                                <div className="py-4 flex items-center justify-center gap-2 text-on-surface-variant text-xs">
+                                    <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                                    <span>Loading batches for {tempLevel}...</span>
+                                </div>
+                            ) : levelBatches && levelBatches.length > 0 ? (
+                                levelBatches.map((batchItem) => {
+                                    const isSelected = tempBatch === batchItem;
+                                    return (
+                                        <button
+                                            key={batchItem}
+                                            type="button"
+                                            onClick={() => setTempBatch(batchItem)}
+                                            className={`w-full py-2.5 px-3.5 rounded-xl font-medium transition-all flex items-center justify-between border cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-secondary/15 text-secondary border-secondary font-bold shadow-xs'
+                                                    : 'bg-surface text-on-surface border-outline-variant hover:bg-surface-container'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="material-symbols-outlined text-[18px]">domain</span>
+                                                <span className="text-xs sm:text-sm">{batchItem}</span>
+                                            </div>
+                                            {isSelected && (
+                                                <span className="material-symbols-outlined text-secondary text-[18px]">check_circle</span>
+                                            )}
+                                        </button>
+                                    );
+                                })
+                            ) : (
+                                <div className="py-5 text-center text-on-surface-variant bg-surface/50 rounded-xl border border-dashed border-outline-variant/60">
+                                    <span className="material-symbols-outlined text-[32px] opacity-40 block mb-1">domain_disabled</span>
+                                    <p className="text-xs font-semibold">No batches presented</p>
+                                    <p className="text-[11px] opacity-75 mt-0.5">No batches available under {tempLevel}.</p>
                                 </div>
                             )}
                         </div>

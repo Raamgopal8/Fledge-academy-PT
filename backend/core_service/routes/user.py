@@ -133,11 +133,21 @@ class StudentUpdate(BaseModel):
     batch: Optional[str] = None
 
 @router.get("/students")
-async def get_students(current_user: models.User = Depends(get_current_user)):
+async def get_students(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
     if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    students = await models.User.find({"role": "student"}).to_list()
+    query = {"role": "student"}
+    if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"]:
+        query["level"] = level.strip()
+    if batch and batch.strip() and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        query["batch"] = batch.strip()
+
+    students = await models.User.find(query).to_list()
     
     return [
         {
@@ -452,12 +462,26 @@ async def get_classroom_members(
 
 
 @router.get("/available-batches", response_model=List[str])
-async def get_available_batches(current_user: models.User = Depends(get_current_user)):
-    """Fetch distinct available batch names across all users, class schedules, and materials in the database"""
+async def get_available_batches(
+    level: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetch distinct available batch names across users, class schedules, and materials in the database, filtered by level if provided"""
     batches = set()
+    clean_level = level.strip() if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"] else None
 
-    # 1. Distinct batches from users (students and staff)
-    users = await models.User.find_all().to_list()
+    # 1. Distinct batches from student users enrolled in this level
+    if clean_level:
+        users = await models.User.find({
+            "role": "student",
+            "$or": [
+                {"level": clean_level},
+                {"levels": clean_level}
+            ]
+        }).to_list()
+    else:
+        users = await models.User.find({"role": "student"}).to_list()
+
     for u in users:
         if u.batch and u.batch.strip() and u.batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
             batches.add(u.batch.strip())
@@ -467,7 +491,10 @@ async def get_available_batches(current_user: models.User = Depends(get_current_
 
     # 2. Distinct batches from class schedules
     try:
-        schedules = await models.ClassSchedule.find_all().to_list()
+        if clean_level:
+            schedules = await models.ClassSchedule.find({"level": clean_level}).to_list()
+        else:
+            schedules = await models.ClassSchedule.find_all().to_list()
         for s in schedules:
             if s.batch and s.batch.strip() and s.batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
                 batches.add(s.batch.strip())
@@ -476,6 +503,17 @@ async def get_available_batches(current_user: models.User = Depends(get_current_
                     batches.add(b.strip())
     except Exception:
         pass
+
+    # If current user is Sensi/Staff, intersect with their assigned batches
+    user_role = (current_user.role or "").lower()
+    if user_role in ["staff", "sensi"]:
+        sensi_batches = getattr(current_user, "batches", []) or []
+        sensi_batch = getattr(current_user, "batch", None)
+        allowed_sensi_batches = set(b.strip() for b in sensi_batches if b and b.strip())
+        if sensi_batch and sensi_batch.strip():
+            allowed_sensi_batches.add(sensi_batch.strip())
+        if allowed_sensi_batches:
+            batches = batches.intersection(allowed_sensi_batches)
 
     # Sort batches naturally
     def sort_key(item: str):

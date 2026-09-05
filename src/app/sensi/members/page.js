@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useSensiContext } from '@/app/sensi/SensiContext';
 
 export default function StaffMembers() {
-    const { selectedBatch } = useSensiContext();
+    const { selectedBatch, selectedLevel } = useSensiContext();
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -14,10 +14,15 @@ export default function StaffMembers() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students${batchParam}`, {
+            const params = new URLSearchParams();
+            if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global') {
+                params.append('level', selectedLevel);
+            }
+            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global') {
+                params.append('batch', selectedBatch);
+            }
+            const queryParam = params.toString() ? `?${params.toString()}` : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students${queryParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -39,7 +44,7 @@ export default function StaffMembers() {
 
     useEffect(() => {
         fetchStudents();
-    }, [selectedBatch]);
+    }, [selectedBatch, selectedLevel]);
 
     const markAttendance = async (studentId, status) => {
         setMarkingStatus(prev => ({ ...prev, [studentId]: true }));
@@ -97,6 +102,26 @@ export default function StaffMembers() {
         );
     }
 
+    const filteredStudents = students.filter(student => {
+        // 1. Level filter first (applies to all levels)
+        const overrideLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global')
+            ? selectedLevel.trim().toLowerCase()
+            : '';
+        const matchesLevel = overrideLevel
+            ? (student.level || '').trim().toLowerCase() === overrideLevel
+            : true;
+
+        // 2. Batch filter second
+        const overrideBatch = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global')
+            ? selectedBatch.trim().toLowerCase()
+            : '';
+        const matchesBatch = overrideBatch
+            ? (student.batch || '').trim().toLowerCase() === overrideBatch
+            : true;
+
+        return matchesLevel && matchesBatch;
+    });
+
     return (
         <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative pb-32 animate-fade-in">
             {/* Header */}
@@ -126,7 +151,7 @@ export default function StaffMembers() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-surface-variant">
-                            {students.map((student) => (
+                            {filteredStudents.map((student) => (
                                 <tr key={student.id} className="hover:bg-surface-container-low transition-colors">
                                     <td className="px-md py-4">
                                         <div className="flex items-center gap-sm">
@@ -187,10 +212,14 @@ export default function StaffMembers() {
                                     </td>
                                 </tr>
                             ))}
-                            {students.length === 0 && (
+                            {filteredStudents.length === 0 && (
                                 <tr>
-                                    <td colSpan="4" className="px-md py-6 text-center font-body-md text-on-surface-variant">
-                                        No students found.
+                                    <td colSpan="4" className="px-md py-8 text-center font-body-md text-on-surface-variant">
+                                        <span className="material-symbols-outlined text-[32px] opacity-40 block mb-1">school</span>
+                                        <p className="font-semibold text-sm">No students found</p>
+                                        <p className="text-xs opacity-75 mt-0.5">
+                                            {selectedLevel ? `No students found under ${selectedLevel}${selectedBatch ? ` (${selectedBatch})` : ''}` : 'No students found.'}
+                                        </p>
                                     </td>
                                 </tr>
                             )}

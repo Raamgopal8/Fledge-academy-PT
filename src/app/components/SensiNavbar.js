@@ -66,7 +66,7 @@ export default function SensiNavbar() {
                             <div className="truncate">
                                 <p className="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider leading-none mb-0.5">Assigned Scope</p>
                                 <p className="font-label-md text-on-surface font-semibold truncate text-xs">
-                                    {context?.selectedLevel || (context?.sensiLevels && context.sensiLevels.length > 0 ? context.sensiLevels[0] : 'Level 5')} • {selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}
+                                    {context?.selectedLevel || (context?.sensiLevels && context.sensiLevels.length > 0 ? context.sensiLevels[0] : 'Level 5')} • {selectedBatch || 'No Batch'}
                                 </p>
                             </div>
                         </div>

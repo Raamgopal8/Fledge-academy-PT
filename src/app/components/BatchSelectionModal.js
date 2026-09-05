@@ -16,6 +16,8 @@ export default function BatchSelectionModal() {
 
     const [tempLevel, setTempLevel] = useState(selectedLevel || 'All Levels');
     const [tempBatch, setTempBatch] = useState(selectedBatch || 'All Batches');
+    const [levelBatches, setLevelBatches] = useState([]);
+    const [isLoadingBatches, setIsLoadingBatches] = useState(false);
 
     useEffect(() => {
         // Automatically open if no batch or level has been set, or if explicitly requested
@@ -27,6 +29,42 @@ export default function BatchSelectionModal() {
             setIsOpen(false);
         }
     }, [selectedBatch, isBatchModalOpen, selectedLevel]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        let isCancelled = false;
+        const loadBatchesForLevel = async () => {
+            setIsLoadingBatches(true);
+            try {
+                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                const levelParam = (tempLevel && tempLevel !== 'All Levels' && tempLevel !== 'Global')
+                    ? `?level=${encodeURIComponent(tempLevel)}`
+                    : '';
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/available-batches${levelParam}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!isCancelled) {
+                        const batchArr = Array.isArray(data) ? data : [];
+                        setLevelBatches(batchArr);
+                        // If tempBatch is a specific batch and not available in the new level, reset to 'All Batches'
+                        if (tempBatch && tempBatch !== 'All Batches' && !batchArr.includes(tempBatch)) {
+                            setTempBatch('All Batches');
+                        }
+                    }
+                } else if (!isCancelled) {
+                    setLevelBatches([]);
+                }
+            } catch (e) {
+                if (!isCancelled) setLevelBatches([]);
+            } finally {
+                if (!isCancelled) setIsLoadingBatches(false);
+            }
+        };
+        loadBatchesForLevel();
+        return () => { isCancelled = true; };
+    }, [tempLevel, isOpen]);
 
     const handleClose = () => {
         if (selectedBatch === null) setSelectedBatch('All Batches');
@@ -173,9 +211,14 @@ export default function BatchSelectionModal() {
                         </button>
 
                         {/* Available Batches Quick Suggestions */}
-                        {availableBatches && availableBatches.length > 0 && (
+                        {isLoadingBatches ? (
+                            <div className="py-3 flex items-center justify-center gap-2 text-on-surface-variant text-xs">
+                                <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                                <span>Loading batches for {tempLevel}...</span>
+                            </div>
+                        ) : levelBatches && levelBatches.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
-                                {availableBatches.map((b) => {
+                                {levelBatches.map((b) => {
                                     const isSelected = tempBatch === b && !batchInput;
                                     return (
                                         <button
@@ -195,6 +238,12 @@ export default function BatchSelectionModal() {
                                         </button>
                                     );
                                 })}
+                            </div>
+                        ) : (
+                            <div className="py-4 text-center text-on-surface-variant bg-surface/50 rounded-xl border border-dashed border-outline-variant/60">
+                                <span className="material-symbols-outlined text-[26px] opacity-40 block mb-1">domain_disabled</span>
+                                <p className="text-xs font-semibold">No batches presented</p>
+                                <p className="text-[11px] opacity-75">No batches found under {tempLevel}</p>
                             </div>
                         )}
 

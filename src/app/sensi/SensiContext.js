@@ -90,16 +90,29 @@ export function SensiProvider({ children }) {
         fetchSensiProfile();
     }, []);
 
-    const setSelectedBatch = (batch) => {
-        // Disallow 'All Batches' or 'All Assigned Batches'
-        if (!batch || batch === 'All Batches' || batch === 'All Assigned Batches') {
-            if (staffBatches && staffBatches.length > 0) {
-                batch = staffBatches[0];
-            } else {
-                batch = '';
+    const fetchBatchesForLevel = async (level) => {
+        if (!level || level === 'All Levels') return [];
+        try {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+            if (!token) return [];
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/available-batches?level=${encodeURIComponent(level)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
             }
+            return [];
+        } catch (e) {
+            return [];
         }
-        setSelectedBatchState(batch);
+    };
+
+    const setSelectedBatch = (batch) => {
+        if (batch === 'All Batches' || batch === 'All Assigned Batches' || batch === 'Global') {
+            batch = '';
+        }
+        setSelectedBatchState(batch || '');
         if (typeof window !== 'undefined') {
             localStorage.setItem('sensiSelectedBatch', batch || '');
             localStorage.setItem('staffSelectedBatch', batch || '');
@@ -107,7 +120,7 @@ export function SensiProvider({ children }) {
         }
     };
 
-    const setSelectedLevel = (lvl) => {
+    const setSelectedLevel = async (lvl) => {
         // Disallow 'All Levels' for sensi
         if (!lvl || lvl === 'All Levels' || lvl === 'All') {
             if (sensiLevels && sensiLevels.length > 0) {
@@ -122,6 +135,15 @@ export function SensiProvider({ children }) {
             localStorage.setItem('staffSelectedLevel', lvl);
             localStorage.setItem('level', lvl);
         }
+        // Fetch batches for this level and adjust selectedBatch
+        const validLevelBatches = await fetchBatchesForLevel(lvl);
+        if (validLevelBatches.length > 0) {
+            if (!selectedBatch || !validLevelBatches.includes(selectedBatch)) {
+                setSelectedBatch(validLevelBatches[0]);
+            }
+        } else {
+            setSelectedBatch('');
+        }
     };
 
     const updateStaffBatches = (batches) => {
@@ -130,10 +152,6 @@ export function SensiProvider({ children }) {
         if (typeof window !== 'undefined') {
             localStorage.setItem('sensiBatches', JSON.stringify(batchList));
             localStorage.setItem('staffBatches', JSON.stringify(batchList));
-            const currentSaved = localStorage.getItem('sensiSelectedBatch') || localStorage.getItem('staffSelectedBatch') || localStorage.getItem('batch') || '';
-            if ((!currentSaved || currentSaved === 'All Batches' || currentSaved === 'All Assigned Batches') && batchList.length > 0) {
-                setSelectedBatch(batchList[0]);
-            }
         }
     };
 
@@ -165,6 +183,7 @@ export function SensiProvider({ children }) {
             setStaffBatches: updateStaffBatches,
             setSensiBatches: updateStaffBatches,
             setSensiLevels: updateSensiLevels,
+            fetchBatchesForLevel,
             isBatchModalOpen,
             setIsBatchModalOpen
         }}>

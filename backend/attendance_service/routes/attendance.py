@@ -13,6 +13,7 @@ def get_today_date_str():
 
 @router.get("/students")
 async def get_students_attendance(
+    level: Optional[str] = None,
     batch: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
@@ -21,6 +22,8 @@ async def get_students_attendance(
         raise HTTPException(status_code=403, detail="Not authorized")
     
     query = {"role": "student"}
+    if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"]:
+        query["level"] = level.strip()
     if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
         query["batch"] = batch
     elif user_role in ["staff", "sensi"]:
@@ -49,6 +52,7 @@ async def get_students_attendance(
             "name": student.name or student.email.split('@')[0],
             "email": student.email,
             "profile_image_url": student.profile_image_url,
+            "level": getattr(student, "level", None),
             "status": attendance_map.get(student.id, "not_marked"),
             "batch": getattr(student, "batch", None)
         })

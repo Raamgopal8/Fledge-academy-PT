@@ -82,7 +82,7 @@ export default function SensiTopNav() {
                     >
                         <span className="material-symbols-outlined text-[15px] sm:text-[17px] shrink-0">swap_horiz</span>
                         <span className="truncate">
-                            {selectedLevel || (sensiLevels && sensiLevels.length > 0 ? sensiLevels[0] : 'Level 5')} • {selectedBatch || (staffBatches && staffBatches.length > 0 ? staffBatches[0] : 'Select Batch')}
+                            {selectedLevel || (sensiLevels && sensiLevels.length > 0 ? sensiLevels[0] : 'Level 5')} • {selectedBatch || 'No Batch'}
                         </span>
                     </button>
 

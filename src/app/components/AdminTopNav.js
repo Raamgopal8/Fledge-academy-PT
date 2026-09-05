@@ -67,7 +67,7 @@ export default function AdminTopNav() {
                     >
                         <span className="material-symbols-outlined text-[15px] sm:text-[16px] shrink-0">tune</span>
                         <span className="truncate">
-                            {selectedLevel === 'All Levels' ? 'Global Lvl' : selectedLevel} • {selectedBatch === 'All Batches' ? 'Global Batch' : (selectedBatch || 'Batch')}
+                            {selectedLevel === 'All Levels' ? 'Global Lvl' : selectedLevel} • {selectedBatch === 'All Batches' ? 'Global Batch' : (selectedBatch || 'No Batch')}
                         </span>
                     </button>
                     <NotificationBell />

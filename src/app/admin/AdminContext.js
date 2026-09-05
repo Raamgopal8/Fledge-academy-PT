@@ -22,21 +22,30 @@ export function AdminProvider({ children }) {
     const [availableLevels, setAvailableLevels] = useState(['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1']);
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
 
-    const fetchAvailableBatches = async () => {
+    const fetchAvailableBatches = async (lvl) => {
+        const targetLevel = lvl !== undefined ? lvl : selectedLevel;
         try {
             const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-            if (!token) return;
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/available-batches`, {
+            if (!token) return [];
+            const levelParam = (targetLevel && targetLevel !== 'All Levels' && targetLevel !== 'Global') 
+                ? `?level=${encodeURIComponent(targetLevel)}` 
+                : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/available-batches${levelParam}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     setAvailableBatches(data);
+                    return data;
                 }
             }
+            setAvailableBatches([]);
+            return [];
         } catch (e) {
             console.warn("Failed to fetch available batches:", e);
+            setAvailableBatches([]);
+            return [];
         }
     };
 
@@ -64,11 +73,11 @@ export function AdminProvider({ children }) {
         if (storedBatch !== null) {
             setSelectedBatchState(storedBatch);
         }
-        const storedLevel = localStorage.getItem('adminSelectedLevel') || localStorage.getItem('ceoSelectedLevel');
+        const storedLevel = localStorage.getItem('adminSelectedLevel') || localStorage.getItem('ceoSelectedLevel') || 'All Levels';
         if (storedLevel !== null) {
             setSelectedLevelState(storedLevel);
         }
-        fetchAvailableBatches();
+        fetchAvailableBatches(storedLevel);
         fetchAvailableLevels();
     }, []);
 
@@ -84,13 +93,18 @@ export function AdminProvider({ children }) {
         }
     };
 
-    const setSelectedLevel = (lvl) => {
+    const setSelectedLevel = async (lvl) => {
         const cleanLevel = lvl || 'All Levels';
         setSelectedLevelState(cleanLevel);
         if (typeof window !== 'undefined') {
             localStorage.setItem('adminSelectedLevel', cleanLevel);
             localStorage.setItem('ceoSelectedLevel', cleanLevel);
             localStorage.setItem('level', cleanLevel);
+        }
+        const newBatches = await fetchAvailableBatches(cleanLevel);
+        // Reset selected batch if not in the new level's batches
+        if (selectedBatch && selectedBatch !== 'All Batches' && !newBatches.includes(selectedBatch)) {
+            setSelectedBatch('All Batches');
         }
     };
 

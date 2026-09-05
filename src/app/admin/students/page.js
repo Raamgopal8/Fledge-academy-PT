@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAdminContext } from '@/app/admin/AdminContext';
 
 export default function CEOStudents() {
-    const { searchQuery, selectedBatch, availableBatches } = useAdminContext();
+    const { searchQuery, selectedBatch, selectedLevel, availableBatches } = useAdminContext();
     const [students, setStudents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -12,7 +12,13 @@ export default function CEOStudents() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     
     const [currentStudent, setCurrentStudent] = useState(null);
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', level: 'Level 5', batch: selectedBatch || '' });
+    const [formData, setFormData] = useState({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        level: (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') ? selectedLevel : 'Level 5', 
+        batch: selectedBatch || '' 
+    });
     const [formError, setFormError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
@@ -20,7 +26,15 @@ export default function CEOStudents() {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/students`, {
+            const params = new URLSearchParams();
+            if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+                params.append('level', selectedLevel);
+            }
+            if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/students${queryStr}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!res.ok) throw new Error('Failed to fetch students');
@@ -35,7 +49,7 @@ export default function CEOStudents() {
 
     useEffect(() => {
         fetchStudents();
-    }, []);
+    }, [selectedLevel, selectedBatch]);
 
     const handleAddSubmit = async (e) => {
         e.preventDefault();
@@ -173,9 +187,24 @@ export default function CEOStudents() {
     const filteredStudents = students.filter(student => {
         const matchesSearch = (student.name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
                               student.email.toLowerCase().includes((searchQuery || '').toLowerCase());
-        const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
-        const matchesBatch = overrideBatch ? (student.batch || '').trim() === overrideBatch.trim() : true;
-        return matchesSearch && matchesBatch;
+        
+        // 1. Level filter first (applies to all levels)
+        const overrideLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') 
+            ? selectedLevel.trim().toLowerCase() 
+            : '';
+        const matchesLevel = overrideLevel 
+            ? (student.level || '').trim().toLowerCase() === overrideLevel 
+            : true;
+
+        // 2. Batch filter second
+        const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') 
+            ? '' 
+            : (selectedBatch || '');
+        const matchesBatch = overrideBatch 
+            ? (student.batch || '').trim().toLowerCase() === overrideBatch.trim().toLowerCase() 
+            : true;
+
+        return matchesSearch && matchesLevel && matchesBatch;
     });
 
     return (
@@ -194,10 +223,13 @@ export default function CEOStudents() {
                 </div>
                 <button 
                     onClick={() => { 
+                        const defaultLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') 
+                            ? selectedLevel 
+                            : 'Level 5';
                         const defaultBatch = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
                             ? selectedBatch 
                             : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'Batch - 1');
-                        setFormData({ name: '', email: '', password: '', level: 'Level 5', batch: defaultBatch }); 
+                        setFormData({ name: '', email: '', password: '', level: defaultLevel, batch: defaultBatch }); 
                         setFormError(''); 
                         setIsAddModalOpen(true); 
                     }}
