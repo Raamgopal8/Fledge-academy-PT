@@ -23,12 +23,41 @@ export default function DashboardOverview() {
   const [profile, setProfile] = useState(null);
   const [activeMaterialFilter, setActiveMaterialFilter] = useState("All");
 
+  // Level formatting helper
+  const formatLevel = (lvl) => {
+    if (!lvl) return 'Level 5';
+    const str = String(lvl).trim();
+    if (str.startsWith('Level ')) return str;
+    if (['1', '2', '3', '4', '5'].includes(str)) return `Level ${str}`;
+    return str;
+  };
+
+  const rawAssignedLevel = profile?.level || (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5');
+  const assignedLevel = formatLevel(rawAssignedLevel);
+  const assignedLevels = (Array.isArray(profile?.levels) && profile.levels.length > 0)
+    ? profile.levels.map(formatLevel)
+    : [assignedLevel];
+
   // Notes state
   const [notes, setNotes] = useState([]);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteLink, setNoteLink] = useState("");
-  const [noteLevel, setNoteLevel] = useState(() => (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5'));
-  const [notesFilterLevel, setNotesFilterLevel] = useState('All');
+  const [noteLevel, setNoteLevel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('level') || 'Level 5';
+      const str = String(saved).trim();
+      return str.startsWith('Level ') ? str : (['1', '2', '3', '4', '5'].includes(str) ? `Level ${str}` : str);
+    }
+    return 'Level 5';
+  });
+  const [notesFilterLevel, setNotesFilterLevel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('level') || 'Level 5';
+      const str = String(saved).trim();
+      return str.startsWith('Level ') ? str : (['1', '2', '3', '4', '5'].includes(str) ? `Level ${str}` : str);
+    }
+    return 'Level 5';
+  });
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [noteMessage, setNoteMessage] = useState({ type: '', text: '' });
   
@@ -64,7 +93,13 @@ export default function DashboardOverview() {
         .then(data => { 
           if (data) {
             setProfile(data); 
-            if (data.level) setNoteLevel(data.level);
+            const userLvl = data.level 
+              ? formatLevel(data.level)
+              : (Array.isArray(data.levels) && data.levels.length > 0 ? formatLevel(data.levels[0]) : null);
+            if (userLvl) {
+              setNoteLevel(userLvl);
+              setNotesFilterLevel(userLvl);
+            }
           }
         })
         .catch(err => console.error("Error fetching profile:", err));
@@ -117,6 +152,11 @@ export default function DashboardOverview() {
     const handleProfileUpdate = (e) => {
       if (e.detail) {
         setProfile(prev => ({ ...(prev || {}), ...e.detail }));
+        if (e.detail.level) {
+          const updatedLvl = formatLevel(e.detail.level);
+          setNoteLevel(updatedLvl);
+          setNotesFilterLevel(updatedLvl);
+        }
       }
     };
 
@@ -125,6 +165,20 @@ export default function DashboardOverview() {
       window.removeEventListener('fledge_profile_updated', handleProfileUpdate);
     };
   }, []);
+
+  // Ensure noteLevel and notesFilterLevel stay in sync with assigned levels
+  useEffect(() => {
+    if (assignedLevels.length > 0) {
+      if (!assignedLevels.includes(noteLevel)) {
+        setNoteLevel(assignedLevels[0]);
+      }
+      if (assignedLevels.length === 1) {
+        setNotesFilterLevel(assignedLevels[0]);
+      } else if (notesFilterLevel !== 'All' && !assignedLevels.includes(notesFilterLevel)) {
+        setNotesFilterLevel(assignedLevels[0]);
+      }
+    }
+  }, [assignedLevels, noteLevel, notesFilterLevel]);
 
   const handleUploadNote = async (e) => {
     e.preventDefault();
@@ -142,7 +196,7 @@ export default function DashboardOverview() {
         throw new Error('Your session has expired or you are not logged in. Please log in again.');
       }
 
-      const level = noteLevel || localStorage.getItem('level') || 'Level 5';
+      const level = formatLevel(noteLevel || assignedLevel || 'Level 5');
       const batch = localStorage.getItem('batch') || '';
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes`, {
@@ -543,11 +597,9 @@ export default function DashboardOverview() {
                     onChange={(e) => setNoteLevel(e.target.value)}
                     className="w-full h-[42px] px-3 bg-white border border-outline-variant rounded-xl text-xs font-semibold text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
                   >
-                    <option value="Level 5">Level 5 (Beginner)</option>
-                    <option value="Level 4">Level 4</option>
-                    <option value="Level 3">Level 3</option>
-                    <option value="Level 2">Level 2</option>
-                    <option value="Level 1">Level 1</option>
+                    {assignedLevels.map((lvl) => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="md:col-span-4">
@@ -607,7 +659,7 @@ export default function DashboardOverview() {
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                  My Shared Notes ({notes.filter(n => notesFilterLevel === 'All' || (n.level || 'Level 5') === notesFilterLevel).length})
+                  My Shared Notes ({notes.filter(n => notesFilterLevel === 'All' || formatLevel(n.level || assignedLevel) === notesFilterLevel).length})
                 </h4>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] text-on-surface-variant font-medium">Filter Level:</span>
@@ -616,12 +668,10 @@ export default function DashboardOverview() {
                     onChange={(e) => setNotesFilterLevel(e.target.value)}
                     className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                   >
-                    <option value="All">All Levels</option>
-                    <option value="Level 5">Level 5</option>
-                    <option value="Level 4">Level 4</option>
-                    <option value="Level 3">Level 3</option>
-                    <option value="Level 2">Level 2</option>
-                    <option value="Level 1">Level 1</option>
+                    {assignedLevels.length > 1 && <option value="All">All Levels</option>}
+                    {assignedLevels.map((lvl) => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -629,14 +679,14 @@ export default function DashboardOverview() {
                 <div className="flex justify-center p-4 text-primary">
                   <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
                 </div>
-              ) : notes.filter(n => notesFilterLevel === 'All' || (n.level || 'Level 5') === notesFilterLevel).length === 0 ? (
+              ) : notes.filter(n => notesFilterLevel === 'All' || formatLevel(n.level || assignedLevel) === notesFilterLevel).length === 0 ? (
                 <p className="text-xs text-on-surface-variant text-center py-4 bg-surface-container-low/30 rounded-xl border border-dashed border-outline-variant/60">
                   {notes.length === 0 ? "No notes uploaded yet. Paste your first notes link above!" : `No notes uploaded for ${notesFilterLevel}.`}
                 </p>
               ) : (
                 <div className="divide-y divide-outline-variant/40 rounded-xl border border-outline-variant/60 overflow-hidden bg-white">
                   {notes
-                    .filter(n => notesFilterLevel === 'All' || (n.level || 'Level 5') === notesFilterLevel)
+                    .filter(n => notesFilterLevel === 'All' || formatLevel(n.level || assignedLevel) === notesFilterLevel)
                     .map((n) => (
                     <div key={n.id} className="p-3 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors gap-3">
                       <div className="flex items-center gap-3 min-w-0">

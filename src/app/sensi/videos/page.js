@@ -43,9 +43,9 @@ export default function StaffVideos() {
 
     // Active Player & Layout States (Identical to Student Video Classroom)
     const [activeVideo, setActiveVideo] = useState(null);
-    const [viewMode, setViewMode] = useState('cinema'); // 'cinema' | 'grid'
+    const [viewMode, setViewMode] = useState('cinema'); 
     const [isTheaterMode, setIsTheaterMode] = useState(false);
-    const [mobileTab, setMobileTab] = useState('overview'); // 'overview' | 'playlist'
+    const [mobileTab, setMobileTab] = useState('overview'); 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isMobileLandscape, setIsMobileLandscape] = useState(false);
 
@@ -849,6 +849,14 @@ export default function StaffVideos() {
                                                                 {/* Top-Right Transparent Share button shield mask */}
                                                                 <div
                                                                     className="absolute top-0 right-0 w-20 sm:w-28 h-14 sm:h-18 bg-transparent pointer-events-auto cursor-default select-none z-20"
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                    onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                />
+
+                                                                {/* Top Header Channel & Title Shield */}
+                                                                <div
+                                                                    className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-16 sm:h-20 lg:h-24 bg-transparent pointer-events-auto cursor-default select-none z-30"
                                                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                                                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                                                     onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}

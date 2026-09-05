@@ -887,14 +887,9 @@ export default function StudentVideos() {
                                                         {/* Transparent Shield & Mask Overlay to hide/block YouTube & Share buttons in normal & fullscreen */}
                                                         {isYouTubeEmbed(activeVideo.video_url) && (
                                                             <>
-                                                                {/* Top Header Shield: covers top bar, channel avatar, title, and settings button at top right, while leaving CC and audio unblocked */}
-                                                                {/* Audio icon is at top left: ~36px wide (left: 8px to ~44px). */}
-                                                                {/* CC icon is at top right: next to settings (around right: 48px to 90px). */}
-                                                                {/* Settings icon is at the far top right: right: 0 to 48px. */}
-
                                                                 {/* Top-Right: Settings Shield - blocks the settings gear button completely */}
                                                                 <div
-                                                                    className="absolute top-0 right-0 w-12 sm:w-14 h-12 sm:h-14 pointer-events-auto cursor-default select-none z-30"
+                                                                    className="absolute top-0 right-0 w-12 sm:w-14 h-12 sm:h-14 bg-transparent pointer-events-auto cursor-default select-none z-30"
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
@@ -909,9 +904,9 @@ export default function StudentVideos() {
                                                                     }}
                                                                 />
 
-                                                                {/* Top-Left Channel, Avatar & Title Mask: completely hides and blocks YouTube channel card, subscriber count, avatar, and title links */}
+                                                                {/* Top Header Channel & Title Shield: covers channel avatar, name, subscriber info, and redirect links, leaving CC button on the right accessible */}
                                                                 <div
-                                                                    className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-14 sm:h-16 bg-black pointer-events-auto cursor-default select-none z-30"
+                                                                    className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-16 sm:h-20 lg:h-24 bg-transparent pointer-events-auto cursor-default select-none z-30"
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();

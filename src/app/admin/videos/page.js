@@ -855,6 +855,14 @@ export default function CEOVideos() {
                                                                     onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                                                     onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                                                 />
+
+                                                                {/* Top Header Channel & Title Shield */}
+                                                                <div
+                                                                    className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-16 sm:h-20 lg:h-24 bg-transparent pointer-events-auto cursor-default select-none z-30"
+                                                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                    onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                                />
                                                             </>
                                                         )}
                                                     </div>
