@@ -787,7 +787,7 @@ export default function StudentVideos() {
                 {isLoading ? (
                     <div className="flex flex-col justify-center items-center h-80 bg-surface-container-lowest border border-outline-variant/60 rounded-3xl gap-3 shadow-xs">
                         <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
-                        <p className="text-xs text-on-surface-variant font-medium">Loading your video classroom...</p>
+                        <p className="text-xs text-on-surface-variant font-medium">Loading your video classroom</p>
                     </div>
                 ) : filteredVideos.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center p-12 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant h-80 space-y-3">
@@ -795,7 +795,7 @@ export default function StudentVideos() {
                             <span className="material-symbols-outlined text-4xl">videocam_off</span>
                         </div>
                         <h3 className="font-headline-sm text-base font-bold text-on-surface">No videos available</h3>
-                        <p className="font-body-sm text-xs text-on-surface-variant max-w-sm">
+                        <p className="font-body-sm text-xs text-on-surface-variant">
                             No lessons match your current filters. Clear the search or check back soon for new lecture uploads.
                         </p>
                         {(searchQuery || selectedCategory !== 'All') && (
@@ -909,9 +909,9 @@ export default function StudentVideos() {
                                                                     }}
                                                                 />
 
-                                                                {/* Top Header Channel & Title Shield: covers channel avatar, name, and redirect links, leaving audio button on the left and CC button on the right accessible */}
+                                                                {/* Top-Left Channel, Avatar & Title Mask: completely hides and blocks YouTube channel card, subscriber count, avatar, and title links */}
                                                                 <div
-                                                                    className="absolute top-0 left-12 sm:left-14 right-24 sm:right-28 lg:right-32 h-14 sm:h-16 lg:h-20 pointer-events-auto cursor-default select-none z-30"
+                                                                    className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-14 sm:h-16 bg-black pointer-events-auto cursor-default select-none z-30"
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();

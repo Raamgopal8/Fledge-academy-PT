@@ -27,6 +27,8 @@ export default function DashboardOverview() {
   const [notes, setNotes] = useState([]);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteLink, setNoteLink] = useState("");
+  const [noteLevel, setNoteLevel] = useState(() => (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5'));
+  const [notesFilterLevel, setNotesFilterLevel] = useState('All');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [noteMessage, setNoteMessage] = useState({ type: '', text: '' });
   
@@ -59,7 +61,12 @@ export default function DashboardOverview() {
       // Fetch Profile
       fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers, cache: 'no-store' })
         .then(res => res.ok ? res.json() : null)
-        .then(data => { if (data) setProfile(data); })
+        .then(data => { 
+          if (data) {
+            setProfile(data); 
+            if (data.level) setNoteLevel(data.level);
+          }
+        })
         .catch(err => console.error("Error fetching profile:", err));
 
       // Fetch Attendance
@@ -135,7 +142,7 @@ export default function DashboardOverview() {
         throw new Error('Your session has expired or you are not logged in. Please log in again.');
       }
 
-      const level = localStorage.getItem('level') || 'Level 5';
+      const level = noteLevel || localStorage.getItem('level') || 'Level 5';
       const batch = localStorage.getItem('batch') || '';
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes`, {
@@ -527,6 +534,22 @@ export default function DashboardOverview() {
             {/* Upload Input Form */}
             <form onSubmit={handleUploadNote} className="space-y-3 bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/60">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div className="md:col-span-3">
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                    Level <span className="text-primary">*</span>
+                  </label>
+                  <select
+                    value={noteLevel}
+                    onChange={(e) => setNoteLevel(e.target.value)}
+                    className="w-full h-[42px] px-3 bg-white border border-outline-variant rounded-xl text-xs font-semibold text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer"
+                  >
+                    <option value="Level 5">Level 5 (Beginner)</option>
+                    <option value="Level 4">Level 4</option>
+                    <option value="Level 3">Level 3</option>
+                    <option value="Level 2">Level 2</option>
+                    <option value="Level 1">Level 1</option>
+                  </select>
+                </div>
                 <div className="md:col-span-4">
                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                     Topic / Title
@@ -539,7 +562,7 @@ export default function DashboardOverview() {
                     className="w-full h-[42px] px-3.5 bg-white border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                 </div>
-                <div className="md:col-span-8">
+                <div className="md:col-span-5">
                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
                     Notes Link URL <span className="text-primary">*</span>
                   </label>
@@ -582,29 +605,55 @@ export default function DashboardOverview() {
 
             {/* Submitted Notes List */}
             <div className="mt-4 space-y-2">
-              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                My Shared Notes ({notes.length})
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+                  My Shared Notes ({notes.filter(n => notesFilterLevel === 'All' || (n.level || 'Level 5') === notesFilterLevel).length})
+                </h4>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-on-surface-variant font-medium">Filter Level:</span>
+                  <select
+                    value={notesFilterLevel}
+                    onChange={(e) => setNotesFilterLevel(e.target.value)}
+                    className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="All">All Levels</option>
+                    <option value="Level 5">Level 5</option>
+                    <option value="Level 4">Level 4</option>
+                    <option value="Level 3">Level 3</option>
+                    <option value="Level 2">Level 2</option>
+                    <option value="Level 1">Level 1</option>
+                  </select>
+                </div>
+              </div>
               {isLoading.notes ? (
                 <div className="flex justify-center p-4 text-primary">
                   <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
                 </div>
-              ) : notes.length === 0 ? (
+              ) : notes.filter(n => notesFilterLevel === 'All' || (n.level || 'Level 5') === notesFilterLevel).length === 0 ? (
                 <p className="text-xs text-on-surface-variant text-center py-4 bg-surface-container-low/30 rounded-xl border border-dashed border-outline-variant/60">
-                  No notes uploaded yet. Paste your first notes link above!
+                  {notes.length === 0 ? "No notes uploaded yet. Paste your first notes link above!" : `No notes uploaded for ${notesFilterLevel}.`}
                 </p>
               ) : (
                 <div className="divide-y divide-outline-variant/40 rounded-xl border border-outline-variant/60 overflow-hidden bg-white">
-                  {notes.map((n) => (
+                  {notes
+                    .filter(n => notesFilterLevel === 'All' || (n.level || 'Level 5') === notesFilterLevel)
+                    .map((n) => (
                     <div key={n.id} className="p-3 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                           <span className="material-symbols-outlined text-[18px]">description</span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-on-surface truncate">
-                            {n.title || 'Study Notes'}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-on-surface truncate">
+                              {n.title || 'Study Notes'}
+                            </p>
+                            {n.level && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                                {n.level}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-0.5 text-[11px] text-on-surface-variant">
                             <span className="truncate max-w-[200px] text-primary">{n.note_link}</span>
                             <span>•</span>

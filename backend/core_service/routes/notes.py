@@ -34,13 +34,16 @@ async def create_student_note(
 
     uploader_name = current_user.name or (current_user.email.split("@")[0] if current_user.email else "Student")
     
+    note_level = (request.level or getattr(current_user, "level", None) or "Level 5").strip()
+    note_batch = (request.batch or getattr(current_user, "batch", None) or "").strip() or None
+
     note = models.StudentNote(
         title=request.title.strip() if request.title and request.title.strip() else "Study Notes",
         note_link=clean_link,
         uploader_name=uploader_name,
         uploader_id=str(current_user.id),
-        level=request.level or getattr(current_user, "level", None),
-        batch=request.batch or getattr(current_user, "batch", None),
+        level=note_level,
+        batch=note_batch,
         created_at=(datetime.utcnow() + timedelta(hours=5, minutes=30))
     )
     
@@ -63,23 +66,79 @@ async def get_student_notes(
     level: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    """Fetch student notes. Staff sees batch notes with uploader name; Students see notes."""
+    """Fetch student notes. Level-scoped for students, assigned-batches scoped for Sensi."""
     query = {}
+    user_role = (current_user.role or "").lower()
     
-    if current_user.role == "student":
-        # Return student's own notes or batch notes
+    if user_role == "student":
+        student_level = (level or getattr(current_user, "level", None) or "Level 5").strip()
         student_batch = getattr(current_user, "batch", None)
+        
+        # Strictly isolate notes by level:
+        # Level 5 notes are only visible to Level 5 members;
+        # Level 4, 3, 2, 1 members only see notes for their level.
+        if student_level == "Level 5":
+            level_condition = {"$or": [{"level": "Level 5"}, {"level": None}, {"level": ""}]}
+        else:
+            level_condition = {"level": student_level}
+
+        # Student scope: student's own notes or notes in their batch
+        scope_conditions = [{"uploader_id": str(current_user.id)}]
         if student_batch and student_batch not in ["All Batches", "Global"]:
-            query["$or"] = [
-                {"uploader_id": str(current_user.id)},
+            scope_conditions.extend([
                 {"batch": student_batch},
                 {"batch": None},
                 {"batch": ""}
+            ])
+            
+        query = {
+            "$and": [
+                level_condition,
+                {"$or": scope_conditions}
             ]
+        }
+    elif user_role in ["staff", "sensi"]:
+        # Sensi strictly fetches notes for their assigned batches
+        assigned_batches = getattr(current_user, "batches", None) or []
+        if not assigned_batches and getattr(current_user, "batch", None):
+            assigned_batches = [current_user.batch]
+        assigned_batches = [b.strip() for b in assigned_batches if b and b.strip()]
+
+        if not assigned_batches:
+            return []
+
+        # Batch filter
+        if batch and batch.strip() and batch.strip() not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
+            target_batch = batch.strip()
+            if target_batch in assigned_batches:
+                query["batch"] = target_batch
+            else:
+                # Sensi is requesting a batch they are not assigned to
+                return []
+        else:
+            if len(assigned_batches) == 1:
+                query["batch"] = assigned_batches[0]
+            else:
+                query["batch"] = {"$in": assigned_batches}
+
+        # Level filter for Sensi
+        if level and level.strip() and level.strip() not in ["All Levels", "All", "Global"]:
+            target_level = level.strip()
+            if target_level == "Level 5":
+                query["$or"] = [{"level": "Level 5"}, {"level": None}, {"level": ""}]
+            else:
+                query["level"] = target_level
     else:
-        # Staff / CEO
-        if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
-            query["batch"] = batch
+        # Admin / CEO - Global access with optional filters
+        if batch and batch.strip() and batch.strip() not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
+            query["batch"] = batch.strip()
+            
+        if level and level.strip() and level.strip() not in ["All Levels", "All", "Global"]:
+            target_level = level.strip()
+            if target_level == "Level 5":
+                query["$or"] = [{"level": "Level 5"}, {"level": None}, {"level": ""}]
+            else:
+                query["level"] = target_level
             
     notes = await models.StudentNote.find(query).sort("-created_at").to_list()
     
@@ -112,8 +171,18 @@ async def delete_student_note(
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    # Only uploader or staff/ceo can delete
-    if (current_user.role or "").lower() not in ["staff", "sensi", "ceo", "admin"] and note.uploader_id != str(current_user.id):
+    user_role = (current_user.role or "").lower()
+    
+    if user_role == "student":
+        if note.uploader_id != str(current_user.id):
+            raise HTTPException(status_code=403, detail="Not authorized to delete this note")
+    elif user_role in ["staff", "sensi"]:
+        assigned_batches = getattr(current_user, "batches", None) or []
+        if not assigned_batches and getattr(current_user, "batch", None):
+            assigned_batches = [current_user.batch]
+        if note.uploader_id != str(current_user.id) and note.batch not in assigned_batches:
+            raise HTTPException(status_code=403, detail="Not authorized to delete notes outside assigned batches")
+    elif user_role not in ["admin", "ceo"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete this note")
 
     await note.delete()

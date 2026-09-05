@@ -11,7 +11,7 @@ const COLOR_CLASSES = {
 };
 
 export default function SensiDashboard() {
-    const { selectedBatch, setIsBatchModalOpen } = useSensiContext();
+    const { selectedBatch, selectedLevel, setIsBatchModalOpen } = useSensiContext();
     const [summary, setSummary] = useState(null);
     const [classes, setClasses] = useState(null);
     const [activities, setActivities] = useState(null);
@@ -40,12 +40,21 @@ export default function SensiDashboard() {
                 ? `?batch=${encodeURIComponent(selectedBatch)}` 
                 : '';
 
+            const notesParams = new URLSearchParams();
+            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') {
+                notesParams.append('batch', selectedBatch);
+            }
+            if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All') {
+                notesParams.append('level', selectedLevel);
+            }
+            const notesQuery = notesParams.toString() ? `?${notesParams.toString()}` : '';
+
             const [summaryRes, classesRes, activitiesRes, profileRes, notesRes] = await Promise.all([
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/summary${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/classes${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${batchParam}`, { headers }).catch(() => null)
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${notesQuery}`, { headers }).catch(() => null)
             ]);
 
             if (summaryRes && summaryRes.ok) setSummary(await summaryRes.json());
@@ -63,7 +72,7 @@ export default function SensiDashboard() {
 
     useEffect(() => {
         fetchDashboardData();
-    }, [selectedBatch]);
+    }, [selectedBatch, selectedLevel]);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -627,7 +636,7 @@ export default function SensiDashboard() {
                     {(!studentNotes || studentNotes.length === 0) ? (
                         <div className="p-8 text-center text-on-surface-variant flex flex-col items-center justify-center gap-2 bg-surface-container-low/30 rounded-2xl border border-dashed border-outline-variant/60">
                             <span className="material-symbols-outlined text-3xl text-outline/40">note_stack</span>
-                            <p className="text-xs font-medium">No student notes uploaded for this batch yet.</p>
+                            <p className="text-xs font-medium">No student notes uploaded for {selectedLevel ? `${selectedLevel} • ` : ''}{selectedBatch || 'this batch'} yet.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -665,11 +674,18 @@ export default function SensiDashboard() {
 
                                         {/* Action link */}
                                         <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between">
-                                            {note.batch && (
-                                                <span className="text-[10px] font-medium text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md border border-outline-variant/40">
-                                                    {note.batch}
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                {note.level && (
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary">
+                                                        {note.level}
+                                                    </span>
+                                                )}
+                                                {note.batch && (
+                                                    <span className="text-[10px] font-medium text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md border border-outline-variant/40">
+                                                        {note.batch}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-2 ml-auto">
                                                 <button
                                                     onClick={async (e) => {
