@@ -16,7 +16,7 @@ export default function SensiNavbar() {
     const setIsBatchModalOpen = context?.setIsBatchModalOpen || (() => {});
 
     const navLinks = [
-        { name: 'Overview', href: '/sensi/dashboard', icon: 'dashboard' },
+        { name: 'Dashboard', href: '/sensi/dashboard', icon: 'dashboard' },
         { name: 'Announcements', href: '/sensi/announcements', icon: 'campaign' },
         { name: 'Materials', href: '/sensi/materials', icon: 'library_books' },
         { name: 'Videos', href: '/sensi/videos', icon: 'smart_display' },

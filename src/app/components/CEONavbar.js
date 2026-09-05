@@ -11,7 +11,7 @@ export default function CEONavbar() {
 
 
     const navItems = [
-        { name: 'Overview', path: '/ceo/dashboard', icon: 'dashboard' },
+        { name: 'Dashboard', path: '/ceo/dashboard', icon: 'dashboard' },
         { name: 'Activity Monitor', path: '/ceo/performance', icon: 'monitoring' },
         { name: 'Students', path: '/ceo/students', icon: 'groups' },
         { name: 'Staff', path: '/ceo/staff', icon: 'manage_accounts' },

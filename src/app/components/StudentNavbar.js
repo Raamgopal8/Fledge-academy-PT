@@ -12,7 +12,7 @@ export default function StudentNavbar() {
   const { isMobileNavOpen, setIsMobileNavOpen } = useStudentContext();
 
     const navItems = [
-      { name: "Overview", icon: "dashboard", href: "/dashboard" },
+      { name: "Dashboard", icon: "dashboard", href: "/dashboard" },
       { name: "Pathway", icon: "route", href: "/dashboard/pathway" },
       { name: "Announcements", icon: "campaign", href: "/dashboard/announcements" },
       { name: "Community", icon: "forum", href: "/community" },

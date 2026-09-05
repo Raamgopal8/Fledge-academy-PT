@@ -67,11 +67,28 @@ export default function StudentPathway() {
     const nodes = [
         {
             id: 'N5',
+            badgeText: '5',
             levelName: 'Level 5',
-            title: 'Foundation',
-            subtitle: 'Core Vocab & Kana',
+            title: 'Level 5 · The Beginning',
+            tagline: 'Make your first Japanese moments yours.',
+            subtitle: 'The Beginning',
             kanji: '初級',
-            desc: 'Your journey begins here. Master basic Hiragana, Katakana, and essential core vocabulary to form simple everyday sentences.',
+            desc: 'Learn to recognise the language around you, build your first sentences and handle the little interactions that make Japan feel less unfamiliar.',
+            readThis: {
+                label: 'YOU CAN READ THIS',
+                japanese: 'ありがとう',
+                translation: '“Thank you.”'
+            },
+            sayThis: {
+                label: 'YOU CAN SAY THIS',
+                japanese: 'はじめまして。',
+                translation: '“Nice to meet you.”'
+            },
+            realLifeUnlock: {
+                label: 'REAL-LIFE UNLOCK',
+                text: 'Order a simple drink without switching back to English.'
+            },
+            tags: ['✦ First words', 'あ Kana', '✪ Everyday Japanese'],
             lessonsCount: '48 Lessons',
             vocabCount: '800 Words',
             accent: '#a4d2a4',
@@ -82,11 +99,27 @@ export default function StudentPathway() {
         },
         {
             id: 'N4',
+            badgeText: '4',
+            badgeStatus: 'NEXT',
             levelName: 'Level 4',
-            title: 'Elementary',
-            subtitle: 'Daily Conversation',
-            kanji: '基礎',
-            desc: 'Solidify foundational grammar. Engage in daily conversations about familiar topics and understand basic written passages and short stories.',
+            title: 'Level 4 · Finding Your Voice',
+            tagline: 'Japanese stops being a script.',
+            subtitle: 'Finding Your Voice',
+            kanji: '中級への入口',
+            desc: "You'll move from prepared answers to everyday exchanges — asking, answering, reacting and keeping a conversation going.",
+            stackedCards: [
+                {
+                    label: "ONE DAY YOU'LL HEAR THIS",
+                    japanese: "週末は何をしましたか？",
+                    subtext: "And understand what is being asked without translating every word."
+                },
+                {
+                    label: "ONE DAY YOU'LL ANSWER",
+                    japanese: "友達と映画を見ました。",
+                    subtext: "“I watched a movie with my friend.”"
+                }
+            ],
+            unlockText: 'UNLOCK WHEN LEVEL 5 IS COMPLETE',
             lessonsCount: '62 Lessons',
             vocabCount: '1,500 Words',
             accent: '#8aacad',
@@ -97,11 +130,27 @@ export default function StudentPathway() {
         },
         {
             id: 'N3',
+            badgeText: '3',
+            badgeStatus: 'AHEAD',
             levelName: 'Level 3',
-            title: 'Intermediate',
-            subtitle: 'Bridge to Fluency',
+            title: 'Level 3 · Seeing Further',
+            tagline: 'You stop waiting for the question.',
+            subtitle: 'Seeing Further',
             kanji: '中級',
-            desc: 'The crucial bridge to fluency. Transition into everyday conversational mastery and tackle intermediate Kanji structures with confidence.',
+            desc: "Start asking your own questions, giving opinions, explaining reasons and following conversations that aren't written for a textbook.",
+            sideBySide: [
+                {
+                    label: 'ASK',
+                    japanese: 'どうしてそう思うんですか？'
+                },
+                {
+                    label: 'EXPLAIN',
+                    japanese: '日本で働きたいので…'
+                }
+            ],
+            quote: '"You don\'t just know the answer. You can explain why."',
+            quoteHighlight: 'why.',
+            unlockText: 'UNLOCK WHEN LEVEL 4 IS COMPLETE',
             lessonsCount: '75 Lessons',
             vocabCount: '3,000 Words',
             accent: '#aacdce',
@@ -112,11 +161,28 @@ export default function StudentPathway() {
         },
         {
             id: 'N2',
+            badgeText: '2',
+            badgeStatus: 'AHEAD',
             levelName: 'Level 2',
-            title: 'Advanced',
-            subtitle: 'Business Fluency',
+            title: 'Level 2 · Moving Independently',
+            tagline: 'Japanese leaves the classroom.',
+            subtitle: 'Moving Independently',
             kanji: '上級',
-            desc: 'Navigate complex business scenarios and comprehend advanced reading materials. Read standard Japanese newspapers and media with ease.',
+            desc: 'Work, messages, relationships, plans and problems become part of your language journey.',
+            sideBySide: [
+                {
+                    label: 'AT WORK',
+                    japanese: 'よろしくお願いいたします。',
+                    subtext: 'Write with the right level of formality.'
+                },
+                {
+                    label: 'IN LIFE',
+                    japanese: 'ずっと一緒にいたい。',
+                    subtext: 'Express something that actually matters to you.'
+                }
+            ],
+            quote: '"You don\'t need a translation for every important moment."',
+            unlockText: 'UNLOCK WHEN LEVEL 3 IS COMPLETE',
             lessonsCount: '90 Lessons',
             vocabCount: '6,000 Words',
             accent: '#e9c176',
@@ -127,11 +193,30 @@ export default function StudentPathway() {
         },
         {
             id: 'N1',
+            badgeText: '1',
+            badgeStatus: 'THE SUMMIT',
             levelName: 'Level 1',
-            title: 'Mastery',
-            subtitle: 'Abstract Logic',
-            kanji: '精通',
-            desc: 'Achieve full mastery of the Japanese language. Comprehend highly abstract logic, specialized terminology, and nuanced cultural context seamlessly.',
+            title: 'Level 1 · Reading Between the Lines',
+            tagline: "The words aren't always the whole message.",
+            subtitle: 'Reading Between the Lines',
+            kanji: '最上級',
+            desc: 'Understand nuance, indirectness, formal language and complex ideas — not only what was said, but why it was said that way.',
+            rowCards: [
+                {
+                    japanese: 'ちょっと……',
+                    label: 'LOOK CLOSER',
+                    subtext1: 'Literally: “a little…”',
+                    subtext2: 'Sometimes it means: “That may be difficult.”'
+                },
+                {
+                    japanese: '考えておきます。',
+                    label: 'READ THE ROOM',
+                    subtext1: '“I\'ll think about it.”',
+                    subtext2: 'It may not be a promise.'
+                }
+            ],
+            quote: '"Mastery is not knowing every word. It\'s understanding the space between them."',
+            unlockText: 'UNLOCK WHEN LEVEL 2 IS COMPLETE',
             lessonsCount: '110 Lessons',
             vocabCount: '10,000+ Words',
             accent: '#c5a059',
@@ -320,7 +405,7 @@ export default function StudentPathway() {
                                                     className="font-serif-title text-2xl sm:text-3xl font-bold tracking-tight"
                                                     style={{ color: node.accent }}
                                                 >
-                                                    {node.id}
+                                                    {node.badgeText || node.id}
                                                 </span>
                                                 <span className="absolute -bottom-1.5 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-[#16130e] border border-white/10 text-[#d1c5b4]">
                                                     {node.kanji}
@@ -334,9 +419,15 @@ export default function StudentPathway() {
                                                         {node.title}
                                                     </h3>
                                                 </div>
-                                                <p className="text-xs uppercase tracking-widest font-semibold text-[#d1c5b4] mt-0.5">
-                                                    {node.subtitle}
-                                                </p>
+                                                {node.tagline ? (
+                                                    <p className="text-sm font-semibold text-[#e9e1d8] mt-1">
+                                                        {node.tagline}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-xs uppercase tracking-widest font-semibold text-[#d1c5b4] mt-0.5">
+                                                        {node.subtitle}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
 
@@ -355,17 +446,156 @@ export default function StudentPathway() {
                                                 </div>
                                             )}
                                             {isLocked && (
-                                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/40 border border-white/10 text-[#d1c5b4]/60 text-xs font-medium">
-                                                    <span className="material-symbols-outlined text-sm">lock</span>
+                                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/40 border border-white/10 text-[#d1c5b4]/70 text-[11px] font-semibold tracking-wider uppercase">
+                                                    {node.badgeStatus ? (
+                                                        <span>~ {node.badgeStatus}</span>
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-sm">lock</span>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Description */}
-                                    <p className="text-sm sm:text-base leading-relaxed text-[#d1c5b4] mb-5 font-normal">
+                                    <p className="text-sm sm:text-base leading-relaxed text-[#d1c5b4] mb-4 font-normal">
                                         {node.desc}
                                     </p>
+
+                                    {/* Level 5: Read & Say */}
+                                    {node.readThis && node.sayThis && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                            <div className="bg-[#1c1813]/80 border border-white/5 rounded-2xl p-3.5">
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-[#d1c5b4]/60 block mb-1">
+                                                    {node.readThis.label}
+                                                </span>
+                                                <div className="text-xl font-bold text-white mb-0.5">
+                                                    {node.readThis.japanese}
+                                                </div>
+                                                <div className="text-xs text-[#d1c5b4]/80 italic">
+                                                    {node.readThis.translation}
+                                                </div>
+                                            </div>
+                                            <div className="bg-[#1c1813]/80 border border-white/5 rounded-2xl p-3.5">
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-[#d1c5b4]/60 block mb-1">
+                                                    {node.sayThis.label}
+                                                </span>
+                                                <div className="text-xl font-bold text-white mb-0.5">
+                                                    {node.sayThis.japanese}
+                                                </div>
+                                                <div className="text-xs text-[#d1c5b4]/80 italic">
+                                                    {node.sayThis.translation}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Level 5: Real Life Unlock */}
+                                    {node.realLifeUnlock && (
+                                        <div className="bg-[#1c1813]/80 border border-white/5 rounded-2xl p-3.5 mb-3 flex items-start gap-2.5">
+                                            <div className="w-6 h-6 rounded-full bg-[#e9c176]/15 text-[#e9c176] flex items-center justify-center shrink-0 mt-0.5">
+                                                <span className="text-xs">☕</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-[#d1c5b4]/60 block mb-0.5">
+                                                    {node.realLifeUnlock.label}
+                                                </span>
+                                                <p className="text-xs text-[#d1c5b4]">
+                                                    {node.realLifeUnlock.text}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Level 5: Tags */}
+                                    {node.tags && node.tags.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                                            {node.tags.map((tag, tIdx) => (
+                                                <span key={tIdx} className="text-[11px] font-medium px-3 py-1 rounded-full bg-black/40 border border-white/10 text-[#d1c5b4]">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Level 4: Stacked Cards */}
+                                    {node.stackedCards && (
+                                        <div className="space-y-3 mb-4">
+                                            {node.stackedCards.map((card, cIdx) => (
+                                                <div key={cIdx} className="bg-[#1c1813]/80 border border-white/5 rounded-2xl p-3.5">
+                                                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#d1c5b4]/60 block mb-1">
+                                                        {card.label}
+                                                    </span>
+                                                    <div className="text-lg sm:text-xl font-bold text-white mb-0.5">
+                                                        {card.japanese}
+                                                    </div>
+                                                    <div className="text-xs text-[#d1c5b4]/80">
+                                                        {card.subtext}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Levels 3 & 2: Side by Side Cards */}
+                                    {node.sideBySide && (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                            {node.sideBySide.map((card, cIdx) => (
+                                                <div key={cIdx} className="bg-[#1c1813]/80 border border-white/5 rounded-2xl p-3.5 flex flex-col justify-center">
+                                                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#d1c5b4]/60 block mb-1">
+                                                        {card.label}
+                                                    </span>
+                                                    <div className="text-lg sm:text-xl font-bold text-white mb-0.5">
+                                                        {card.japanese}
+                                                    </div>
+                                                    {card.subtext && (
+                                                        <div className="text-xs text-[#d1c5b4]/80 mt-0.5">
+                                                            {card.subtext}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Level 1: Row Cards */}
+                                    {node.rowCards && (
+                                        <div className="space-y-3 mb-3">
+                                            {node.rowCards.map((row, rIdx) => (
+                                                <div key={rIdx} className="bg-[#1c1813]/80 border border-white/5 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                    <div className="text-xl sm:text-2xl font-bold text-white shrink-0 min-w-[130px]">
+                                                        {row.japanese}
+                                                    </div>
+                                                    <div className="border-t sm:border-t-0 sm:border-l border-white/10 pt-2 sm:pt-0 sm:pl-4 flex-1">
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#d1c5b4]/60 block mb-0.5">
+                                                            {row.label}
+                                                        </span>
+                                                        <p className="text-xs text-[#d1c5b4]/60 italic mb-0.5">
+                                                            {row.subtext1}
+                                                        </p>
+                                                        <p className="text-xs font-semibold text-[#e9e1d8]">
+                                                            {row.subtext2}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Quotes for Levels 3, 2, 1 */}
+                                    {node.quote && (
+                                        <div className="border-l-2 border-[#e9c176]/50 pl-3.5 py-1 mb-4 text-xs italic text-[#d1c5b4] leading-relaxed">
+                                            {node.quoteHighlight ? (
+                                                <span>
+                                                    {node.quote.split(node.quoteHighlight)[0]}
+                                                    <span className="text-[#e9c176] font-semibold not-italic">{node.quoteHighlight}</span>
+                                                    {node.quote.split(node.quoteHighlight)[1]}
+                                                </span>
+                                            ) : (
+                                                <span>{node.quote}</span>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Meta pills / footer */}
                                     <div className="flex items-center justify-between pt-4 border-t border-[#4e4639]/30 text-xs text-[#d1c5b4]/80">
@@ -391,8 +621,8 @@ export default function StudentPathway() {
                                             </span>
                                         )}
                                         {isLocked && (
-                                            <span className="text-[#d1c5b4]/50 italic">
-                                                Unlock at {node.levelName}
+                                            <span className="text-[#d1c5b4]/50 italic text-[11px] tracking-wider uppercase font-medium">
+                                                {node.unlockText || `Unlock at ${node.levelName}`}
                                             </span>
                                         )}
                                     </div>
@@ -402,8 +632,26 @@ export default function StudentPathway() {
                     })}
                 </div>
 
+                {/* Note For Your Future Self Card */}
+                <div className="glass-card rounded-3xl p-5 sm:p-7 max-w-2xl mx-auto w-full flex items-center gap-5 mt-10 mb-4 border border-[#e9c176]/25 bg-[#1c1813]/85 shadow-2xl">
+                    <div className="w-12 h-12 rounded-full bg-[#e9c176]/10 border border-[#e9c176]/30 flex items-center justify-center shrink-0 text-[#e9c176] font-serif-title text-xl font-bold">
+                        花
+                    </div>
+                    <div>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-[#e9c176]/80 block mb-1">
+                            A NOTE FOR YOUR FUTURE SELF
+                        </span>
+                        <h4 className="text-base sm:text-lg font-bold text-white mb-1 font-serif-title">
+                            One day, you'll stop noticing how far you've come.
+                        </h4>
+                        <p className="text-xs sm:text-sm text-[#d1c5b4]/80 leading-relaxed">
+                            The sentence you once had to translate will become a sentence you simply understand.
+                        </p>
+                    </div>
+                </div>
+
                 {/* Footer indicator */}
-                <div className="text-center mt-12 text-xs text-[#d1c5b4]/60">
+                <div className="text-center mt-8 text-xs text-[#d1c5b4]/60">
                     <p className="tracking-wide">✦ Japanese Language Proficiency Roadmap (JLPT N5 → N1) ✦</p>
                 </div>
             </main>
