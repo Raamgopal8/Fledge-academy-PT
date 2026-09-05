@@ -395,19 +395,19 @@ export default function StudentPathway() {
                                         <div className="flex items-center gap-4">
                                             {/* Badge */}
                                             <div 
-                                                className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex-shrink-0 flex items-center justify-center border shadow-inner relative transition-transform duration-300 group-hover:scale-105"
+                                                className="w-[64px] h-[64px] sm:w-[72px] sm:h-[72px] rounded-2xl flex-shrink-0 flex flex-col items-center justify-center p-1.5 border shadow-inner relative transition-transform duration-300 group-hover:scale-105"
                                                 style={{ 
                                                     backgroundColor: '#231f1a', 
                                                     borderColor: isCurrent ? '#e9c176' : node.accentBorder 
                                                 }}
                                             >
                                                 <span 
-                                                    className="font-serif-title text-2xl sm:text-3xl font-bold tracking-tight"
+                                                    className="font-serif-title text-2xl sm:text-3xl font-bold tracking-tight leading-none"
                                                     style={{ color: node.accent }}
                                                 >
                                                     {node.badgeText || node.id}
                                                 </span>
-                                                <span className="absolute -bottom-1.5 text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full bg-[#16130e] border border-white/10 text-[#d1c5b4]">
+                                                <span className="text-[9px] sm:text-[10px] font-medium text-[#d1c5b4]/85 whitespace-nowrap text-center leading-tight mt-1 tracking-wider">
                                                     {node.kanji}
                                                 </span>
                                             </div>
