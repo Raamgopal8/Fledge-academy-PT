@@ -682,10 +682,12 @@ export default function CommunityChat({ role, overrideBatch }) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className={`relative ${
+                                    <div 
+                                        style={msg.audio_url && isYou ? { backgroundColor: '#6FB7E4' } : undefined}
+                                        className={`relative ${
                                         msg.audio_url 
                                             ? (isYou 
-                                                ? 'bg-[#d9fdd3] dark:bg-emerald-950/60 text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl rounded-tr-xs border border-emerald-300/40 dark:border-emerald-800/40 p-1 sm:p-1.5' 
+                                                ? 'bg-[#6FB7E4] text-slate-950 rounded-2xl sm:rounded-3xl rounded-tr-xs border border-[#5D8BCC]/60 shadow-xs p-1 sm:p-1.5' 
                                                 : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl rounded-tl-xs border border-outline-variant/40 p-1 sm:p-1.5')
                                             : (isYou 
                                                 ? 'bg-primary text-on-primary rounded-2xl sm:rounded-3xl rounded-tr-xs px-3 sm:px-4 py-2 sm:py-2.5' 
@@ -836,8 +838,10 @@ export default function CommunityChat({ role, overrideBatch }) {
                         </button>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                        <div className="flex-1 bg-white dark:bg-slate-950/70 rounded-2xl p-1 sm:p-1.5 border border-black/5 dark:border-white/10 shadow-xs">
+                        <div 
+                            style={{ backgroundColor: '#6FB7E4' }}
+                            className="flex-1 bg-[#6FB7E4] text-slate-950 rounded-2xl p-1 sm:p-1.5 border border-[#5D8BCC]/60 shadow-xs"
+                        >
                             <WhatsAppAudioPlayer
                                 src={audioUrl}
                                 time="Preview"

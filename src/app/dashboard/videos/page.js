@@ -38,6 +38,10 @@ export default function StudentVideos() {
     const [showSettings, setShowSettings] = useState(false);
     const [selectedQuality, setSelectedQuality] = useState('Auto');
     const [showQualityMenu, setShowQualityMenu] = useState(false);
+    const [streamStartPos, setStreamStartPos] = useState(0);
+    const [qualityNotification, setQualityNotification] = useState('');
+    const ytCurrentTimeRef = useRef(0);
+    const qualityNotificationTimeoutRef = useRef(null);
     const [doubleTapFeedback, setDoubleTapFeedback] = useState(null); // 'left' | 'right' | null
 
     const qualityMenuRef = useRef(null);
@@ -173,6 +177,25 @@ export default function StudentVideos() {
         };
         document.addEventListener('mousedown', handleClickOutside);
 
+        // 9. YouTube postMessage listener to continuously track playback time & state
+        const handleYouTubeMessage = (e) => {
+            if (!e.data) return;
+            try {
+                const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+                if (data && data.event === 'infoDelivery' && data.info) {
+                    if (typeof data.info.currentTime === 'number') {
+                        ytCurrentTimeRef.current = data.info.currentTime;
+                    }
+                    if (typeof data.info.duration === 'number' && data.info.duration > 0) {
+                        setDuration(data.info.duration);
+                    }
+                }
+            } catch (err) {
+                // Ignore non-JSON or other origin messages
+            }
+        };
+        window.addEventListener('message', handleYouTubeMessage);
+
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -188,6 +211,7 @@ export default function StudentVideos() {
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
             document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('message', handleYouTubeMessage);
         };
     }, []);
 
@@ -248,7 +272,7 @@ export default function StudentVideos() {
         }
     };
 
-    const getEmbedUrl = (url) => {
+    const getEmbedUrl = (url, quality = selectedQuality, startTime = streamStartPos) => {
         if (!url) return '';
         const cleanUrl = url.trim();
 
@@ -266,28 +290,39 @@ export default function StudentVideos() {
         }
 
         // 2. YouTube Links
+        const qualityMap = {
+            'Auto': '',
+            '1080p': 'hd1080',
+            '720p': 'hd720',
+            '480p': 'large',
+            '360p': 'medium'
+        };
+        const vqVal = qualityMap[quality] || '';
+        const vqParam = vqVal ? `&vq=${vqVal}` : '';
+        const startParam = startTime > 0 ? `&start=${Math.floor(startTime)}&autoplay=1` : '';
         const originParam = typeof window !== 'undefined' && window.location?.origin ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
+
         if (cleanUrl.includes('youtube.com/watch')) {
             const match = cleanUrl.match(/[?&]v=([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}${vqParam}${startParam}`;
             }
         }
         if (cleanUrl.includes('youtu.be/')) {
             const match = cleanUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}${vqParam}${startParam}`;
             }
         }
         if (cleanUrl.includes('youtube.com/embed/')) {
             const cleanEmbed = cleanUrl.replace('youtube-nocookie.com', 'youtube.com');
             const separator = cleanEmbed.includes('?') ? '&' : '?';
-            return `${cleanEmbed}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
+            return `${cleanEmbed}${separator}rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}${vqParam}${startParam}`;
         }
         if (cleanUrl.includes('youtube.com/shorts/')) {
             const match = cleanUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}`;
+                return `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1&controls=1&enablejsapi=1&playsinline=1&iv_load_policy=3&fs=0${originParam}${vqParam}${startParam}`;
             }
         }
 
@@ -474,10 +509,42 @@ export default function StudentVideos() {
         setShowControls(true);
         setShowSettings(false);
         setDoubleTapFeedback(null);
+        ytCurrentTimeRef.current = 0;
+        setStreamStartPos(0);
+        setSelectedQuality('Auto');
+        setQualityNotification('');
         if (videoRef.current) {
             videoRef.current.playbackRate = playbackRate;
         }
     }, [activeVideo?.id, activeVideo?._id, activeVideo?.video_url]);
+
+    // Periodically sync currentTime with YouTube iframe
+    useEffect(() => {
+        if (!activeVideo || !isYouTubeEmbed(activeVideo.video_url)) return;
+        const interval = setInterval(() => {
+            try {
+                const iframe = playerContainerRef.current?.querySelector('iframe');
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening' }), '*');
+                    iframe.contentWindow.postMessage(JSON.stringify({
+                        event: 'command',
+                        func: 'getCurrentTime',
+                        args: []
+                    }), '*');
+                }
+            } catch (e) {}
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [activeVideo]);
+
+    const handleIframeLoad = () => {
+        try {
+            const iframe = playerContainerRef.current?.querySelector('iframe');
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(JSON.stringify({ event: 'listening' }), '*');
+            }
+        } catch (err) {}
+    };
 
     const togglePlay = (e) => {
         e?.stopPropagation();
@@ -547,24 +614,46 @@ export default function StudentVideos() {
 
         const targetQuality = qualityMap[qualityLabel] || 'default';
 
-        // Send postMessage to YouTube iframe if available
-        try {
-            const iframe = playerContainerRef.current?.querySelector('iframe');
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(JSON.stringify({
-                    event: 'command',
-                    func: 'setPlaybackQuality',
-                    args: [targetQuality]
-                }), '*');
+        if (activeVideo && isYouTubeEmbed(activeVideo.video_url)) {
+            const currentPos = ytCurrentTimeRef.current || currentTime || 0;
+            setStreamStartPos(currentPos);
 
-                iframe.contentWindow.postMessage(JSON.stringify({
-                    event: 'command',
-                    func: 'setPlaybackQualityRange',
-                    args: [targetQuality, targetQuality]
-                }), '*');
+            // Show brief visual feedback toast
+            if (qualityNotificationTimeoutRef.current) {
+                clearTimeout(qualityNotificationTimeoutRef.current);
             }
-        } catch (err) {
-            console.warn("Quality change postMessage error:", err);
+            setQualityNotification(`Quality: ${qualityLabel}`);
+            qualityNotificationTimeoutRef.current = setTimeout(() => {
+                setQualityNotification('');
+            }, 3000);
+
+            // Send postMessage to YouTube iframe if available
+            try {
+                const iframe = playerContainerRef.current?.querySelector('iframe');
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(JSON.stringify({
+                        event: 'command',
+                        func: 'setPlaybackQuality',
+                        args: [targetQuality]
+                    }), '*');
+
+                    iframe.contentWindow.postMessage(JSON.stringify({
+                        event: 'command',
+                        func: 'setPlaybackQualityRange',
+                        args: [targetQuality, targetQuality]
+                    }), '*');
+                }
+            } catch (err) {
+                console.warn("Quality change postMessage error:", err);
+            }
+        } else {
+            if (qualityNotificationTimeoutRef.current) {
+                clearTimeout(qualityNotificationTimeoutRef.current);
+            }
+            setQualityNotification(`Quality: ${qualityLabel}`);
+            qualityNotificationTimeoutRef.current = setTimeout(() => {
+                setQualityNotification('');
+            }, 3000);
         }
     };
 
@@ -854,18 +943,28 @@ export default function StudentVideos() {
                                                     </button>
                                                 )}
 
+                                                {/* Quality Change Feedback Toast Badge */}
+                                                {qualityNotification && (
+                                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-full bg-black/85 backdrop-blur-md border border-white/25 text-white text-xs font-semibold flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
+                                                        <span className="material-symbols-outlined text-[16px] text-primary">high_quality</span>
+                                                        <span>{qualityNotification}</span>
+                                                    </div>
+                                                )}
+
                                                 {/* Player Embed or YouTube-Style HTML5 Video Player */}
                                                 {isIframeEmbed(activeVideo.video_url) ? (
                                                     <div className="player-embed-wrapper relative w-full h-full overflow-hidden">
                                                         <iframe
-                                                            src={getEmbedUrl(activeVideo.video_url)}
+                                                            key={`${activeVideo.id || activeVideo._id}-${activeVideo.video_url}-${selectedQuality}-${Math.floor(streamStartPos)}`}
+                                                            src={getEmbedUrl(activeVideo.video_url, selectedQuality, streamStartPos)}
                                                             title={activeVideo.title}
+                                                            onLoad={handleIframeLoad}
                                                             className="w-full h-full border-0 pointer-events-auto"
                                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; unload"
                                                             allowFullScreen
                                                         />
 
-                                                        {/* Top-Right Shield & Mask: completely hides and blocks Google Drive pop-out button and YouTube share button on mobile and desktop */}
+                                                        {/* Top-Right Shield & Mask: completely hides and blocks Google Drive pop-out button on mobile and desktop */}
                                                         {isGoogleDriveEmbed(activeVideo.video_url) && (
                                                             <div
                                                                 className="absolute top-0 right-0 w-16 h-16 sm:w-20 sm:h-20 bg-black z-30 pointer-events-auto cursor-default select-none flex items-center justify-center"
@@ -884,27 +983,10 @@ export default function StudentVideos() {
                                                             />
                                                         )}
 
-                                                        {/* Transparent Shield & Mask Overlay to hide/block YouTube & Share buttons in normal & fullscreen */}
+                                                        {/* Transparent Shield & Mask Overlay to hide/block external redirect links without blocking settings & CC */}
                                                         {isYouTubeEmbed(activeVideo.video_url) && (
                                                             <>
-                                                                {/* Top-Right: Settings Shield - blocks the settings gear button completely */}
-                                                                <div
-                                                                    className="absolute top-0 right-0 w-12 sm:w-14 h-12 sm:h-14 bg-transparent pointer-events-auto cursor-default select-none z-30"
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                    onMouseDown={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                    onTouchStart={(e) => {
-                                                                        e.preventDefault();
-                                                                        e.stopPropagation();
-                                                                    }}
-                                                                />
-
-                                                                {/* Top Header Channel & Title Shield: covers channel avatar, name, subscriber info, and redirect links, leaving CC button on the right accessible */}
+                                                                {/* Top Header Channel & Title Shield: covers channel avatar, name, subscriber info, and redirect links, leaving Settings and CC accessible */}
                                                                 <div
                                                                     className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-16 sm:h-20 lg:h-24 bg-transparent pointer-events-auto cursor-default select-none z-30"
                                                                     onClick={(e) => {
@@ -921,13 +1003,13 @@ export default function StudentVideos() {
                                                                     }}
                                                                 />
 
-                                                                {/* Bottom Bar Transparent Shield Mask covering Watch on YouTube & Share/Watch Later */}
+                                                                {/* Bottom Bar Transparent Shield Mask: protects against redirects while keeping Settings & CC clickable */}
                                                                 <div
-                                                                    className="absolute bottom-0 left-0 right-0 h-16 sm:h-20 lg:h-24 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1 sm:pb-2"
+                                                                    className="absolute bottom-0 left-0 right-0 h-12 sm:h-14 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1"
                                                                 >
                                                                     {/* Left transparent shield covering share / watch later pills */}
                                                                     <div
-                                                                        className="w-32 sm:w-44 lg:w-56 h-12 sm:h-16 bg-transparent pointer-events-auto cursor-default select-none"
+                                                                        className="w-28 sm:w-36 lg:w-44 h-10 sm:h-12 bg-transparent pointer-events-auto cursor-default select-none"
                                                                         onClick={(e) => {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
@@ -941,9 +1023,9 @@ export default function StudentVideos() {
                                                                             e.stopPropagation();
                                                                         }}
                                                                     />
-                                                                    {/* Right transparent shield covering 'Watch on YouTube' button and bottom-right settings if rendered in desktop bottom bar */}
+                                                                    {/* Right transparent shield covering only the external YouTube link at bottom-right edge without blocking gear/CC */}
                                                                     <div
-                                                                        className="w-48 sm:w-64 lg:w-80 h-12 sm:h-16 bg-transparent pointer-events-auto cursor-default select-none"
+                                                                        className="w-14 sm:w-16 h-8 sm:h-10 bg-transparent pointer-events-auto cursor-default select-none"
                                                                         onClick={(e) => {
                                                                             e.preventDefault();
                                                                             e.stopPropagation();
@@ -1190,7 +1272,7 @@ export default function StudentVideos() {
 
                                                     {/* Quality Selection Dropdown Menu */}
                                                     {showQualityMenu && (
-                                                        <div className="absolute right-0 bottom-full mb-2 w-36 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-1.5 shadow-xl z-50 animate-scale-up">
+                                                        <div className="absolute right-0 bottom-full mb-2 w-48 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-2 shadow-xl z-50 animate-scale-up">
                                                             <div className="px-2 py-1 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/30 mb-1">
                                                                 Video Quality
                                                             </div>
@@ -1205,12 +1287,23 @@ export default function StudentVideos() {
                                                                             : 'text-on-surface hover:bg-surface-container'
                                                                     }`}
                                                                 >
-                                                                    <span>{q}</span>
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <span>{q}</span>
+                                                                        {(q === '1080p' || q === '720p') && (
+                                                                            <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-primary/20 text-primary uppercase">HD</span>
+                                                                        )}
+                                                                    </span>
                                                                     {selectedQuality === q && (
                                                                         <span className="material-symbols-outlined text-[14px] text-primary">check</span>
                                                                     )}
                                                                 </button>
                                                             ))}
+                                                            {isYouTubeEmbed(activeVideo?.video_url) && (
+                                                                <div className="mt-1.5 pt-1.5 border-t border-outline-variant/30 px-2 py-1 text-[10px] text-on-surface-variant flex items-start gap-1">
+                                                                    <span className="material-symbols-outlined text-[13px] text-primary flex-shrink-0 mt-0.5">settings</span>
+                                                                    <span>You can also use the ⚙️ gear icon directly in the video player.</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
