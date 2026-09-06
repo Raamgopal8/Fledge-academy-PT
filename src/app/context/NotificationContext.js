@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { setupFCMForegroundListener } from '../utils/firebaseMessaging';
 
 const NotificationContext = createContext(null);
 
@@ -32,7 +33,12 @@ export function NotificationProvider({ children }) {
     const [activePopup, setActivePopup] = useState(null);
     const [isTrayOpen, setIsTrayOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('notifications_enabled') !== 'false';
+        }
+        return true;
+    });
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [userRole, setUserRole] = useState('student');
 
@@ -68,14 +74,8 @@ export function NotificationProvider({ children }) {
     // Sync notification preference with profile settings
     const checkNotificationPreference = useCallback(async () => {
         if (typeof window === 'undefined') return;
-        
-        // 1. Initial check from localStorage
-        const localPref = localStorage.getItem('notifications_enabled');
-        if (localPref !== null) {
-            setNotificationsEnabled(localPref === 'true');
-        }
 
-        // 2. Fetch from user profile API
+        // Fetch from user profile API
         const token = localStorage.getItem('token');
         if (!token) return;
 
@@ -779,8 +779,14 @@ export function NotificationProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        checkNotificationPreference();
-        fetchAllNotifications();
+        let isMounted = true;
+        const init = async () => {
+            await checkNotificationPreference();
+            if (isMounted) {
+                fetchAllNotifications();
+            }
+        };
+        init();
 
         const handlePrefChange = (e) => {
             const enabled = e.detail?.enabled !== false;
@@ -801,14 +807,58 @@ export function NotificationProvider({ children }) {
         window.addEventListener('fledge_notification_preference_changed', handlePrefChange);
         window.addEventListener('fledge_new_class_created', handleNewClassCreated);
 
+        // Real-time Firebase Push listener for foreground notifications
+        const cleanupFCM = setupFCMForegroundListener((notifData) => {
+            const isEnabled = localStorage.getItem('notifications_enabled') !== 'false';
+            if (!isEnabled) return;
+
+            playNotificationChime();
+            setActivePopup({
+                id: notifData.id,
+                title: notifData.title,
+                message: notifData.body,
+                link: notifData.link,
+                icon: 'notifications_active',
+                badgeColor: 'bg-primary/10 text-primary border-primary/20',
+                accentColor: 'from-primary to-secondary',
+                priority: 'urgent',
+                timeAgo: 'Just now'
+            });
+
+            // Immediately prepend to active notifications list and increment unread badge
+            setNotifications(prev => [
+                {
+                    id: notifData.id,
+                    type: notifData.type || 'fcm_push',
+                    title: notifData.title,
+                    message: notifData.body,
+                    timestamp: new Date(),
+                    timeAgo: 'Just now',
+                    link: notifData.link,
+                    icon: 'notifications_active',
+                    badgeColor: 'bg-primary/10 text-primary border-primary/20',
+                    accentColor: 'from-primary to-secondary',
+                    priority: 'urgent',
+                    isRead: false
+                },
+                ...prev.filter(n => n.id !== notifData.id)
+            ]);
+            setUnreadCount(prev => prev + 1);
+
+            // Re-sync with backend to catch any database-persisted records
+            fetchAllNotifications();
+        });
+
         // Auto-refresh interval every 60s
         const interval = setInterval(fetchAllNotifications, 60000);
         return () => {
+            isMounted = false;
             clearInterval(interval);
+            cleanupFCM();
             window.removeEventListener('fledge_notification_preference_changed', handlePrefChange);
             window.removeEventListener('fledge_new_class_created', handleNewClassCreated);
         };
-    }, [checkNotificationPreference, fetchAllNotifications]);
+    }, [checkNotificationPreference, fetchAllNotifications, playNotificationChime]);
 
     const dismissPopup = () => {
         if (activePopup) {

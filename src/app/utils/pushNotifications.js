@@ -1,4 +1,5 @@
 // Utility for Service Worker & Web Push Notifications Registration
+import { requestFCMToken, removeFCMToken } from './firebaseMessaging';
 
 // Convert Base64 URL safe VAPID key to Uint8Array
 function urlBase64ToUint8Array(base64String) {
@@ -22,9 +23,20 @@ export async function registerServiceWorker() {
     }
 
     try {
+        // Register default PWA service worker
         const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/'
         });
+
+        // Also register Firebase Messaging service worker if supported
+        try {
+            await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                scope: '/'
+            });
+        } catch (fcmSwErr) {
+            // Non-blocking if firebase sw registration fails
+        }
+
         return registration;
     } catch (err) {
         console.warn('Service Worker registration failed:', err);
@@ -33,7 +45,7 @@ export async function registerServiceWorker() {
 }
 
 export async function subscribeToPushNotifications() {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
         console.warn('Push messaging is not supported in this browser.');
         return { success: false, reason: 'unsupported' };
     }
@@ -45,7 +57,21 @@ export async function subscribeToPushNotifications() {
             return { success: false, reason: 'permission_denied' };
         }
 
-        // 2. Register / Get Service Worker
+        // 2. Primary: Try Firebase Cloud Messaging (FCM)
+        try {
+            const fcmResult = await requestFCMToken();
+            if (fcmResult && fcmResult.success) {
+                return { success: true, method: 'fcm', token: fcmResult.token };
+            }
+        } catch (fcmErr) {
+            console.warn('[Push] FCM subscription skipped or encountered error, falling back to WebPush:', fcmErr);
+        }
+
+        // 3. Fallback: Standard Web Push with PushManager
+        if (!('PushManager' in window)) {
+            return { success: true, permission: 'granted' };
+        }
+
         let registration = await navigator.serviceWorker.ready;
         if (!registration) {
             registration = await registerServiceWorker();
@@ -54,10 +80,8 @@ export async function subscribeToPushNotifications() {
             return { success: false, reason: 'sw_failed' };
         }
 
-        // 3. Get existing subscription or create new
         let subscription = await registration.pushManager.getSubscription();
-
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
         if (!subscription && vapidPublicKey) {
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
@@ -67,7 +91,6 @@ export async function subscribeToPushNotifications() {
             });
         }
 
-        // 4. Send subscription token to backend if available
         if (subscription) {
             const token = localStorage.getItem('token');
             if (token) {
@@ -85,7 +108,7 @@ export async function subscribeToPushNotifications() {
                     console.warn('Could not sync push token with backend:', e);
                 }
             }
-            return { success: true, subscription };
+            return { success: true, method: 'webpush', subscription };
         }
 
         return { success: true, permission: 'granted' };
@@ -96,16 +119,22 @@ export async function subscribeToPushNotifications() {
 }
 
 export async function unsubscribeFromPushNotifications() {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+    if (typeof window === 'undefined') {
         return;
     }
 
     try {
-        const registration = await navigator.serviceWorker.ready;
-        if (registration) {
-            const subscription = await registration.pushManager.getSubscription();
-            if (subscription) {
-                await subscription.unsubscribe();
+        // Clean up FCM token
+        await removeFCMToken();
+
+        // Clean up Web Push subscription
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            if (registration && registration.pushManager) {
+                const subscription = await registration.pushManager.getSubscription();
+                if (subscription) {
+                    await subscription.unsubscribe();
+                }
             }
         }
     } catch (err) {

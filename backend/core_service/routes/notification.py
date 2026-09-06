@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import models
 from routes.auth import get_current_user
 from redis_client import get_cache, set_cache, delete_cache, delete_pattern
+from fcm_service import send_fcm_push
 
 router = APIRouter()
 
@@ -17,6 +18,21 @@ class NotificationCreate(BaseModel):
     type: str = "general"
     link: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = {}
+
+class FCMTokenPayload(BaseModel):
+    token: Optional[str] = None
+    endpoint: Optional[str] = None  # for web push subscription object compatibility
+    device_type: Optional[str] = "unknown"
+    user_agent: Optional[str] = None
+    keys: Optional[Dict[str, Any]] = None
+
+class PushNotificationRequest(BaseModel):
+    recipient_id: Optional[str] = "all"
+    recipient_role: Optional[str] = None
+    title: str
+    message: str
+    link: Optional[str] = "/dashboard"
+    type: str = "push"
 
 def format_notification(n: models.Notification) -> dict:
     return {
@@ -85,10 +101,13 @@ async def create_notification(
     payload: NotificationCreate,
     current_user: models.User = Depends(get_current_user)
 ):
-    """Create and persist a new notification in DB and invalidate target user caches"""
+    """Create and persist a new notification in DB, invalidate caches, and dispatch FCM push"""
+    recipient_id = payload.recipient_id.strip().lower()
+    recipient_role = payload.recipient_role.lower() if payload.recipient_role else None
+
     new_notif = models.Notification(
-        recipient_id=payload.recipient_id.strip().lower(),
-        recipient_role=payload.recipient_role.lower() if payload.recipient_role else None,
+        recipient_id=recipient_id,
+        recipient_role=recipient_role,
         title=payload.title,
         message=payload.message,
         type=payload.type,
@@ -98,12 +117,140 @@ async def create_notification(
     await new_notif.insert()
 
     # Invalidate Redis notification cache for target or all
-    if payload.recipient_id in ["all", "role:student", "role:staff", "role:ceo"]:
+    if recipient_id in ["all", "role:student", "role:staff", "role:ceo"]:
         await delete_pattern("user:notifications:*")
     else:
-        await delete_cache(f"user:notifications:{payload.recipient_id.strip().lower()}")
+        await delete_cache(f"user:notifications:{recipient_id}")
+
+    # Collect recipient FCM device tokens for real-time mobile push
+    try:
+        target_tokens = []
+        if recipient_id == "all":
+            all_users = await models.User.find({"preferences.notifications": {"$ne": False}}).to_list()
+            for u in all_users:
+                target_tokens.extend((u.preferences or {}).get("fcm_tokens", []))
+        elif recipient_id.startswith("role:"):
+            role = recipient_id.split(":", 1)[1]
+            role_users = await models.User.find({"role": role, "preferences.notifications": {"$ne": False}}).to_list()
+            for u in role_users:
+                target_tokens.extend((u.preferences or {}).get("fcm_tokens", []))
+        else:
+            # Single user by email or ID
+            target_user = await models.User.find_one({
+                "$or": [
+                    {"email": recipient_id},
+                    {"_id": recipient_id}
+                ]
+            })
+            if target_user:
+                target_tokens = list((target_user.preferences or {}).get("fcm_tokens", []))
+
+        # Deduplicate tokens
+        target_tokens = list(set(filter(None, target_tokens)))
+
+        if target_tokens:
+            await send_fcm_push(
+                tokens=target_tokens,
+                title=payload.title,
+                body=payload.message,
+                link=payload.link or "/dashboard",
+                data={
+                    "id": str(new_notif.id),
+                    "type": payload.type,
+                    "recipient_id": recipient_id
+                }
+            )
+    except Exception as push_err:
+        pass
 
     return format_notification(new_notif)
+
+@router.post("/fcm-token")
+@router.post("/subscribe")
+async def register_device_token(
+    payload: FCMTokenPayload,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Register or refresh FCM device token for current user"""
+    token_str = payload.token or payload.endpoint
+    if not token_str:
+        return {"message": "No token provided", "success": False}
+
+    user_prefs = current_user.preferences or {}
+    fcm_tokens = list(user_prefs.get("fcm_tokens", []))
+
+    if token_str not in fcm_tokens:
+        fcm_tokens.append(token_str)
+        user_prefs["fcm_tokens"] = fcm_tokens[-20:]  # Keep last 20 active devices
+        user_prefs["notifications"] = True
+        current_user.preferences = user_prefs
+        await current_user.save()
+
+    return {
+        "success": True,
+        "message": "Device token registered successfully",
+        "registered_devices_count": len(user_prefs.get("fcm_tokens", []))
+    }
+
+@router.post("/fcm-token/remove")
+async def remove_device_token(
+    payload: FCMTokenPayload,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Remove device token on logout or disabling notifications"""
+    token_str = payload.token or payload.endpoint
+    if not token_str:
+        return {"message": "No token provided", "success": False}
+
+    user_prefs = current_user.preferences or {}
+    fcm_tokens = list(user_prefs.get("fcm_tokens", []))
+
+    if token_str in fcm_tokens:
+        fcm_tokens = [t for t in fcm_tokens if t != token_str]
+        user_prefs["fcm_tokens"] = fcm_tokens
+        current_user.preferences = user_prefs
+        await current_user.save()
+
+    return {"success": True, "message": "Device token removed successfully"}
+
+@router.post("/send-push")
+async def send_direct_push(
+    payload: PushNotificationRequest,
+    current_user: models.User = Depends(get_current_user)
+):
+    """Send immediate push notification via FCM to users or role"""
+    recipient_id = (payload.recipient_id or "all").strip().lower()
+
+    target_tokens = []
+    if recipient_id == "all":
+        users = await models.User.find({"preferences.notifications": {"$ne": False}}).to_list()
+        for u in users:
+            target_tokens.extend((u.preferences or {}).get("fcm_tokens", []))
+    elif recipient_id.startswith("role:"):
+        role = recipient_id.split(":", 1)[1]
+        users = await models.User.find({"role": role, "preferences.notifications": {"$ne": False}}).to_list()
+        for u in users:
+            target_tokens.extend((u.preferences or {}).get("fcm_tokens", []))
+    else:
+        u = await models.User.find_one({"email": recipient_id})
+        if u:
+            target_tokens = list((u.preferences or {}).get("fcm_tokens", []))
+
+    target_tokens = list(set(filter(None, target_tokens)))
+
+    result = await send_fcm_push(
+        tokens=target_tokens,
+        title=payload.title,
+        body=payload.message,
+        link=payload.link,
+        data={"type": payload.type}
+    )
+
+    return {
+        "success": True,
+        "targeted_devices": len(target_tokens),
+        "result": result
+    }
 
 @router.patch("/{notification_id}/read", response_model=dict)
 async def mark_notification_read(
