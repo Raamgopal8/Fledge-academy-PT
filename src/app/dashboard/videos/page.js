@@ -498,7 +498,6 @@ export default function StudentVideos() {
         setDoubleTapFeedback(null);
         ytCurrentTimeRef.current = 0;
         setStreamStartPos(0);
-        setQualityNotification('');
         if (videoRef.current) {
             videoRef.current.playbackRate = playbackRate;
         }
