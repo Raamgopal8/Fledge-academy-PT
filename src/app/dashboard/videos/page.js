@@ -748,6 +748,28 @@ export default function StudentVideos() {
                     border: none !important;
                     border-radius: 0 !important;
                 }
+                .mobile-landscape-fullscreen {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    width: 100dvw !important;
+                    height: 100dvh !important;
+                    z-index: 99999 !important;
+                    border-radius: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
+                    background-color: #000000 !important;
+                }
+                .mobile-landscape-fullscreen .player-embed-wrapper {
+                    width: 100% !important;
+                    height: 100% !important;
+                    border-radius: 0 !important;
+                }
                 @keyframes pulseGlow {
                     0%, 100% { opacity: 0.4; }
                     50% { opacity: 0.8; }
@@ -983,12 +1005,13 @@ export default function StudentVideos() {
                                                             />
                                                         )}
 
-                                                        {/* Transparent Shield & Mask Overlay to hide/block external redirect links without blocking settings & CC */}
+                                                        {/* Straight-line hidden transparent blocks to block YouTube Settings, Watch on YouTube, Share, Audio, More Videos, etc. */}
                                                         {isYouTubeEmbed(activeVideo.video_url) && (
                                                             <>
-                                                                {/* Top Header Channel & Title Shield: covers channel avatar, name, subscriber info, and redirect links, leaving Settings and CC accessible */}
+                                                                {/* 1. Top Straight-Line Transparent Bar: Blocks channel info, avatar, Watch Later, Share, Audio, and Settings gear */}
                                                                 <div
-                                                                    className="absolute top-0 left-0 right-24 sm:right-28 lg:right-32 h-16 sm:h-20 lg:h-24 bg-transparent pointer-events-auto cursor-default select-none z-30"
+                                                                    className="absolute top-0 left-0 right-0 h-16 sm:h-20 md:h-24 bg-transparent pointer-events-auto cursor-default select-none z-30 touch-none"
+                                                                    style={{ touchAction: 'none' }}
                                                                     onClick={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
@@ -997,49 +1020,53 @@ export default function StudentVideos() {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
                                                                     }}
+                                                                    onPointerDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
                                                                     onTouchStart={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchMove={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchEnd={(e) => {
                                                                         e.preventDefault();
                                                                         e.stopPropagation();
                                                                     }}
                                                                 />
 
-                                                                {/* Bottom Bar Transparent Shield Mask: protects against redirects while keeping Settings & CC clickable */}
+                                                                {/* 2. Bottom Straight-Line Transparent Bar: Blocks "Watch on YouTube", More Videos grid button, Share, etc. */}
                                                                 <div
-                                                                    className="absolute bottom-0 left-0 right-0 h-12 sm:h-14 pointer-events-none z-20 flex items-end justify-between px-2 sm:px-4 pb-1"
-                                                                >
-                                                                    {/* Left transparent shield covering share / watch later pills */}
-                                                                    <div
-                                                                        className="w-28 sm:w-36 lg:w-44 h-10 sm:h-12 bg-transparent pointer-events-auto cursor-default select-none"
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                        }}
-                                                                        onMouseDown={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                        }}
-                                                                        onTouchStart={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                        }}
-                                                                    />
-                                                                    {/* Right transparent shield covering only the external YouTube link at bottom-right edge without blocking gear/CC */}
-                                                                    <div
-                                                                        className="w-14 sm:w-16 h-8 sm:h-10 bg-transparent pointer-events-auto cursor-default select-none"
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                        }}
-                                                                        onMouseDown={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                        }}
-                                                                        onTouchStart={(e) => {
-                                                                            e.preventDefault();
-                                                                            e.stopPropagation();
-                                                                        }}
-                                                                    />
-                                                                </div>
+                                                                    className="absolute bottom-0 left-0 right-0 h-14 sm:h-16 md:h-20 bg-transparent pointer-events-auto cursor-default select-none z-30 touch-none"
+                                                                    style={{ touchAction: 'none' }}
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onMouseDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onPointerDown={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchStart={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchMove={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                    onTouchEnd={(e) => {
+                                                                        e.preventDefault();
+                                                                        e.stopPropagation();
+                                                                    }}
+                                                                />
                                                             </>
                                                         )}
                                                     </div>
