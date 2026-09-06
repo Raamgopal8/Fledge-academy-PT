@@ -677,11 +677,6 @@ export default function StudentPathway() {
                         Curriculum Milestone Pathway
                     </div>
                 </div>                
-
-                {/* Footer indicator */}
-                <div className="text-center mt-8 text-xs text-[#d1c5b4]/60">
-                    <p className="tracking-wide">✦ Japanese Language Proficiency Roadmap (JLPT N5 → N1) ✦</p>
-                </div>
             </main>
         </div>
     );
