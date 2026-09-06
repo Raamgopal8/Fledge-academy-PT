@@ -251,7 +251,7 @@ export default function StudentPathway() {
             },
             tags: ['✦ First words', 'あ Kana', '✪ Everyday Japanese'],
             lessonsCount: '48 Lessons',
-            vocabCount: '800 Words',
+            vocabCount: '800 Vocabulary',
             accent: '#a4d2a4',
             accentBg: 'rgba(164, 210, 164, 0.15)',
             accentBorder: 'rgba(164, 210, 164, 0.4)',
@@ -612,7 +612,7 @@ export default function StudentPathway() {
                                         <div className="flex items-center justify-between pt-4 border-t border-[#4e4639]/30 text-xs text-[#d1c5b4]/80">
                                             <div className="flex items-center gap-3">
                                                 <span className="flex items-center gap-1">
-                                                    <span className="material-symbols-outlined text-sm text-[#e9c176]">auto_stories</span>
+                                                    <span className="text-xs sm:text-sm font-bold text-[#e9c176] select-none leading-none">字</span>
                                                     {node.lessonsCount}
                                                 </span>
                                                 <span className="flex items-center gap-1">
