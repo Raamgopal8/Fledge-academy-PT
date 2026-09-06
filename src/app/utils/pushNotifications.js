@@ -1,5 +1,5 @@
 // Utility for Service Worker & Web Push Notifications Registration
-import { requestFCMToken, removeFCMToken } from './firebaseMessaging';
+import { requestFCMToken, removeFCMToken, DEFAULT_FIREBASE_VAPID_KEY } from './firebaseMessaging';
 
 // Convert Base64 URL safe VAPID key to Uint8Array
 function urlBase64ToUint8Array(base64String) {
@@ -81,7 +81,7 @@ export async function subscribeToPushNotifications() {
         }
 
         let subscription = await registration.pushManager.getSubscription();
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || DEFAULT_FIREBASE_VAPID_KEY;
 
         if (!subscription && vapidPublicKey) {
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);

@@ -4,6 +4,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 
+export const DEFAULT_FIREBASE_VAPID_KEY = 'BE1f-OCLbXb9lc209_5zkMZySAUx8WT06eKTSvTAoUMXuFOxFZq1ATFyUfa7mQ8fZy0EcRy2rmrANbiDh71U6I';
+
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -130,7 +132,7 @@ export async function requestFCMToken() {
         }
 
         // 4. Retrieve FCM Token
-        const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || DEFAULT_FIREBASE_VAPID_KEY;
         const tokenOptions = {
             serviceWorkerRegistration: swRegistration
         };

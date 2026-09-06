@@ -1,11 +1,6 @@
-// Firebase Cloud Messaging Background Service Worker
-// Handles push notifications when the web application / mobile PWA is closed or in background
-
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
-// Initialize the Firebase app in the service worker
-// Read config parameters passed in URL or use default project identifier
 const firebaseConfig = {
     apiKey: new URL(location).searchParams.get('apiKey') || '',
     authDomain: new URL(location).searchParams.get('authDomain') || '',
@@ -19,7 +14,6 @@ try {
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
 
-    // Background push notification handler
     messaging.onBackgroundMessage((payload) => {
         console.log('[firebase-messaging-sw.js] Received background message:', payload);
 
@@ -46,7 +40,6 @@ try {
     console.warn('[firebase-messaging-sw.js] Firebase initialization notice:', err);
 }
 
-// Handle notification tap on mobile lockscreen / desktop banner
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
