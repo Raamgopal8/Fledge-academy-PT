@@ -18,15 +18,24 @@ export default function WhatsAppAudioPlayer({
     isYou = false,
     showAvatar = true,
     className = '',
+    initialDuration = 0,
     onEnded
 }) {
     const audioRef = useRef(null);
     const waveformRef = useRef(null);
+    const animFrameRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
+    const [duration, setDuration] = useState(initialDuration || 0);
     const [isLoading, setIsLoading] = useState(false);
     const [hasError, setHasError] = useState(false);
+
+    // Sync initialDuration if provided or changed
+    useEffect(() => {
+        if (initialDuration > 0) {
+            setDuration(initialDuration);
+        }
+    }, [initialDuration]);
 
     // Generate unique wave pattern if audio src has hash
     const wavePattern = useMemo(() => {
@@ -42,6 +51,61 @@ export default function WhatsAppAudioPlayer({
         });
     }, [src]);
 
+    // Decode true audio buffer duration (especially fixes WebM MediaRecorder audio having duration=Infinity)
+    useEffect(() => {
+        if (!src) return;
+        let isCancelled = false;
+
+        const decodeBufferDuration = async () => {
+            try {
+                const response = await fetch(src);
+                const arrayBuffer = await response.arrayBuffer();
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtxClass) return;
+                const audioCtx = new AudioCtxClass();
+                const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+                if (!isCancelled && decoded && decoded.duration > 0) {
+                    setDuration(decoded.duration);
+                }
+                audioCtx.close().catch(() => {});
+            } catch (err) {
+                // Ignore cross-origin / network fetch errors, fallback to audio element
+            }
+        };
+
+        decodeBufferDuration();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [src]);
+
+    // Smooth 60fps synchronization between audio playback clock and UI waveform/timer
+    useEffect(() => {
+        if (isPlaying) {
+            const syncProgress = () => {
+                const audio = audioRef.current;
+                if (audio) {
+                    setCurrentTime(audio.currentTime);
+                    if (duration <= 0 && isFinite(audio.duration) && audio.duration > 0) {
+                        setDuration(audio.duration);
+                    }
+                }
+                animFrameRef.current = requestAnimationFrame(syncProgress);
+            };
+            animFrameRef.current = requestAnimationFrame(syncProgress);
+        } else {
+            if (animFrameRef.current) {
+                cancelAnimationFrame(animFrameRef.current);
+            }
+        }
+        return () => {
+            if (animFrameRef.current) {
+                cancelAnimationFrame(animFrameRef.current);
+            }
+        };
+    }, [isPlaying, duration]);
+
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
@@ -49,6 +113,18 @@ export default function WhatsAppAudioPlayer({
         const handleLoadedMetadata = () => {
             if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
                 setDuration(audio.duration);
+            } else if (audio.duration === Infinity) {
+                // WebM workaround for Chrome: briefly seek to end to read duration
+                audio.currentTime = 1e101;
+                audio.ontimeupdate = () => {
+                    audio.ontimeupdate = null;
+                    if (isFinite(audio.duration) && audio.duration > 0) {
+                        setDuration(audio.duration);
+                    } else if (isFinite(audio.currentTime) && audio.currentTime > 0) {
+                        setDuration(audio.currentTime);
+                    }
+                    audio.currentTime = 0;
+                };
             }
             setIsLoading(false);
         };
@@ -69,6 +145,7 @@ export default function WhatsAppAudioPlayer({
         const handleEnded = () => {
             setIsPlaying(false);
             setCurrentTime(0);
+            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
             if (onEnded) onEnded();
         };
 
@@ -131,19 +208,21 @@ export default function WhatsAppAudioPlayer({
     const handleSeek = (e) => {
         const audio = audioRef.current;
         const barContainer = waveformRef.current;
-        if (!audio || !barContainer || !duration) return;
+        if (!audio || !barContainer) return;
+
+        const effectiveDuration = duration > 0 ? duration : (isFinite(audio.duration) ? audio.duration : 0);
+        if (!effectiveDuration) return;
 
         const rect = barContainer.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const percentage = Math.max(0, Math.min(1, clickX / rect.width));
-        const targetTime = percentage * duration;
+        const targetTime = percentage * effectiveDuration;
 
         audio.currentTime = targetTime;
         setCurrentTime(targetTime);
     };
 
-    const progress = duration > 0 ? currentTime / duration : 0;
-    const currentBarIndex = Math.floor(progress * wavePattern.length);
+    const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
 
     return (
         <div className={`flex items-center gap-2 sm:gap-3 py-1 px-1 select-none min-w-[220px] xs:min-w-[250px] sm:min-w-[290px] max-w-full ${className}`}>
@@ -182,20 +261,21 @@ export default function WhatsAppAudioPlayer({
 
             {/* 2. Center: Waveform & Timestamps */}
             <div className="flex-1 flex flex-col justify-center min-w-0">
-                {/* Waveform Bars Container */}
+                {/* Waveform Bars Container with Smooth Playhead */}
                 <div
                     ref={waveformRef}
                     onClick={handleSeek}
-                    className="h-7 sm:h-8 flex items-center gap-[2px] sm:gap-[2.5px] cursor-pointer group/wave py-1"
+                    className="relative h-7 sm:h-8 flex items-center gap-[2px] sm:gap-[2.5px] cursor-pointer group/wave py-1"
                     title="Click to seek"
                 >
                     {wavePattern.map((heightPercent, idx) => {
-                        const isPlayed = idx <= currentBarIndex && (isPlaying || currentTime > 0);
+                        const barRatio = idx / Math.max(1, wavePattern.length - 1);
+                        const isPlayed = progress >= barRatio && (isPlaying || currentTime > 0);
                         return (
                             <div
                                 key={idx}
                                 style={{ height: `${heightPercent}%` }}
-                                className={`flex-1 rounded-full transition-colors duration-100 ${
+                                className={`flex-1 rounded-full transition-colors duration-75 ${
                                     isPlayed
                                         ? (isYou ? 'bg-[#193b68]' : 'bg-[#265998] dark:bg-[#6FB7E4]')
                                         : (isYou ? 'bg-white/80 group-hover/wave:bg-white' : 'bg-slate-300 dark:bg-slate-600 group-hover/wave:bg-slate-400 dark:group-hover/wave:bg-slate-500')
@@ -203,6 +283,14 @@ export default function WhatsAppAudioPlayer({
                             />
                         );
                     })}
+
+                    {/* Smooth Gliding Playhead Scrubber Dot */}
+                    {(isPlaying || currentTime > 0) && (
+                        <div
+                            style={{ left: `${progress * 100}%` }}
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#193b68] dark:bg-[#6FB7E4] shadow-sm ring-2 ring-white/80 pointer-events-none transition-all duration-75"
+                        />
+                    )}
                 </div>
 
                 {/* Sub-label: Duration / Playhead & Message Timestamp */}

@@ -838,6 +838,7 @@ export default function CommunityChat({ role, overrideBatch }) {
                         </button>
                     </div>
 
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <div 
                             style={{ backgroundColor: '#6FB7E4' }}
                             className="flex-1 bg-[#6FB7E4] text-slate-950 rounded-2xl p-1 sm:p-1.5 border border-[#5D8BCC]/60 shadow-xs"
@@ -845,6 +846,7 @@ export default function CommunityChat({ role, overrideBatch }) {
                             <WhatsAppAudioPlayer
                                 src={audioUrl}
                                 time="Preview"
+                                initialDuration={recordingTime}
                                 avatarUrl={userProfileImage || (userEmail && avatarMap[userEmail]) || (userName && avatarMap[userName])}
                                 userName={userName}
                                 isYou={true}
