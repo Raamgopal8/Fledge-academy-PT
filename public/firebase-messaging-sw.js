@@ -2,12 +2,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
 const firebaseConfig = {
-    apiKey: new URL(location).searchParams.get('apiKey') || '',
-    authDomain: new URL(location).searchParams.get('authDomain') || '',
+    apiKey: new URL(location).searchParams.get('apiKey') || 'AIzaSyCLAPwadPE7TDzrkZoH7ax_CrR6b3RP054',
+    authDomain: new URL(location).searchParams.get('authDomain') || 'fledgeportal.firebaseapp.com',
     projectId: new URL(location).searchParams.get('projectId') || 'fledgeportal',
-    storageBucket: new URL(location).searchParams.get('storageBucket') || 'fledgeportal.appspot.com',
+    storageBucket: new URL(location).searchParams.get('storageBucket') || 'fledgeportal.firebasestorage.app',
     messagingSenderId: new URL(location).searchParams.get('messagingSenderId') || '844515198625',
-    appId: new URL(location).searchParams.get('appId') || ''
+    appId: new URL(location).searchParams.get('appId') || '1:844515198625:web:d1febaeabb62cc7756d2e0'
 };
 
 try {
@@ -41,6 +41,50 @@ try {
 } catch (err) {
     console.warn('[firebase-messaging-sw.js] Firebase initialization notice:', err);
 }
+
+// Native push event listener to ensure Android Chrome ALWAYS pops notifications
+self.addEventListener('push', (event) => {
+    let payload = {};
+    try {
+        if (event.data) {
+            payload = event.data.json();
+        }
+    } catch (e) {
+        payload = {
+            notification: {
+                title: 'Fledge Academy',
+                body: event.data ? event.data.text() : 'You have a new update.'
+            }
+        };
+    }
+
+    const title = payload.notification?.title || payload.data?.title || payload.title || 'Fledge Academy';
+    const body = payload.notification?.body || payload.data?.body || payload.data?.message || payload.body || 'New update available on your portal.';
+    const icon = payload.notification?.icon || payload.data?.icon || '/icon-192.png';
+    const link = payload.data?.link || payload.data?.url || payload.fcmOptions?.link || payload.link || '/dashboard';
+
+    const options = {
+        body: body,
+        icon: icon,
+        badge: '/icon-192.png',
+        tag: payload.data?.tag || payload.data?.id || 'fledge-fcm-alert',
+        vibrate: [200, 100, 200],
+        renotify: true,
+        requireInteraction: true,
+        data: {
+            url: link,
+            timestamp: Date.now()
+        },
+        actions: [
+            { action: 'open', title: 'Open' },
+            { action: 'close', title: 'Dismiss' }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();

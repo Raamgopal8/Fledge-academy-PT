@@ -4,21 +4,18 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 
-export const DEFAULT_FIREBASE_VAPID_KEY = 'BE1f-OCLbXb9lc209_5zkMZySAUx8WT06eKTSvTAoUMXuFOxFZq1ATFyUfa7mQ8fZy0EcRy2rmrANbiDh71U6I';
+export const DEFAULT_FIREBASE_VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'fledgeportal',
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-/**
- * Initializes and returns the Firebase App instance safely.
- */
 export function getFirebaseApp() {
     if (typeof window === 'undefined') return null;
 
@@ -31,9 +28,6 @@ export function getFirebaseApp() {
     return getApp();
 }
 
-/**
- * Initializes and returns the Firebase Messaging instance if supported by the browser.
- */
 export async function getFirebaseMessaging() {
     if (typeof window === 'undefined') return null;
 

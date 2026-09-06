@@ -83,6 +83,8 @@ async def send_fcm_push(
         "title": str(title),
         "body": str(body),
         "link": str(link or "/dashboard"),
+        "icon": "/icon-192.png",
+        "tag": "fledge-notification",
         "timestamp": str(int(os.path.getmtime(__file__) if os.path.exists(__file__) else 0))
     }
     if data:
