@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function StudentPathway() {
     // Instant cache-first initialization to eliminate loading delays
@@ -28,6 +28,8 @@ export default function StudentPathway() {
 
     const [error, setError] = useState(null);
     const [activeNode, setActiveNode] = useState(null);
+    const currentNodeRef = useRef(null);
+    const hasScrolledRef = useRef(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -59,6 +61,21 @@ export default function StudentPathway() {
         fetchProfile();
         return () => { isMounted = false; };
     }, []);
+
+    useEffect(() => {
+        if (!isLoading && currentNodeRef.current && !hasScrolledRef.current) {
+            const hasToken = typeof window !== 'undefined' && localStorage.getItem('token');
+            if (hasToken && !profile) return;
+
+            const timer = setTimeout(() => {
+                if (currentNodeRef.current && !hasScrolledRef.current) {
+                    currentNodeRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    hasScrolledRef.current = true;
+                }
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isLoading, profile]);
 
     if (isLoading) {
         return (
@@ -106,20 +123,20 @@ export default function StudentPathway() {
             title: '上級Jōkyū N1 . Advanced Level',
             tagline: "The words aren't always the whole message.",
             subtitle: 'Reading Between the Lines',
-            kanji: '最上級',
+            kanji: '上級',
             desc: 'Understand nuance, indirectness, formal language and complex ideas — not only what was said, but why it was said that way.',
             rowCards: [
                 {
-                    japanese: 'ちょっと……',
+                    japanese: '〜極まりない',
                     label: 'LOOK CLOSER',
-                    subtext1: 'Literally: “a little…”',
-                    subtext2: 'Sometimes it means: “That may be difficult.”'
+                    subtext1: 'Literally: “Boundless / Having no endpoint.”',
+                    subtext2: 'It means: “Extremely... [to an intolerable degree].”'
                 },
                 {
-                    japanese: '考えておきます。',
+                    japanese: '〜を余儀なくされる',
                     label: 'READ THE ROOM',
-                    subtext1: '“I\'ll think about it.”',
-                    subtext2: 'It may not be a promise.'
+                    subtext1: '“Being made to have no other choice.”',
+                    subtext2: '“Being Forced into a situation”'
                 }
             ],
             quote: '"Mastery is not knowing every word. It\'s understanding the space between them."',
@@ -140,7 +157,7 @@ export default function StudentPathway() {
             title: '中上級Chūjōkyū N2 . Upper Intermediate Level',
             tagline: 'Japanese leaves the classroom.',
             subtitle: 'Moving Independently',
-            kanji: '上級',
+            kanji: '中上級',
             desc: 'Work, messages, relationships, plans and problems become part of your language journey.',
             sideBySide: [
                 {
@@ -203,7 +220,7 @@ export default function StudentPathway() {
             title: '初中級 N4 . Upper Elementary Level',
             tagline: 'Japanese stops being a script.',
             subtitle: 'Finding Your Voice',
-            kanji: '中級への入口',
+            kanji: '初中級',
             desc: "You'll move from prepared answers to everyday exchanges — asking, answering, reacting and keeping a conversation going.",
             stackedCards: [
                 {
@@ -344,20 +361,24 @@ export default function StudentPathway() {
             {/* Main Scrollable Canvas */}
             <main className="relative z-10 py-10 md:py-16 px-4 sm:px-8 max-w-6xl mx-auto flex flex-col">
                 
-                {/* Header Banner */}
-                <div className="text-center mb-12 sm:mb-16 relative z-20 max-w-2xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#e9c176]/10 border border-[#e9c176]/30 text-[#e9c176] text-xs font-semibold uppercase tracking-widest mb-3 backdrop-blur-md">
-                        <span className="material-symbols-outlined text-sm">explore</span>
-                        Curriculum Milestone Pathway
+                {/* Note For Your Future Self Card */}
+                <div className="glass-card rounded-3xl p-5 sm:p-7 max-w-2xl mx-auto w-full flex items-center gap-5 mt-14 mb-4 border border-[#e9c176]/25 bg-[#1c1813]/85 shadow-2xl">
+                    <div className="w-12 h-12 rounded-full bg-[#e9c176]/10 border border-[#e9c176]/30 flex items-center justify-center shrink-0 text-[#e9c176] font-serif-title text-xl font-bold">
+                        花
                     </div>
-                    <h1 className="font-serif-title text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-3 drop-shadow-md">
-                        Learning Journey
-                    </h1>
-                    <p className="text-[#d1c5b4] text-sm sm:text-base leading-relaxed">
-                        Follow the roadmap from fundamental kana to fluent mastery. Progress at your own pace through each milestone.
-                    </p>
+                    <div>
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-[#e9c176]/80 block mb-1">
+                            A NOTE FOR YOUR FUTURE SELF
+                        </span>
+                        <h4 className="text-base sm:text-lg font-bold text-white mb-1 font-serif-title">
+                            One day, you&apos;ll stop noticing how far you&apos;ve come.
+                        </h4>
+                        <p className="text-xs sm:text-sm text-[#d1c5b4]/80 leading-relaxed">
+                            The sentence you once had to translate will become a sentence you simply understand.
+                        </p>
+                    </div>
                 </div>
-
+                
                 {/* Relative Container for Pathway & Nodes */}
                 <div className="relative w-full">
                     {/* SVG Connecting Path - Hardware Accelerated without heavy Gaussian filters */}
@@ -392,6 +413,7 @@ export default function StudentPathway() {
                             return (
                                 <div 
                                     key={node.id} 
+                                    ref={isCurrent ? currentNodeRef : null}
                                     className={`flex w-full ${node.alignment}`}
                                 >
                                     <div 
@@ -643,24 +665,18 @@ export default function StudentPathway() {
                         })}
                     </div>
                 </div>
-
-                {/* Note For Your Future Self Card */}
-                <div className="glass-card rounded-3xl p-5 sm:p-7 max-w-2xl mx-auto w-full flex items-center gap-5 mt-14 mb-4 border border-[#e9c176]/25 bg-[#1c1813]/85 shadow-2xl">
-                    <div className="w-12 h-12 rounded-full bg-[#e9c176]/10 border border-[#e9c176]/30 flex items-center justify-center shrink-0 text-[#e9c176] font-serif-title text-xl font-bold">
-                        花
+                
+                {/* Header Banner */}
+                <div className="text-center mb-12 sm:mb-16 relative z-20 max-w-2xl mx-auto">
+                    <h1 className="font-serif-title text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-3 drop-shadow-md">
+                        Learning Journey
+                    </h1>
+                   
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#e9c176]/10 border border-[#e9c176]/30 text-[#e9c176] text-xs font-semibold uppercase tracking-widest mb-3 backdrop-blur-md">
+                        <span className="material-symbols-outlined text-sm">explore</span>
+                        Curriculum Milestone Pathway
                     </div>
-                    <div>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-[#e9c176]/80 block mb-1">
-                            A NOTE FOR YOUR FUTURE SELF
-                        </span>
-                        <h4 className="text-base sm:text-lg font-bold text-white mb-1 font-serif-title">
-                            One day, you&apos;ll stop noticing how far you&apos;ve come.
-                        </h4>
-                        <p className="text-xs sm:text-sm text-[#d1c5b4]/80 leading-relaxed">
-                            The sentence you once had to translate will become a sentence you simply understand.
-                        </p>
-                    </div>
-                </div>
+                </div>                
 
                 {/* Footer indicator */}
                 <div className="text-center mt-8 text-xs text-[#d1c5b4]/60">
