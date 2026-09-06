@@ -40,13 +40,15 @@ async def get_profile(current_user: models.User = Depends(get_current_user)):
         return cached
 
     user_batches = getattr(current_user, "batches", None) or ([current_user.batch] if getattr(current_user, "batch", None) else [])
+    user_levels = getattr(current_user, "levels", None) or ([current_user.level] if getattr(current_user, "level", None) else [])
     profile_data = {
         "email": current_user.email,
         "name": current_user.name,
         "phone": getattr(current_user, "phone", None),
         "role": current_user.role,
         "profile_image_url": current_user.profile_image_url,
-        "level": current_user.level,
+        "level": current_user.level or (user_levels[0] if user_levels else None),
+        "levels": user_levels,
         "batch": current_user.batch or (user_batches[0] if user_batches else None),
         "batches": user_batches,
         "preferences": current_user.preferences
@@ -349,6 +351,8 @@ async def update_sensi(
             sensi.batches = [sensi_data.batch] if sensi_data.batch else []
         
     await sensi.save()
+    if sensi.email:
+        await invalidate_user_account(sensi.email.lower())
     return {"message": "Sensi member updated successfully"}
 
 class SensiLevelUpdate(BaseModel):
@@ -372,7 +376,11 @@ async def update_sensi_level(
         raise HTTPException(status_code=404, detail="Sensi member not found")
         
     sensi.level = level_data.level
+    if not getattr(sensi, "levels", None) or level_data.level not in sensi.levels:
+        sensi.levels = list(dict.fromkeys((getattr(sensi, "levels", []) or []) + [level_data.level]))
     await sensi.save()
+    if sensi.email:
+        await invalidate_user_account(sensi.email.lower())
     return {"message": "Sensi level updated successfully"}
 
 @router.delete("/sensi/{sensi_id}")
@@ -390,6 +398,8 @@ async def delete_sensi(
         raise HTTPException(status_code=404, detail="Sensi member not found")
         
     await sensi.delete()
+    if sensi.email:
+        await invalidate_user_account(sensi.email.lower())
     return {"message": "Sensi member deleted successfully"}
 
 @router.get("/classroom/members")
@@ -504,7 +514,7 @@ async def get_available_batches(
     except Exception:
         pass
 
-    # If current user is Sensi/Staff, intersect with their assigned batches
+    # If current user is Sensi/Staff, ensure their assigned batches are always available
     user_role = (current_user.role or "").lower()
     if user_role in ["staff", "sensi"]:
         sensi_batches = getattr(current_user, "batches", []) or []
@@ -513,7 +523,7 @@ async def get_available_batches(
         if sensi_batch and sensi_batch.strip():
             allowed_sensi_batches.add(sensi_batch.strip())
         if allowed_sensi_batches:
-            batches = batches.intersection(allowed_sensi_batches)
+            batches = batches.union(allowed_sensi_batches) if batches else allowed_sensi_batches
 
     # Sort batches naturally
     def sort_key(item: str):

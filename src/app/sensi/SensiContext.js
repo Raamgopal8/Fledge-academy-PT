@@ -141,6 +141,10 @@ export function SensiProvider({ children }) {
             if (!selectedBatch || !validLevelBatches.includes(selectedBatch)) {
                 setSelectedBatch(validLevelBatches[0]);
             }
+        } else if (staffBatches && staffBatches.length > 0) {
+            if (!selectedBatch || !staffBatches.includes(selectedBatch)) {
+                setSelectedBatch(staffBatches[0]);
+            }
         } else {
             setSelectedBatch('');
         }

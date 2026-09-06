@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import WhatsAppAudioPlayer from './WhatsAppAudioPlayer';
 
 export default function CommunityChat({ role, overrideBatch }) {
     const [messages, setMessages] = useState([]);
@@ -681,25 +682,28 @@ export default function CommunityChat({ role, overrideBatch }) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className={`relative px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl sm:rounded-3xl font-body-md shadow-xs break-words leading-relaxed max-w-full ${
-                                        isYou 
-                                            ? 'bg-primary text-on-primary rounded-tr-xs' 
-                                            : 'bg-surface-container-high dark:bg-slate-900 text-on-surface rounded-tl-xs border border-outline-variant/40'
-                                    }`}>
-                                        {/* 1. Voice Message */}
+                                    <div className={`relative ${
+                                        msg.audio_url 
+                                            ? (isYou 
+                                                ? 'bg-[#d9fdd3] dark:bg-emerald-950/60 text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl rounded-tr-xs border border-emerald-300/40 dark:border-emerald-800/40 p-1 sm:p-1.5' 
+                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl rounded-tl-xs border border-outline-variant/40 p-1 sm:p-1.5')
+                                            : (isYou 
+                                                ? 'bg-primary text-on-primary rounded-2xl sm:rounded-3xl rounded-tr-xs px-3 sm:px-4 py-2 sm:py-2.5' 
+                                                : 'bg-surface-container-high dark:bg-slate-900 text-on-surface rounded-2xl sm:rounded-3xl rounded-tl-xs border border-outline-variant/40 px-3 sm:px-4 py-2 sm:py-2.5')
+                                    } font-body-md shadow-xs break-words leading-relaxed max-w-full`}>
+                                        {/* 1. WhatsApp Voice Message */}
                                         {msg.audio_url && (
-                                            <div className="flex flex-col gap-1 py-0.5 max-w-full">
-                                                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-bold opacity-90">
-                                                    <span className="material-symbols-outlined text-[15px] sm:text-[18px]">graphic_eq</span>
-                                                    <span>Voice Message</span>
-                                                </div>
-                                                <div className="w-full max-w-[170px] xs:max-w-[210px] sm:max-w-[260px]">
-                                                    <audio 
-                                                        controls 
-                                                        src={msg.audio_url} 
-                                                        className="w-full h-8 custom-audio-player rounded-lg" 
-                                                    />
-                                                </div>
+                                            <div className="flex flex-col max-w-full">
+                                                <WhatsAppAudioPlayer
+                                                    src={msg.audio_url}
+                                                    time={time}
+                                                    avatarUrl={avatarUrl}
+                                                    userName={msg.author_name}
+                                                    isYou={isYou}
+                                                />
+                                                {msg.content && (
+                                                    <p className="text-xs sm:text-sm whitespace-pre-wrap px-2.5 pb-1 pt-0.5 leading-relaxed">{msg.content}</p>
+                                                )}
                                             </div>
                                         )}
 
@@ -808,15 +812,15 @@ export default function CommunityChat({ role, overrideBatch }) {
 
             {/* Audio Message Studio Preview Card (if audio is recorded and ready to send) */}
             {audioUrl && (
-                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 flex flex-col gap-2.5 sm:gap-3">
+                <div className="p-3 sm:p-4 bg-surface-container-low dark:bg-slate-900 border-t border-outline-variant/80 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center">
                                 <span className="material-symbols-outlined text-[16px] sm:text-[18px]">mic</span>
                             </div>
                             <div>
-                                <h4 className="text-xs font-bold text-on-surface">Audio Message Studio</h4>
-                                <p className="text-[10px] text-on-surface-variant">Preview your voice note</p>
+                                <h4 className="text-xs font-bold text-on-surface">Voice Note Preview</h4>
+                                <p className="text-[10px] text-on-surface-variant">Listen before sending</p>
                             </div>
                         </div>
 
@@ -830,15 +834,23 @@ export default function CommunityChat({ role, overrideBatch }) {
                         </button>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3">
-                        <audio src={audioUrl} controls className="w-full sm:flex-1 h-9 sm:h-10 rounded-xl" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex-1 bg-white dark:bg-slate-950/70 rounded-2xl p-1 sm:p-1.5 border border-black/5 dark:border-white/10 shadow-xs">
+                            <WhatsAppAudioPlayer
+                                src={audioUrl}
+                                time="Preview"
+                                avatarUrl={userProfileImage || (userEmail && avatarMap[userEmail]) || (userName && avatarMap[userName])}
+                                userName={userName}
+                                isYou={true}
+                            />
+                        </div>
                         
                         <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 w-full sm:w-auto justify-end">
                             <button
                                 type="button"
                                 onClick={resetRecorder}
                                 disabled={isSendingAudio}
-                                className="flex-1 sm:flex-none px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                className="flex-1 sm:flex-none px-3.5 py-2 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[16px]">delete</span>
                                 <span>Discard</span>
@@ -869,8 +881,7 @@ export default function CommunityChat({ role, overrideBatch }) {
                     <button
                         type="button"
                         onClick={stopRecording}
-                        className="px-3 sm:px-4 py-1.5 rounded-xl bg-error text-white text-xs font-bold hover:bg-error/90 transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0"
-                    >
+                        className="px-3 sm:px-4 py-1.5 rounded-xl bg-error text-white text-xs font-bold hover:bg-error/90 transition-all flex items-center gap-1 cursor-pointer shadow-xs shrink-0">
                         <span className="material-symbols-outlined text-[16px]">stop</span>
                         <span>Stop</span>
                     </button>

@@ -29,7 +29,7 @@ const SUGGESTED_CATEGORIES = [
 ];
 
 export default function CEOVideos() {
-    const { selectedBatch, availableBatches } = useAdminContext();
+    const { selectedBatch, selectedLevel, setSelectedLevel, availableBatches } = useAdminContext();
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,7 +59,12 @@ export default function CEOVideos() {
     const [doubleTapFeedback, setDoubleTapFeedback] = useState(null);
 
     // Filtering states
-    const [filterLevel, setFilterLevel] = useState('All');
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -72,7 +77,7 @@ export default function CEOVideos() {
         category: '',
         category_color: '#4F46E5',
         video_url: '',
-        level: 'Level 5',
+        level: (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') ? selectedLevel : 'Level 5',
         batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
             ? selectedBatch
             : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
@@ -110,41 +115,67 @@ export default function CEOVideos() {
         };
     }, []);
 
+    // Sync formData batch with selectedBatch
     useEffect(() => {
         if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
             setFormData(prev => ({ ...prev, batch: selectedBatch }));
         }
     }, [selectedBatch]);
 
+    // Sync formData level and in-page filterLevel with selectedLevel
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            setFormData(prev => ({ ...prev, level: selectedLevel }));
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global') {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel) {
+            setSelectedLevel(lvl === 'All' ? 'All Levels' : lvl);
+        }
+    };
+
     useEffect(() => {
         fetchVideos();
-    }, [selectedBatch]);
+    }, [selectedBatch, selectedLevel]);
 
     const fetchVideos = async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const batchParam = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
-                ? `?batch=${encodeURIComponent(selectedBatch)}`
-                : '';
+            const params = new URLSearchParams();
+            if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+                params.append('level', selectedLevel);
+            }
+            if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
 
             const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
-            const res = await fetch(`${videoApiBase}/api/videos/${batchParam}`, {
+            const res = await fetch(`${videoApiBase}/api/videos${queryStr}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             if (!res.ok) throw new Error('Failed to fetch videos');
             const data = await res.json();
-            setVideos(data);
+            const videoList = Array.isArray(data) ? data : [];
+            setVideos(videoList);
 
-            if (data && data.length > 0) {
+            if (videoList.length > 0) {
                 setActiveVideo(prev => {
-                    if (prev && data.some(v => (v.id || v._id) === (prev.id || prev._id))) {
+                    if (prev && videoList.some(v => (v.id || v._id) === (prev.id || prev._id))) {
                         return prev;
                     }
-                    return data[0];
+                    return videoList[0];
                 });
+            } else {
+                setActiveVideo(null);
             }
         } catch (err) {
             setError(err.message);
@@ -437,13 +468,19 @@ export default function CEOVideos() {
 
     // Filtered Video List
     const filteredVideos = videos.filter(v => {
-        if (filterLevel !== 'All' && v.level !== filterLevel) return false;
+        if (filterLevel !== 'All') {
+            const vLvl = (v.level || '').trim().toLowerCase();
+            const fLvl = filterLevel.trim().toLowerCase();
+            const isGlobalLevel = !vLvl || vLvl === 'all' || vLvl === 'all levels' || vLvl === 'global';
+            if (vLvl !== fLvl && !isGlobalLevel) return false;
+        }
         if (selectedCategory !== 'All' && v.category !== selectedCategory) return false;
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             const titleMatch = (v.title || '').toLowerCase().includes(q);
             const catMatch = (v.category || '').toLowerCase().includes(q);
-            const batchMatch = (v.batch || '').toLowerCase().includes(q);
+            const batchMatch = (v.batch || '').toLowerCase().includes(q) ||
+                (Array.isArray(v.batches) && v.batches.some(b => (b || '').toLowerCase().includes(q)));
             return titleMatch || catMatch || batchMatch;
         }
         return true;
@@ -456,6 +493,8 @@ export default function CEOVideos() {
             if (!currentStillValid) {
                 setActiveVideo(filteredVideos[0]);
             }
+        } else {
+            setActiveVideo(null);
         }
     }, [filterLevel, selectedCategory, searchQuery, videos]);
 
@@ -653,6 +692,10 @@ export default function CEOVideos() {
                                 if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
                                     setFormData(prev => ({ ...prev, batch: selectedBatch }));
                                 }
+                                const currentEffectiveLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global')
+                                    ? selectedLevel
+                                    : (filterLevel !== 'All' ? filterLevel : 'Level 5');
+                                setFormData(prev => ({ ...prev, level: currentEffectiveLevel }));
                             }}
                             className="bg-primary text-on-primary px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                         >
@@ -739,7 +782,7 @@ export default function CEOVideos() {
                             <span className="material-symbols-outlined text-4xl">videocam_off</span>
                         </div>
                         <h3 className="font-headline-sm text-base font-bold text-on-surface">No videos available</h3>
-                        <p className="font-body-sm text-xs text-on-surface-variant max-w-sm">
+                        <p className="font-body-sm text-xs text-on-surface-variant">
                             No lessons match your current filters. Clear the search or upload a new lecture video.
                         </p>
                         <div className="flex items-center gap-2 pt-2">
@@ -748,7 +791,7 @@ export default function CEOVideos() {
                                     onClick={() => {
                                         setSearchQuery('');
                                         setSelectedCategory('All');
-                                        setFilterLevel('All');
+                                        handleFilterLevelChange('All');
                                     }}
                                     className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl text-xs font-bold hover:bg-primary/20 transition-all cursor-pointer"
                                 >
@@ -756,7 +799,16 @@ export default function CEOVideos() {
                                 </button>
                             )}
                             <button
-                                onClick={() => setIsUploadOpen(true)}
+                                onClick={() => {
+                                    setIsUploadOpen(true);
+                                    if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                                        setFormData(prev => ({ ...prev, batch: selectedBatch }));
+                                    }
+                                    const currentEffectiveLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global')
+                                        ? selectedLevel
+                                        : (filterLevel !== 'All' ? filterLevel : 'Level 5');
+                                    setFormData(prev => ({ ...prev, level: currentEffectiveLevel }));
+                                }}
                                 className="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
                             >
                                 Upload Lesson
@@ -1173,10 +1225,10 @@ export default function CEOVideos() {
                                                                 {activeVideo.level}
                                                             </span>
                                                         )}
-                                                        {activeVideo.batch && (
+                                                        {(activeVideo.batch || (Array.isArray(activeVideo.batches) && activeVideo.batches.length > 0)) && (
                                                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
                                                                 <span className="material-symbols-outlined text-[13px]">groups</span>
-                                                                {activeVideo.batch}
+                                                                {activeVideo.batch || activeVideo.batches.join(', ')}
                                                             </span>
                                                         )}
                                                         {activeVideo.created_at && (
@@ -1260,7 +1312,7 @@ export default function CEOVideos() {
                                                         <button
                                                             key={lvl}
                                                             type="button"
-                                                            onClick={() => setFilterLevel(lvl)}
+                                                            onClick={() => handleFilterLevelChange(lvl)}
                                                             className={`px-3 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
                                                                 filterLevel === lvl
                                                                     ? 'bg-primary text-on-primary font-bold shadow-2xs'
@@ -1326,9 +1378,9 @@ export default function CEOVideos() {
                                                                             {video.level}
                                                                         </span>
                                                                     )}
-                                                                    {video.batch && (
+                                                                    {(video.batch || (Array.isArray(video.batches) && video.batches.length > 0)) && (
                                                                         <span className="text-[9px] text-on-surface-variant font-medium truncate">
-                                                                            {video.batch}
+                                                                            {video.batch || video.batches.join(', ')}
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -1382,7 +1434,7 @@ export default function CEOVideos() {
                                                 <button
                                                     key={lvl}
                                                     type="button"
-                                                    onClick={() => setFilterLevel(lvl)}
+                                                    onClick={() => handleFilterLevelChange(lvl)}
                                                     className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                                                         filterLevel === lvl
                                                             ? 'bg-primary text-on-primary shadow-xs font-bold'
@@ -1453,9 +1505,9 @@ export default function CEOVideos() {
                                                                 {video.level}
                                                             </span>
                                                         )}
-                                                        {video.batch && (
+                                                        {(video.batch || (Array.isArray(video.batches) && video.batches.length > 0)) && (
                                                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white border border-white/20 backdrop-blur-md">
-                                                                {video.batch}
+                                                                {video.batch || video.batches.join(', ')}
                                                             </span>
                                                         )}
                                                     </div>
@@ -1614,14 +1666,29 @@ export default function CEOVideos() {
                                     )}
                                 </div>
 
-                                <div>
+                                <div className="space-y-2">
                                     <label className="block font-semibold text-xs text-on-surface mb-1">Category / Topic</label>
+                                    {/* Category name input with suggested categories datalist */}
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            list="category-suggestions"
+                                            value={formData.category}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                                            placeholder="e.g. Grammar Lesson"
+                                            className="w-full px-3 py-2 bg-surface-container-lowest border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                        />
+                                        <datalist id="category-suggestions">
+                                            {SUGGESTED_CATEGORIES.map(cat => (
+                                                <option key={cat} value={cat} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    {/* Color picker — live preview badge shows the typed/selected category name */}
                                     <CategoryColorPicker
-                                        category={formData.category}
-                                        color={formData.category_color}
-                                        onCategoryChange={(cat) => setFormData(prev => ({ ...prev, category: cat }))}
+                                        categoryName={formData.category}
+                                        selectedColor={formData.category_color}
                                         onColorChange={(col) => setFormData(prev => ({ ...prev, category_color: col }))}
-                                        suggestedCategories={SUGGESTED_CATEGORIES}
                                     />
                                 </div>
 

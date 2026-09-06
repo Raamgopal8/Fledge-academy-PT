@@ -10,6 +10,25 @@ const COLOR_CLASSES = {
   error: 'border-error'
 };
 
+function formatGoogleDriveUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.includes('lh3.googleusercontent.com/d/')) return trimmed;
+  const match = trimmed.match(/drive\.google\.com\/(?:file\/d\/([a-zA-Z0-9_-]+)|open\?id=([a-zA-Z0-9_-]+)|uc\?(?:[^&]*&)*id=([a-zA-Z0-9_-]+))/i);
+  if (match) {
+    const fileId = match[1] || match[2] || match[3];
+    if (fileId) return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  return trimmed;
+}
+
+const getInitials = (name) => {
+  if (!name) return 'U';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
+
 export default function DashboardOverview() {
   const scrollContainerRef = useRef(null);
   const router = useRouter();
@@ -58,6 +77,7 @@ export default function DashboardOverview() {
     }
     return 'Level 5';
   });
+  const [avatarMap, setAvatarMap] = useState({});
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [noteMessage, setNoteMessage] = useState({ type: '', text: '' });
   
@@ -79,7 +99,7 @@ export default function DashboardOverview() {
 
       const headers = { 'Authorization': `Bearer ${token}` };
       const level = localStorage.getItem('level') || 'Level 5';
-            const batch = localStorage.getItem('batch') || '';
+      const batch = localStorage.getItem('batch') || '';
             
       // Fetch Schedules
       fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule?level=${encodeURIComponent(level)}&batch=${encodeURIComponent(batch)}`, { headers, cache: 'no-store' })
@@ -93,6 +113,9 @@ export default function DashboardOverview() {
         .then(data => { 
           if (data) {
             setProfile(data); 
+            if (data.profile_image_url) {
+              localStorage.setItem('userProfileImage', data.profile_image_url);
+            }
             const userLvl = data.level 
               ? formatLevel(data.level)
               : (Array.isArray(data.levels) && data.levels.length > 0 ? formatLevel(data.levels[0]) : null);
@@ -103,6 +126,25 @@ export default function DashboardOverview() {
           }
         })
         .catch(err => console.error("Error fetching profile:", err));
+
+      // Fetch Classroom Members for Avatar resolution
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/classroom/members`, { headers, cache: 'no-store' })
+        .then(res => res.ok ? res.json() : null)
+        .then(members => {
+          if (Array.isArray(members)) {
+            const map = {};
+            members.forEach(m => {
+              if (m.profile_image_url) {
+                if (m.email) map[m.email] = m.profile_image_url;
+                if (m.name) map[m.name] = m.profile_image_url;
+                if (m.id) map[m.id] = m.profile_image_url;
+                if (m._id) map[m._id] = m.profile_image_url;
+              }
+            });
+            setAvatarMap(map);
+          }
+        })
+        .catch(err => console.error("Error fetching classroom members for avatars:", err));
 
       // Fetch Attendance
       fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/my-status`, { headers, cache: 'no-store' })
@@ -219,6 +261,9 @@ export default function DashboardOverview() {
       }
 
       const createdNote = await res.json();
+      if (!createdNote.uploader_image) {
+        createdNote.uploader_image = profile?.profile_image_url || (typeof window !== 'undefined' ? localStorage.getItem('userProfileImage') : '');
+      }
       setNotes(prev => [createdNote, ...prev]);
       setNoteTitle('');
       setNoteLink('');
@@ -291,7 +336,7 @@ export default function DashboardOverview() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
     
     if (diffDays < 0) {
-      return { label: 'Overdue', color: 'error', icon: 'error' };
+      return { label: 'Deadline', color: 'error', icon: 'error' };
     } else if (diffDays === 0) {
       return { label: 'Due Today', color: 'error', icon: 'assignment_late' };
     } else if (diffDays === 1) {
@@ -587,6 +632,48 @@ export default function DashboardOverview() {
 
             {/* Upload Input Form */}
             <form onSubmit={handleUploadNote} className="space-y-3 bg-surface-container-lowest/60 p-4 rounded-xl border border-outline-variant/60">
+              {/* Uploader Profile Identity Banner */}
+              <div className="flex items-center gap-3 p-2.5 bg-surface-container-low/70 rounded-xl border border-outline-variant/40">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-xs">
+                  {(profile?.profile_image_url || (typeof window !== 'undefined' && localStorage.getItem('userProfileImage'))) ? (
+                    <img 
+                      src={formatGoogleDriveUrl(profile?.profile_image_url || (typeof window !== 'undefined' ? localStorage.getItem('userProfileImage') : ''))} 
+                      alt={profile?.name || "Student"} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const currentSrc = e.currentTarget.src || '';
+                        if (currentSrc.includes('lh3.googleusercontent.com/d/')) {
+                          const fileId = currentSrc.split('/d/')[1]?.split('?')[0]?.split('=')[0];
+                          if (fileId) {
+                            e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`;
+                            return;
+                          }
+                        }
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.nextSibling) {
+                          e.currentTarget.nextSibling.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <span className={`font-bold text-xs text-primary ${(profile?.profile_image_url || (typeof window !== 'undefined' && localStorage.getItem('userProfileImage'))) ? 'hidden' : 'flex'}`}>
+                    {getInitials(profile?.name || 'Student')}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-on-surface truncate">
+                      {profile?.name || (typeof window !== 'undefined' ? localStorage.getItem('userName') : '') || 'Student'}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
+                      Author
+                    </span>
+                  </div>
+                
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                 <div className="md:col-span-3">
                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
@@ -600,7 +687,7 @@ export default function DashboardOverview() {
                     {assignedLevels.map((lvl) => (
                       <option key={lvl} value={lvl}>{lvl}</option>
                     ))}
-                  </select>
+                  </select> 
                 </div>
                 <div className="md:col-span-4">
                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
@@ -608,7 +695,6 @@ export default function DashboardOverview() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Chapter 4 Summary"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
                     className="w-full h-[42px] px-3.5 bg-white border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
@@ -625,7 +711,6 @@ export default function DashboardOverview() {
                     <input
                       type="url"
                       required
-                      placeholder="https://docs.google.com/... or https://notion.so/..."
                       value={noteLink}
                       onChange={(e) => setNoteLink(e.target.value)}
                       className="w-full h-[42px] pl-10 pr-3.5 bg-white border border-outline-variant rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
@@ -687,51 +772,95 @@ export default function DashboardOverview() {
                 <div className="divide-y divide-outline-variant/40 rounded-xl border border-outline-variant/60 overflow-hidden bg-white">
                   {notes
                     .filter(n => notesFilterLevel === 'All' || formatLevel(n.level || assignedLevel) === notesFilterLevel)
-                    .map((n) => (
-                    <div key={n.id} className="p-3 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-[18px]">description</span>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs font-bold text-on-surface truncate">
-                              {n.title || 'Study Notes'}
-                            </p>
-                            {n.level && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 shrink-0">
-                                {n.level}
+                    .map((n) => {
+                      const uploaderName = n.uploader_name || 'Student';
+                      const isOwner = n.uploader_id === String(profile?.id || profile?._id || '') || 
+                        (typeof window !== 'undefined' && n.uploader_name === localStorage.getItem('userName'));
+                      const rawImg = n.uploader_image || 
+                        (isOwner ? (profile?.profile_image_url || (typeof window !== 'undefined' ? localStorage.getItem('userProfileImage') : '')) : '') || 
+                        avatarMap[n.uploader_id] || 
+                        avatarMap[n.uploader_name] || 
+                        '';
+                      const noteImg = rawImg ? formatGoogleDriveUrl(rawImg) : '';
+                      return (
+                        <div key={n.id} className="p-3.5 flex items-center justify-between hover:bg-surface-container-low/40 transition-colors gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Profile Image of Uploader */}
+                            <div className="w-10 h-10 rounded-full overflow-hidden border border-primary/20 bg-primary/10 flex items-center justify-center text-primary shrink-0 shadow-xs">
+                              {noteImg ? (
+                                <img
+                                  src={noteImg}
+                                  alt={uploaderName}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => {
+                                    const currentSrc = e.currentTarget.src || '';
+                                    if (currentSrc.includes('lh3.googleusercontent.com/d/')) {
+                                      const fileId = currentSrc.split('/d/')[1]?.split('?')[0]?.split('=')[0];
+                                      if (fileId) {
+                                        e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`;
+                                        return;
+                                      }
+                                    }
+                                    e.currentTarget.style.display = 'none';
+                                    if (e.currentTarget.nextSibling) {
+                                      e.currentTarget.nextSibling.style.display = 'flex';
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                              <span className={`font-bold text-xs text-primary ${noteImg ? 'hidden' : 'flex'}`}>
+                                {getInitials(uploaderName)}
                               </span>
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-xs font-bold text-on-surface truncate">
+                                  {n.title || 'Study Notes'}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1 text-[11px] text-on-surface-variant flex-wrap">
+                                <span className="font-semibold text-on-surface flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[13px] text-primary">person</span>
+                                  {uploaderName}
+                                </span>
+                                {n.uploader_role && n.uploader_role.toLowerCase() !== 'student' && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-secondary/10 text-secondary uppercase tracking-wider">
+                                    {n.uploader_role}
+                                  </span>
+                                )}
+                                <span>•</span>
+                                <span className="truncate max-w-[180px] sm:max-w-[240px] text-primary">{n.note_link}</span>
+                                <span>•</span>
+                                <span>{new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <a
+                              href={n.note_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant text-primary hover:bg-primary hover:text-white transition-colors text-xs font-semibold flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                              <span className="hidden sm:inline">Open</span>
+                            </a>
+                            {isOwner && (
+                              <button
+                                onClick={() => handleDeleteNote(n.id)}
+                                className="p-1.5 text-outline hover:text-error hover:bg-error/10 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Note"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">delete</span>
+                              </button>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-on-surface-variant">
-                            <span className="truncate max-w-[200px] text-primary">{n.note_link}</span>
-                            <span>•</span>
-                            <span>{new Date(n.created_at).toLocaleDateString()}</span>
-                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <a
-                          href={n.note_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant text-primary hover:bg-primary hover:text-white transition-colors text-xs font-semibold flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                          <span>Open</span>
-                        </a>
-                        <button
-                          onClick={() => handleDeleteNote(n.id)}
-                          className="p-1.5 text-outline hover:text-error hover:bg-error/10 rounded-lg transition-colors"
-                          title="Delete Note"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
                 </div>
               )}
             </div>

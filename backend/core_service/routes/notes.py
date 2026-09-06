@@ -33,6 +33,8 @@ async def create_student_note(
         clean_link = "https://" + clean_link
 
     uploader_name = current_user.name or (current_user.email.split("@")[0] if current_user.email else "Student")
+    uploader_image = getattr(current_user, "profile_image_url", None)
+    uploader_role = getattr(current_user, "role", "student")
     
     note_level = (request.level or getattr(current_user, "level", None) or "Level 5").strip()
     note_batch = (request.batch or getattr(current_user, "batch", None) or "").strip() or None
@@ -42,6 +44,8 @@ async def create_student_note(
         note_link=clean_link,
         uploader_name=uploader_name,
         uploader_id=str(current_user.id),
+        uploader_image=uploader_image,
+        uploader_role=uploader_role,
         level=note_level,
         batch=note_batch,
         created_at=(datetime.utcnow() + timedelta(hours=5, minutes=30))
@@ -55,6 +59,8 @@ async def create_student_note(
         "note_link": note.note_link,
         "uploader_name": note.uploader_name,
         "uploader_id": note.uploader_id,
+        "uploader_image": note.uploader_image,
+        "uploader_role": note.uploader_role,
         "level": note.level,
         "batch": note.batch,
         "created_at": note.created_at.isoformat()
@@ -142,6 +148,24 @@ async def get_student_notes(
             
     notes = await models.StudentNote.find(query).sort("-created_at").to_list()
     
+    # Dynamically look up user profile images for notes that don't have uploader_image stored
+    missing_image_ids = []
+    for n in notes:
+        if not getattr(n, "uploader_image", None) and n.uploader_id:
+            try:
+                missing_image_ids.append(PydanticObjectId(n.uploader_id))
+            except Exception:
+                pass
+
+    user_img_map = {}
+    if missing_image_ids:
+        try:
+            users_with_imgs = await models.User.find({"_id": {"$in": missing_image_ids}}).to_list()
+            for u in users_with_imgs:
+                user_img_map[str(u.id)] = getattr(u, "profile_image_url", None)
+        except Exception:
+            pass
+
     return [
         {
             "id": str(n.id),
@@ -149,6 +173,8 @@ async def get_student_notes(
             "note_link": n.note_link,
             "uploader_name": n.uploader_name,
             "uploader_id": n.uploader_id,
+            "uploader_image": getattr(n, "uploader_image", None) or user_img_map.get(n.uploader_id),
+            "uploader_role": getattr(n, "uploader_role", "student"),
             "level": n.level,
             "batch": n.batch,
             "created_at": n.created_at.isoformat() if n.created_at else None

@@ -31,11 +31,19 @@ export default function SensiBatchSelectionModal() {
 
     useEffect(() => {
         if (isBatchModalOpen) {
-            const initialLevel = selectedLevel || validLevels[0] || 'Level 5';
+            const initialLevel = (selectedLevel && validLevels.includes(selectedLevel))
+                ? selectedLevel
+                : (validLevels[0] || 'Level 5');
             setTempLevel(initialLevel);
-            setTempBatch(selectedBatch || '');
+            const initialBatch = (selectedBatch && validBatches.includes(selectedBatch))
+                ? selectedBatch
+                : (validBatches[0] || '');
+            setTempBatch(initialBatch);
+            if (validBatches.length > 0) {
+                setLevelBatches(validBatches);
+            }
         }
-    }, [isBatchModalOpen, selectedLevel, selectedBatch]);
+    }, [isBatchModalOpen, selectedLevel, selectedBatch, sensiLevels, staffBatches]);
 
     useEffect(() => {
         if (!isBatchModalOpen) return;
@@ -52,9 +60,11 @@ export default function SensiBatchSelectionModal() {
                     const data = await res.json();
                     if (!isCancelled) {
                         const dbBatches = Array.isArray(data) ? data : [];
+                        // Always guarantee all of Sensi's assigned batches are present
+                        const combined = Array.from(new Set([...validBatches, ...dbBatches]));
                         const available = validBatches.length > 0
-                            ? dbBatches.filter(b => validBatches.includes(b))
-                            : dbBatches;
+                            ? validBatches
+                            : (combined.length > 0 ? combined : dbBatches);
                         setLevelBatches(available);
                         if (available.length > 0) {
                             if (!tempBatch || !available.includes(tempBatch)) {
@@ -65,13 +75,27 @@ export default function SensiBatchSelectionModal() {
                         }
                     }
                 } else if (!isCancelled) {
-                    setLevelBatches([]);
-                    setTempBatch('');
+                    if (validBatches.length > 0) {
+                        setLevelBatches(validBatches);
+                        if (!tempBatch || !validBatches.includes(tempBatch)) {
+                            setTempBatch(validBatches[0]);
+                        }
+                    } else {
+                        setLevelBatches([]);
+                        setTempBatch('');
+                    }
                 }
             } catch (e) {
                 if (!isCancelled) {
-                    setLevelBatches([]);
-                    setTempBatch('');
+                    if (validBatches.length > 0) {
+                        setLevelBatches(validBatches);
+                        if (!tempBatch || !validBatches.includes(tempBatch)) {
+                            setTempBatch(validBatches[0]);
+                        }
+                    } else {
+                        setLevelBatches([]);
+                        setTempBatch('');
+                    }
                 }
             } finally {
                 if (!isCancelled) setIsLoadingBatches(false);
@@ -79,7 +103,7 @@ export default function SensiBatchSelectionModal() {
         };
         loadBatches();
         return () => { isCancelled = true; };
-    }, [tempLevel, isBatchModalOpen]);
+    }, [tempLevel, isBatchModalOpen, staffBatches]);
 
     if (!isBatchModalOpen) return null;
 

@@ -10,6 +10,18 @@ const COLOR_CLASSES = {
     error: 'border-l-error'
 };
 
+function formatGoogleDriveUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim();
+    if (trimmed.includes('lh3.googleusercontent.com/d/')) return trimmed;
+    const match = trimmed.match(/drive\.google\.com\/(?:file\/d\/([a-zA-Z0-9_-]+)|open\?id=([a-zA-Z0-9_-]+)|uc\?(?:[^&]*&)*id=([a-zA-Z0-9_-]+))/i);
+    if (match) {
+        const fileId = match[1] || match[2] || match[3];
+        if (fileId) return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+    return trimmed;
+}
+
 export default function SensiDashboard() {
     const { selectedBatch, selectedLevel, setIsBatchModalOpen } = useSensiContext();
     const [summary, setSummary] = useState(null);
@@ -17,6 +29,7 @@ export default function SensiDashboard() {
     const [activities, setActivities] = useState(null);
     const [profile, setProfile] = useState(null);
     const [studentNotes, setStudentNotes] = useState([]);
+    const [avatarMap, setAvatarMap] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     
@@ -49,12 +62,13 @@ export default function SensiDashboard() {
             }
             const notesQuery = notesParams.toString() ? `?${notesParams.toString()}` : '';
 
-            const [summaryRes, classesRes, activitiesRes, profileRes, notesRes] = await Promise.all([
+            const [summaryRes, classesRes, activitiesRes, profileRes, notesRes, membersRes] = await Promise.all([
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/summary${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/classes${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${notesQuery}`, { headers }).catch(() => null)
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${notesQuery}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/classroom/members`, { headers }).catch(() => null)
             ]);
 
             if (summaryRes && summaryRes.ok) setSummary(await summaryRes.json());
@@ -62,6 +76,21 @@ export default function SensiDashboard() {
             if (activitiesRes && activitiesRes.ok) setActivities(await activitiesRes.json());
             if (profileRes && profileRes.ok) setProfile(await profileRes.json());
             if (notesRes && notesRes.ok) setStudentNotes(await notesRes.json());
+            if (membersRes && membersRes.ok) {
+                const members = await membersRes.json().catch(() => []);
+                if (Array.isArray(members)) {
+                    const map = {};
+                    members.forEach(m => {
+                        if (m.profile_image_url) {
+                            if (m.email) map[m.email] = m.profile_image_url;
+                            if (m.name) map[m.name] = m.profile_image_url;
+                            if (m.id) map[m.id] = m.profile_image_url;
+                            if (m._id) map[m._id] = m.profile_image_url;
+                        }
+                    });
+                    setAvatarMap(map);
+                }
+            }
         } catch (err) {
             console.error("Error fetching dashboard data:", err);
             setError(err.message);
@@ -646,10 +675,42 @@ export default function SensiDashboard() {
                                     className="p-4 bg-surface-container-low/50 rounded-2xl border border-outline-variant/50 hover:border-primary/40 hover:bg-surface-container-low transition-all flex flex-col justify-between space-y-3"
                                 >
                                     <div className="space-y-2">
-                                        {/* Uploader Name Badge (prominently displayed) */}
+                                        {/* Uploader Name Badge (prominently displayed with profile image) */}
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 text-primary flex items-center justify-center font-bold text-xs ring-1 ring-primary/20 shrink-0">
-                                                {getInitials(note.uploader_name)}
+                                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-primary/40 text-primary flex items-center justify-center font-bold text-xs ring-1 ring-primary/20 shrink-0">
+                                                {(() => {
+                                                    const rawImg = note.uploader_image || avatarMap[note.uploader_id] || avatarMap[note.uploader_name] || '';
+                                                    const noteImg = rawImg ? formatGoogleDriveUrl(rawImg) : '';
+                                                    return (
+                                                        <>
+                                                            {noteImg ? (
+                                                                <img
+                                                                    src={noteImg}
+                                                                    alt={note.uploader_name || 'Student'}
+                                                                    className="w-full h-full object-cover"
+                                                                    referrerPolicy="no-referrer"
+                                                                    onError={(e) => {
+                                                                        const currentSrc = e.currentTarget.src || '';
+                                                                        if (currentSrc.includes('lh3.googleusercontent.com/d/')) {
+                                                                            const fileId = currentSrc.split('/d/')[1]?.split('?')[0]?.split('=')[0];
+                                                                            if (fileId) {
+                                                                                e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w200`;
+                                                                                return;
+                                                                            }
+                                                                        }
+                                                                        e.currentTarget.style.display = 'none';
+                                                                        if (e.currentTarget.nextSibling) {
+                                                                            e.currentTarget.nextSibling.style.display = 'flex';
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            ) : null}
+                                                            <span className={noteImg ? 'hidden' : 'flex'}>
+                                                                {getInitials(note.uploader_name)}
+                                                            </span>
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                             <div className="min-w-0">
                                                 <p className="text-xs font-bold text-on-surface truncate">

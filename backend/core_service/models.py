@@ -199,6 +199,8 @@ class StudentNote(Document):
     note_link: str
     uploader_name: str
     uploader_id: Optional[str] = None
+    uploader_image: Optional[str] = None
+    uploader_role: Optional[str] = "student"
     level: Optional[str] = None
     batch: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(hours=5, minutes=30))

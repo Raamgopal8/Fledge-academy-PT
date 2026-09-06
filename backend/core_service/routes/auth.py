@@ -29,6 +29,7 @@ class Token(BaseModel):
     token_type: str
     role: str
     level: Optional[str] = None
+    levels: Optional[List[str]] = None
     batch: Optional[str] = None
     batches: Optional[List[str]] = None
     name: Optional[str] = None
@@ -146,6 +147,7 @@ async def login(request: LoginRequest):
         user.role = normalized_role
         await user.save()
 
+    user_levels = getattr(user, "levels", None) or ([user.level] if getattr(user, "level", None) else [])
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={
@@ -153,6 +155,8 @@ async def login(request: LoginRequest):
             "name": user.name or (user.email.split("@")[0].title() if user.email else "Student"),
             "role": normalized_role, 
             "uid": str(user.id), 
+            "level": user.level or (user_levels[0] if user_levels else None),
+            "levels": user_levels,
             "batch": primary_batch,
             "batches": user_batches
         }, 
@@ -162,7 +166,8 @@ async def login(request: LoginRequest):
         "access_token": access_token, 
         "token_type": "bearer", 
         "role": normalized_role, 
-        "level": user.level, 
+        "level": user.level or (user_levels[0] if user_levels else None), 
+        "levels": user_levels,
         "batch": primary_batch,
         "batches": user_batches,
         "name": user.name,
