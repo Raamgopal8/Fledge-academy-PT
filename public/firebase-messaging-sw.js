@@ -5,8 +5,8 @@ const firebaseConfig = {
     apiKey: new URL(location).searchParams.get('apiKey') || '',
     authDomain: new URL(location).searchParams.get('authDomain') || '',
     projectId: new URL(location).searchParams.get('projectId') || 'fledgeportal',
-    storageBucket: new URL(location).searchParams.get('storageBucket') || '',
-    messagingSenderId: new URL(location).searchParams.get('messagingSenderId') || '',
+    storageBucket: new URL(location).searchParams.get('storageBucket') || 'fledgeportal.appspot.com',
+    messagingSenderId: new URL(location).searchParams.get('messagingSenderId') || '844515198625',
     appId: new URL(location).searchParams.get('appId') || ''
 };
 
@@ -23,7 +23,9 @@ try {
             icon: payload.notification?.icon || payload.data?.icon || '/icon-192.png',
             badge: '/icon-192.png',
             tag: payload.data?.tag || payload.data?.id || 'fledge-fcm-alert',
-            vibrate: [100, 50, 100],
+            vibrate: [200, 100, 200],
+            renotify: true,
+            requireInteraction: true,
             data: {
                 url: payload.data?.link || payload.data?.url || payload.fcmOptions?.link || '/dashboard',
                 timestamp: Date.now()

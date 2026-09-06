@@ -106,23 +106,39 @@ async def send_fcm_push(
             body=body
         )
 
+        android = messaging.AndroidConfig(
+            priority="high",
+            notification=messaging.AndroidNotification(
+                title=title,
+                body=body,
+                icon="stock_ticker_update",
+                color="#5D8BCC",
+                sound="default",
+                click_action=link or "/dashboard"
+            )
+        )
+
         webpush = messaging.WebpushConfig(
+            headers={"Urgency": "high"},
             notification=messaging.WebpushNotification(
                 title=title,
                 body=body,
                 icon="/icon-192.png",
-                badge="/icon-192.png"
+                badge="/icon-192.png",
+                vibrate=[100, 50, 100],
+                require_interaction=True
             ),
             fcm_options=messaging.WebpushFCMOptions(
                 link=link or "/dashboard"
             )
         )
 
-        # Batch multicast message
+        # Batch multicast message for Android, iOS, and Web
         message = messaging.MulticastMessage(
             tokens=tokens,
             notification=notification,
             data=safe_data,
+            android=android,
             webpush=webpush
         )
 

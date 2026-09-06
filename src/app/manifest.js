@@ -4,6 +4,7 @@ export default function manifest() {
   return {
     name: 'Fledge Academy Portal',
     short_name: 'Fledge Academy',
+    gcm_sender_id: '103953800507',
     description: 'Interactive Japanese Learning Management Portal for students, instructors, and staff.',
     start_url: '/',
     display: 'standalone',
