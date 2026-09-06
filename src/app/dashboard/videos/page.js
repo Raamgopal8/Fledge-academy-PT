@@ -36,11 +36,8 @@ export default function StudentVideos() {
     const [isMuted, setIsMuted] = useState(false);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
-    const [showQualityMenu, setShowQualityMenu] = useState(false);
     const [streamStartPos, setStreamStartPos] = useState(0);
-    const [qualityNotification, setQualityNotification] = useState('');
     const ytCurrentTimeRef = useRef(0);
-    const qualityNotificationTimeoutRef = useRef(null);
     const [doubleTapFeedback, setDoubleTapFeedback] = useState(null); // 'left' | 'right' | null
 
     // Filter states
@@ -166,13 +163,7 @@ export default function StudentVideos() {
         document.addEventListener('mozfullscreenchange', handleFullscreenChange);
         document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
-        // 8. Outside click listener for quality dropdown
-        const handleClickOutside = (e) => {
-            if (qualityMenuRef.current && !qualityMenuRef.current.contains(e.target)) {
-                setShowQualityMenu(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
+
 
         // 9. YouTube postMessage listener to continuously track playback time & state
         const handleYouTubeMessage = (e) => {
@@ -207,7 +198,6 @@ export default function StudentVideos() {
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-            document.removeEventListener('mousedown', handleClickOutside);
             window.removeEventListener('message', handleYouTubeMessage);
         };
     }, []);
