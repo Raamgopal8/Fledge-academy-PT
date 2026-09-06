@@ -36,15 +36,12 @@ export default function StudentVideos() {
     const [isMuted, setIsMuted] = useState(false);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
-    const [selectedQuality, setSelectedQuality] = useState('Auto');
     const [showQualityMenu, setShowQualityMenu] = useState(false);
     const [streamStartPos, setStreamStartPos] = useState(0);
     const [qualityNotification, setQualityNotification] = useState('');
     const ytCurrentTimeRef = useRef(0);
     const qualityNotificationTimeoutRef = useRef(null);
     const [doubleTapFeedback, setDoubleTapFeedback] = useState(null); // 'left' | 'right' | null
-
-    const qualityMenuRef = useRef(null);
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -511,7 +508,6 @@ export default function StudentVideos() {
         setDoubleTapFeedback(null);
         ytCurrentTimeRef.current = 0;
         setStreamStartPos(0);
-        setSelectedQuality('Auto');
         setQualityNotification('');
         if (videoRef.current) {
             videoRef.current.playbackRate = playbackRate;
@@ -597,64 +593,6 @@ export default function StudentVideos() {
             videoRef.current.playbackRate = speed;
         }
         setShowSettings(false);
-    };
-
-    const handleQualityChange = (qualityLabel) => {
-        setSelectedQuality(qualityLabel);
-        setShowQualityMenu(false);
-
-        // Quality mapping for YouTube embed
-        const qualityMap = {
-            'Auto': 'default',
-            '1080p': 'hd1080',
-            '720p': 'hd720',
-            '480p': 'large',
-            '360p': 'medium'
-        };
-
-        const targetQuality = qualityMap[qualityLabel] || 'default';
-
-        if (activeVideo && isYouTubeEmbed(activeVideo.video_url)) {
-            const currentPos = ytCurrentTimeRef.current || currentTime || 0;
-            setStreamStartPos(currentPos);
-
-            // Show brief visual feedback toast
-            if (qualityNotificationTimeoutRef.current) {
-                clearTimeout(qualityNotificationTimeoutRef.current);
-            }
-            setQualityNotification(`Quality: ${qualityLabel}`);
-            qualityNotificationTimeoutRef.current = setTimeout(() => {
-                setQualityNotification('');
-            }, 3000);
-
-            // Send postMessage to YouTube iframe if available
-            try {
-                const iframe = playerContainerRef.current?.querySelector('iframe');
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(JSON.stringify({
-                        event: 'command',
-                        func: 'setPlaybackQuality',
-                        args: [targetQuality]
-                    }), '*');
-
-                    iframe.contentWindow.postMessage(JSON.stringify({
-                        event: 'command',
-                        func: 'setPlaybackQualityRange',
-                        args: [targetQuality, targetQuality]
-                    }), '*');
-                }
-            } catch (err) {
-                console.warn("Quality change postMessage error:", err);
-            }
-        } else {
-            if (qualityNotificationTimeoutRef.current) {
-                clearTimeout(qualityNotificationTimeoutRef.current);
-            }
-            setQualityNotification(`Quality: ${qualityLabel}`);
-            qualityNotificationTimeoutRef.current = setTimeout(() => {
-                setQualityNotification('');
-            }, 3000);
-        }
     };
 
     // YouTube Double-Tap to Skip Logic (10s back / 10s forward)
@@ -965,20 +903,13 @@ export default function StudentVideos() {
                                                     </button>
                                                 )}
 
-                                                {/* Quality Change Feedback Toast Badge */}
-                                                {qualityNotification && (
-                                                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1.5 rounded-full bg-black/85 backdrop-blur-md border border-white/25 text-white text-xs font-semibold flex items-center gap-2 shadow-2xl animate-fade-in pointer-events-none">
-                                                        <span className="material-symbols-outlined text-[16px] text-primary">high_quality</span>
-                                                        <span>{qualityNotification}</span>
-                                                    </div>
-                                                )}
-
+                                              
                                                 {/* Player Embed or YouTube-Style HTML5 Video Player */}
                                                 {isIframeEmbed(activeVideo.video_url) ? (
                                                     <div className="player-embed-wrapper relative w-full h-full overflow-hidden">
                                                         <iframe
-                                                            key={`${activeVideo.id || activeVideo._id}-${activeVideo.video_url}-${selectedQuality}-${Math.floor(streamStartPos)}`}
-                                                            src={getEmbedUrl(activeVideo.video_url, selectedQuality, streamStartPos)}
+                                                            key={`${activeVideo.id || activeVideo._id}-${activeVideo.video_url}-${Math.floor(streamStartPos)}`}
+                                                            src={getEmbedUrl(activeVideo.video_url, Math.floor(streamStartPos))}
                                                             title={activeVideo.title}
                                                             onLoad={handleIframeLoad}
                                                             className="w-full h-full border-0 pointer-events-auto"
@@ -1277,64 +1208,7 @@ export default function StudentVideos() {
 
                                             {/* Mode & Utility Toggles */}
                                             <div className="flex items-center gap-2">
-
-                                                {/* Video Quality Changer Button & Dropdown */}
-                                                <div className="relative" ref={qualityMenuRef}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowQualityMenu(prev => !prev)}
-                                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-outline-variant/60 bg-surface-container-low hover:bg-surface-container text-on-surface-variant transition-all cursor-pointer ${
-                                                            showQualityMenu ? 'bg-primary/10 text-primary border-primary/30 font-bold' : ''
-                                                        }`}
-                                                        title="Change Video Quality"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[16px]">
-                                                            {selectedQuality === '1080p' || selectedQuality === '720p' ? 'hd' : 'high_quality'}
-                                                        </span>
-                                                        <span>{selectedQuality}</span>
-                                                        <span className="material-symbols-outlined text-[14px]">
-                                                            {showQualityMenu ? 'expand_less' : 'expand_more'}
-                                                        </span>
-                                                    </button>
-
-                                                    {/* Quality Selection Dropdown Menu */}
-                                                    {showQualityMenu && (
-                                                        <div className="absolute right-0 bottom-full mb-2 w-48 bg-surface-container-lowest border border-outline-variant/60 rounded-2xl p-2 shadow-xl z-50 animate-scale-up">
-                                                            <div className="px-2 py-1 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/30 mb-1">
-                                                                Video Quality
-                                                            </div>
-                                                            {['Auto', '1080p', '720p', '480p', '360p'].map((q) => (
-                                                                <button
-                                                                    key={q}
-                                                                    type="button"
-                                                                    onClick={() => handleQualityChange(q)}
-                                                                    className={`w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
-                                                                        selectedQuality === q
-                                                                            ? 'bg-primary/10 text-primary font-bold'
-                                                                            : 'text-on-surface hover:bg-surface-container'
-                                                                    }`}
-                                                                >
-                                                                    <span className="flex items-center gap-1.5">
-                                                                        <span>{q}</span>
-                                                                        {(q === '1080p' || q === '720p') && (
-                                                                            <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-primary/20 text-primary uppercase">HD</span>
-                                                                        )}
-                                                                    </span>
-                                                                    {selectedQuality === q && (
-                                                                        <span className="material-symbols-outlined text-[14px] text-primary">check</span>
-                                                                    )}
-                                                                </button>
-                                                            ))}
-                                                            {isYouTubeEmbed(activeVideo?.video_url) && (
-                                                                <div className="mt-1.5 pt-1.5 border-t border-outline-variant/30 px-2 py-1 text-[10px] text-on-surface-variant flex items-start gap-1">
-                                                                    <span className="material-symbols-outlined text-[13px] text-primary flex-shrink-0 mt-0.5">settings</span>
-                                                                    <span>You can also use the ⚙️ gear icon directly in the video player.</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-
+                                               
                                                  {/* Theater Mode Toggle (Desktop only) */}
                                                 <button
                                                     type="button"
