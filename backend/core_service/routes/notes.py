@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -206,8 +207,17 @@ async def delete_student_note(
         assigned_batches = getattr(current_user, "batches", None) or []
         if not assigned_batches and getattr(current_user, "batch", None):
             assigned_batches = [current_user.batch]
-        if note.uploader_id != str(current_user.id) and note.batch not in assigned_batches:
-            raise HTTPException(status_code=403, detail="Not authorized to delete notes outside assigned batches")
+        assigned_clean = [b.strip().lower() for b in assigned_batches if b and b.strip()]
+        is_global = not assigned_clean or any(b in ["all batches", "all assigned batches", "global", "global access", "all"] for b in assigned_clean)
+
+        # If note has a batch and sensi has specific non-global batches, verify batch match (case- and delimiter-insensitive)
+        if not is_global and note.batch and note.uploader_id != str(current_user.id):
+            note_batch_clean = note.batch.strip().lower()
+            if note_batch_clean not in assigned_clean:
+                norm_note = re.sub(r'[^a-z0-9]', '', note_batch_clean)
+                norm_assigned = [re.sub(r'[^a-z0-9]', '', b) for b in assigned_clean]
+                if norm_note not in norm_assigned:
+                    raise HTTPException(status_code=403, detail="Not authorized to delete notes outside assigned batches")
     elif user_role not in ["admin", "ceo"]:
         raise HTTPException(status_code=403, detail="Not authorized to delete this note")
 

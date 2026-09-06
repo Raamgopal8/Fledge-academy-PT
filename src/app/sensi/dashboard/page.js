@@ -29,6 +29,7 @@ export default function SensiDashboard() {
     const [activities, setActivities] = useState(null);
     const [profile, setProfile] = useState(null);
     const [studentNotes, setStudentNotes] = useState([]);
+    const [deletingNoteId, setDeletingNoteId] = useState(null);
     const [avatarMap, setAvatarMap] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -751,27 +752,38 @@ export default function SensiDashboard() {
                                                 <button
                                                     onClick={async (e) => {
                                                         e.preventDefault();
-                                                        if(confirm('Are you sure you want to delete this note?')) {
+                                                        e.stopPropagation();
+                                                        const noteId = note.id || note._id;
+                                                        if (!noteId) return;
+                                                        if (confirm('Are you sure you want to delete this note?')) {
                                                             try {
+                                                                setDeletingNoteId(noteId);
                                                                 const token = localStorage.getItem('token');
-                                                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes/${note.id}`, {
+                                                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes/${noteId}`, {
                                                                     method: 'DELETE',
                                                                     headers: { 'Authorization': `Bearer ${token}` }
                                                                 });
-                                                                if(res.ok) {
-                                                                    setStudentNotes(prev => prev.filter(n => n.id !== note.id));
+                                                                if (res.ok) {
+                                                                    setStudentNotes(prev => prev.filter(n => (n.id !== noteId && n._id !== noteId)));
                                                                 } else {
-                                                                    alert('Failed to delete note');
+                                                                    const errData = await res.json().catch(() => ({}));
+                                                                    alert(errData.detail || 'Failed to delete note');
                                                                 }
                                                             } catch (err) {
                                                                 console.error('Error deleting note:', err);
+                                                                alert('Network error while deleting note');
+                                                            } finally {
+                                                                setDeletingNoteId(null);
                                                             }
                                                         }
                                                     }}
-                                                    className="p-1.5 rounded-lg text-error hover:bg-error/10 transition-colors"
+                                                    disabled={deletingNoteId === (note.id || note._id)}
+                                                    className="p-1.5 rounded-lg text-error hover:bg-error/10 transition-colors disabled:opacity-40 cursor-pointer"
                                                     title="Delete Note"
                                                 >
-                                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                                    <span className={`material-symbols-outlined text-[16px] ${deletingNoteId === (note.id || note._id) ? 'animate-spin' : ''}`}>
+                                                        {deletingNoteId === (note.id || note._id) ? 'sync' : 'delete'}
+                                                    </span>
                                                 </button>
                                                 <a
                                                     href={note.note_link}

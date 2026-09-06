@@ -1146,28 +1146,44 @@ export default function CommunityChat({ role, overrideBatch }) {
 
             {/* Clear All Messages Confirmation Modal (Sensi & Admin) */}
             {showClearConfirmModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4 animate-scale-up">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-error/15 text-error flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined text-2xl">delete_sweep</span>
+                <div 
+                    onClick={() => setShowClearConfirmModal(false)}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant/80 rounded-3xl p-5 sm:p-6 w-[92vw] sm:w-[480px] max-w-[480px] shrink-0 shadow-2xl space-y-4 animate-scale-up relative"
+                    >
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-error/15 text-error flex items-center justify-center shrink-0">
+                                    <span className="material-symbols-outlined text-2xl">delete_sweep</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <h3 className="text-base sm:text-lg font-bold text-on-surface truncate">
+                                        Clear All Messages?
+                                    </h3>
+                                    <p className="text-xs text-on-surface-variant mt-0.5">
+                                        This action cannot be undone.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-base sm:text-lg font-bold text-on-surface">
-                                    Clear All Messages?
-                                </h3>
-                                <p className="text-xs text-on-surface-variant mt-0.5">
-                                    This action cannot be undone.
-                                </p>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowClearConfirmModal(false)}
+                                className="w-8 h-8 rounded-full text-on-surface-variant hover:bg-surface-container flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                title="Close"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
                         </div>
 
-                        <div className="p-3.5 bg-error/5 dark:bg-error/10 border border-error/20 rounded-2xl text-xs text-on-surface-variant leading-relaxed space-y-1.5">
+                        <div className="p-3.5 sm:p-4 bg-error/5 dark:bg-error/10 border border-error/20 rounded-2xl text-xs text-on-surface-variant leading-relaxed space-y-1.5">
                             <p className="font-semibold text-error flex items-center gap-1.5">
-                                <span className="material-symbols-outlined text-[16px]">warning</span>
+                                <span className="material-symbols-outlined text-[16px] shrink-0">warning</span>
                                 <span>Permanent Data & Cloudflare Purge</span>
                             </p>
-                            <p>
+                            <p className="break-words">
                                 All text messages, voice notes, and <strong>uploaded images/documents in your Cloudflare storage account</strong> for this batch will be permanently deleted.
                             </p>
                         </div>
@@ -1185,7 +1201,7 @@ export default function CommunityChat({ role, overrideBatch }) {
                                 type="button"
                                 onClick={handleClearAllMessages}
                                 disabled={isClearingMessages}
-                                className="px-4 py-2 rounded-xl bg-error hover:bg-error/90 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="px-4 py-2 rounded-xl bg-error hover:bg-error/90 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                             >
                                 <span className={`material-symbols-outlined text-[16px] ${isClearingMessages ? 'animate-spin' : ''}`}>
                                     {isClearingMessages ? 'sync' : 'delete_forever'}
