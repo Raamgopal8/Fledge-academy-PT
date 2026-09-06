@@ -691,8 +691,10 @@ export default function CommunityChat({ role, overrideBatch }) {
                                                 ? 'bg-primary text-on-primary rounded-2xl sm:rounded-3xl rounded-tr-xs px-3 sm:px-4 py-2 sm:py-2.5' 
                                                 : 'bg-surface-container-high dark:bg-slate-900 text-on-surface rounded-2xl sm:rounded-3xl rounded-tl-xs border border-outline-variant/40 px-3 sm:px-4 py-2 sm:py-2.5')
                                     } font-body-md shadow-xs break-words leading-relaxed max-w-full`}>
-                                        {/* 1. WhatsApp Voice Message */}
-                                        {msg.audio_url && (
+                                        
+                                    {/* 1. WhatsApp Voice Message */}
+                                        
+                                    {msg.audio_url && (
                                             <div className="flex flex-col max-w-full">
                                                 <WhatsAppAudioPlayer
                                                     src={msg.audio_url}
