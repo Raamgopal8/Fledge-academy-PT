@@ -78,6 +78,7 @@ class Material(Document):
 
 class Test(Document):
     level: Optional[str] = None
+    levels: Optional[List[str]] = []
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
     title: str

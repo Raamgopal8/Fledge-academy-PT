@@ -1,15 +1,38 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSensiContext } from '@/app/sensi/SensiContext';
 
+const LEVELS = [
+    { value: 'Level 5', label: 'Level 5 (Beginner)', color: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30' },
+    { value: 'Level 4', label: 'Level 4 (Elementary)', color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30' },
+    { value: 'Level 3', label: 'Level 3 (Intermediate)', color: 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30' },
+    { value: 'Level 2', label: 'Level 2 (Pre-Advanced)', color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30' },
+    { value: 'Level 1', label: 'Level 1 (Advanced)', color: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30' },
+];
+
 export default function StudentProgress() {
-    const { selectedBatch } = useSensiContext();
+    const { 
+        selectedBatch, 
+        setSelectedBatch, 
+        selectedLevel, 
+        setSelectedLevel, 
+        staffBatches, 
+        sensiLevels 
+    } = useSensiContext();
     const [submissions, setSubmissions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All'); // 'All', 'Pending Review', 'Reviewed', 'Needs Work'
     
+    // Filtering by level
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
+
     // Quick Review Modal State
     const [activeSubmission, setActiveSubmission] = useState(null);
     const [reviewComment, setReviewComment] = useState('');
@@ -17,17 +40,40 @@ export default function StudentProgress() {
     const [isSavingReview, setIsSavingReview] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
-    const fetchProgress = async () => {
+    // Sync filterLevel when selectedLevel changes in SensiContext / top nav
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global' || selectedLevel === 'All' || !selectedLevel) {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel && lvl !== 'All') {
+            setSelectedLevel(lvl);
+        }
+    };
+
+    const fetchProgress = useCallback(async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
             if (!token) throw new Error("No authentication token found");
 
-            const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
+            const params = new URLSearchParams();
+            if (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels') {
+                params.append('level', filterLevel);
+            } else if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+                params.append('level', selectedLevel);
+            }
+            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
 
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${queryStr}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -44,11 +90,11 @@ export default function StudentProgress() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedBatch, selectedLevel, filterLevel]);
 
     useEffect(() => {
         fetchProgress();
-    }, [selectedBatch]);
+    }, [fetchProgress]);
 
     const handleSaveReview = async (e) => {
         e.preventDefault();
@@ -99,8 +145,26 @@ export default function StudentProgress() {
     const isSubApproved = (s) => s === 'Approved' || s === 'Reviewed';
     const isSubNeedWork = (s) => s === 'Need Work' || s === 'Needs Work' || s === 'Failed';
 
+    const getLevelBadgeClass = (lvl) => {
+        if (!lvl) return 'bg-primary/10 text-primary border-primary/20';
+        const clean = lvl.trim().toLowerCase();
+        const match = LEVELS.find(l => 
+            l.value.toLowerCase() === clean ||
+            clean.startsWith(l.value.toLowerCase()) ||
+            l.value.toLowerCase().startsWith(clean)
+        );
+        return match ? match.color : 'bg-primary/10 text-primary border-primary/20';
+    };
+
     // Filter submissions
     const filteredSubmissions = submissions.filter(sub => {
+        if (filterLevel !== 'All') {
+            const sLvl = (sub.test_level || '').trim().toLowerCase();
+            const fLvl = filterLevel.trim().toLowerCase();
+            const isGlobalLevel = !sLvl || sLvl === 'all' || sLvl === 'all levels' || sLvl === 'global';
+            if (sLvl !== fLvl && !isGlobalLevel && !sLvl.startsWith(fLvl) && !fLvl.startsWith(sLvl)) return false;
+        }
+
         if (statusFilter !== 'All') {
             if (statusFilter === 'Pending Review') {
                 if (isSubApproved(sub.status) || isSubNeedWork(sub.status)) return false;
@@ -123,11 +187,20 @@ export default function StudentProgress() {
         return true;
     });
 
-    // Aggregated Metrics
-    const totalSubmissions = submissions.length;
-    const approvedSubmissions = submissions.filter(s => isSubApproved(s.status)).length;
-    const needsWorkSubmissions = submissions.filter(s => isSubNeedWork(s.status)).length;
-    const pendingSubmissions = submissions.filter(s => !isSubApproved(s.status) && !isSubNeedWork(s.status)).length;
+    // Aggregated Metrics based on level-filtered submissions
+    const levelSubmissions = submissions.filter(sub => {
+        if (filterLevel !== 'All') {
+            const sLvl = (sub.test_level || '').trim().toLowerCase();
+            const fLvl = filterLevel.trim().toLowerCase();
+            const isGlobalLevel = !sLvl || sLvl === 'all' || sLvl === 'all levels' || sLvl === 'global';
+            if (sLvl !== fLvl && !isGlobalLevel && !sLvl.startsWith(fLvl) && !fLvl.startsWith(sLvl)) return false;
+        }
+        return true;
+    });
+    const totalSubmissions = levelSubmissions.length;
+    const approvedSubmissions = levelSubmissions.filter(s => isSubApproved(s.status)).length;
+    const needsWorkSubmissions = levelSubmissions.filter(s => isSubNeedWork(s.status)).length;
+    const pendingSubmissions = levelSubmissions.filter(s => !isSubApproved(s.status) && !isSubNeedWork(s.status)).length;
     const completionRate = totalSubmissions > 0 ? Math.round((approvedSubmissions / totalSubmissions) * 100) : 0;
 
     if (isLoading && submissions.length === 0) {
@@ -157,12 +230,20 @@ export default function StudentProgress() {
                     </p>
                 </div>
 
-                {selectedBatch && selectedBatch !== 'All Assigned Batches' && (
-                    <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
-                        <span className="material-symbols-outlined text-[16px]">groups</span>
-                        <span>{selectedBatch}</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                    {filterLevel && filterLevel !== 'All' && (
+                        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                            <span className="material-symbols-outlined text-[16px]">school</span>
+                            <span>{filterLevel}</span>
+                        </div>
+                    )}
+                    {selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && (
+                        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                            <span className="material-symbols-outlined text-[16px]">groups</span>
+                            <span>{selectedBatch}</span>
+                        </div>
+                    )}
+                </div>
             </section>
 
             {successMessage && (
@@ -254,8 +335,23 @@ export default function StudentProgress() {
             <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 custom-shadow space-y-5">
                 {/* Search & Filter Controls */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-outline-variant/50">
-                    {/* Status Filter Tabs */}
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        {/* Level Filter Dropdown */}
+                        <div className="flex items-center gap-2 bg-surface-container-low border border-outline-variant rounded-xl px-3 py-1.5 shadow-2xs">
+                            <span className="text-xs text-on-surface-variant font-medium">Level:</span>
+                            <select
+                                value={filterLevel}
+                                onChange={(e) => handleFilterLevelChange(e.target.value)}
+                                className="bg-transparent text-xs text-on-surface font-semibold focus:outline-none cursor-pointer"
+                            >
+                                <option value="All">All Levels</option>
+                                {LEVELS.map(l => (
+                                    <option key={l.value} value={l.value}>{l.value}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Status Filter Tabs */}
                         {[
                             { key: 'All', label: 'All Submissions', count: totalSubmissions },
                             { key: 'Pending Review', label: 'Pending', count: pendingSubmissions },
@@ -342,7 +438,7 @@ export default function StudentProgress() {
                                                 </div>
                                                 <div className="flex items-center gap-1.5 mt-0.5">
                                                     {sub.test_level && (
-                                                        <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.2 rounded border border-primary/20">
+                                                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${getLevelBadgeClass(sub.test_level)}`}>
                                                             {sub.test_level}
                                                         </span>
                                                     )}
@@ -385,7 +481,7 @@ export default function StudentProgress() {
                                             <td className="py-3.5 px-4 max-w-[220px]">
                                                 {sub.staff_comments ? (
                                                     <p className="text-xs text-on-surface-variant truncate italic" title={sub.staff_comments}>
-                                                        "{sub.staff_comments}"
+                                                        &quot;{sub.staff_comments}&quot;
                                                     </p>
                                                 ) : (
                                                     <span className="text-[11px] text-outline italic">No feedback provided yet</span>
@@ -451,7 +547,7 @@ export default function StudentProgress() {
                             <div className="flex justify-between items-center">
                                 <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1">
                                     <span className="material-symbols-outlined text-[14px] text-primary">description</span>
-                                    <span>Student's Answer / Work</span>
+                                    <span>Student&apos;s Answer / Work</span>
                                 </span>
                                 {activeSubmission.test_level && (
                                     <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">

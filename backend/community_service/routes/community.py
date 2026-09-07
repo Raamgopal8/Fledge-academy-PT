@@ -294,11 +294,45 @@ async def upload_community_media(
 @router.get("/messages", response_model=List[CommunityMessage])
 async def get_messages(level: Optional[str] = None, batch: Optional[str] = None):
     try:
-        query = {}
-        if level:
-            query["level"] = level
-        if batch:
-            query["batch"] = batch
+        conditions = []
+
+        # 1. Level Filter: if level is 'all', 'all levels', 'global', empty, or None -> show all levels
+        if level and level.strip().lower() not in ["all", "all levels", "global", "all assigned"]:
+            clean_level = level.strip()
+            level_core = clean_level.lower().replace("level", "").strip()
+            conditions.append({
+                "$or": [
+                    {"level": clean_level},
+                    {"level": level_core},
+                    {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                    {"level": {"$regex": "^all levels$", "$options": "i"}},
+                    {"level": {"$regex": "^global$", "$options": "i"}},
+                    {"level": None},
+                    {"level": ""}
+                ]
+            })
+
+        # 2. Batch Filter: if batch is 'all', 'all batches', 'global', 'global access', empty, or None -> show all batches
+        if batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]:
+            clean_batch = batch.strip()
+            conditions.append({
+                "$or": [
+                    {"batch": clean_batch},
+                    {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                    {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                    {"batch": {"$regex": "^global$", "$options": "i"}},
+                    {"batch": None},
+                    {"batch": ""}
+                ]
+            })
+
+        if len(conditions) == 1:
+            query = conditions[0]
+        elif len(conditions) > 1:
+            query = {"$and": conditions}
+        else:
+            query = {}
+
         messages = await CommunityMessage.find(query).sort("+created_at").to_list()
         for m in messages:
             m.role = normalize_role(m.role)
@@ -327,10 +361,10 @@ async def clear_all_messages(
 
     try:
         query = {}
-        if level:
-            query["level"] = level
-        if batch:
-            query["batch"] = batch
+        if level and level.strip().lower() not in ["all", "all levels", "global", "all assigned"]:
+            query["level"] = level.strip()
+        if batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]:
+            query["batch"] = batch.strip()
 
         # Find all messages matching filter
         matching_messages = await CommunityMessage.find(query).to_list()

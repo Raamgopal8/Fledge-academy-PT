@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import WhatsAppAudioPlayer from './WhatsAppAudioPlayer';
 
-export default function CommunityChat({ role, overrideBatch }) {
+export default function CommunityChat({ role, overrideBatch, overrideLevel }) {
+    const isGlobalBatch = (b) => !b || ['all', 'all batches', 'all assigned batches', 'global', 'global access', ''].includes(String(b).trim().toLowerCase());
+    const isGlobalLevel = (l) => !l || ['all', 'all levels', 'global', ''].includes(String(l).trim().toLowerCase());
+
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -63,8 +66,12 @@ export default function CommunityChat({ role, overrideBatch }) {
             setUserName(name);
             const profileImg = localStorage.getItem('userProfileImage') || '';
             setUserProfileImage(profileImg);
-            const level = localStorage.getItem('level') || 'Level 5';
-            const batch = overrideBatch !== undefined ? overrideBatch : (localStorage.getItem('batch') || '');
+            const level = overrideLevel !== undefined 
+                ? overrideLevel 
+                : (localStorage.getItem('adminSelectedLevel') || localStorage.getItem('ceoSelectedLevel') || localStorage.getItem('level') || 'All Levels');
+            const batch = overrideBatch !== undefined 
+                ? overrideBatch 
+                : (localStorage.getItem('adminSelectedBatch') || localStorage.getItem('ceoSelectedBatch') || localStorage.getItem('batch') || '');
             setUserBatch(batch);
             setUserLevel(level);
 
@@ -111,16 +118,36 @@ export default function CommunityChat({ role, overrideBatch }) {
                 .catch(err => console.error("Error fetching members:", err));
             }
         }
-    }, [overrideBatch, role]);
+    }, [overrideBatch, overrideLevel, role]);
+
+
 
     const fetchMessages = async () => {
         try {
-            const currentLevel = userLevel || (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5');
+            const currentLevel = userLevel !== undefined && userLevel !== ''
+                ? userLevel
+                : (overrideLevel !== undefined ? overrideLevel : (typeof window !== 'undefined' ? (localStorage.getItem('adminSelectedLevel') || localStorage.getItem('ceoSelectedLevel') || localStorage.getItem('level') || 'All Levels') : 'All Levels'));
+            
             const currentBatch = userBatch !== undefined && userBatch !== '' 
                 ? userBatch 
-                : (overrideBatch !== undefined ? overrideBatch : (typeof window !== 'undefined' ? (localStorage.getItem('batch') || '') : ''));
+                : (overrideBatch !== undefined ? overrideBatch : (typeof window !== 'undefined' ? (localStorage.getItem('adminSelectedBatch') || localStorage.getItem('ceoSelectedBatch') || localStorage.getItem('batch') || '') : ''));
+            
             const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
-            const res = await fetch(`${communityApiBase}/api/community/messages?level=${encodeURIComponent(currentLevel)}&batch=${encodeURIComponent(currentBatch)}&t=${Date.now()}`);
+            const queryParams = new URLSearchParams();
+
+            // Only restrict by level if NOT global/all levels
+            if (!isGlobalLevel(currentLevel)) {
+                queryParams.append('level', currentLevel);
+            }
+
+            // Only restrict by batch if NOT global/all batches
+            if (!isGlobalBatch(currentBatch)) {
+                queryParams.append('batch', currentBatch);
+            }
+
+            queryParams.append('t', Date.now().toString());
+
+            const res = await fetch(`${communityApiBase}/api/community/messages?${queryParams.toString()}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -139,12 +166,10 @@ export default function CommunityChat({ role, overrideBatch }) {
     };
 
     useEffect(() => {
-        if (userLevel && userBatch !== undefined) {
-            fetchMessages();
-            const interval = setInterval(fetchMessages, 4000);
-            return () => clearInterval(interval);
-        }
-    }, [userLevel, userBatch]);
+        fetchMessages();
+        const interval = setInterval(fetchMessages, 4000);
+        return () => clearInterval(interval);
+    }, [userLevel, userBatch, overrideBatch, overrideLevel]);
 
     // 1. Send Text Message
     const handleSendMessage = async (e) => {
@@ -162,8 +187,8 @@ export default function CommunityChat({ role, overrideBatch }) {
                 author_name: userName,
                 author_image: userProfileImage || localStorage.getItem('userProfileImage') || '',
                 role: formatRole(effectiveRole),
-                level: userLevel,
-                ...(userBatch ? { batch: userBatch } : {})
+                level: isGlobalLevel(userLevel) ? 'All Levels' : userLevel,
+                batch: isGlobalBatch(userBatch) ? 'Global' : userBatch
             };
 
             const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
@@ -253,8 +278,8 @@ export default function CommunityChat({ role, overrideBatch }) {
             formData.append('author_name', userName);
             formData.append('author_image', userProfileImage || localStorage.getItem('userProfileImage') || '');
             formData.append('role', formatRole(effectiveRole));
-            formData.append('level', userLevel);
-            if (userBatch) formData.append('batch', userBatch);
+            formData.append('level', isGlobalLevel(userLevel) ? 'All Levels' : userLevel);
+            formData.append('batch', isGlobalBatch(userBatch) ? 'Global' : userBatch);
 
             const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
             const res = await fetch(`${communityApiBase}/api/community/messages/audio`, {
@@ -388,8 +413,8 @@ export default function CommunityChat({ role, overrideBatch }) {
             formData.append('author_name', userName);
             formData.append('author_image', userProfileImage || localStorage.getItem('userProfileImage') || '');
             formData.append('role', formatRole(effectiveRole));
-            formData.append('level', userLevel);
-            if (userBatch) formData.append('batch', userBatch);
+            formData.append('level', isGlobalLevel(userLevel) ? 'All Levels' : userLevel);
+            formData.append('batch', isGlobalBatch(userBatch) ? 'Global' : userBatch);
 
             const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
             const res = await fetch(`${communityApiBase}/api/community/messages/upload`, {
@@ -471,16 +496,18 @@ export default function CommunityChat({ role, overrideBatch }) {
     const handleClearAllMessages = async () => {
         setIsClearingMessages(true);
         try {
-            const currentLevel = userLevel || (typeof window !== 'undefined' ? (localStorage.getItem('level') || 'Level 5') : 'Level 5');
+            const currentLevel = userLevel !== undefined && userLevel !== '' 
+                ? userLevel 
+                : (overrideLevel !== undefined ? overrideLevel : (typeof window !== 'undefined' ? (localStorage.getItem('adminSelectedLevel') || localStorage.getItem('ceoSelectedLevel') || localStorage.getItem('level') || 'All Levels') : 'All Levels'));
             const currentBatch = userBatch !== undefined && userBatch !== '' 
                 ? userBatch 
-                : (overrideBatch !== undefined ? overrideBatch : (typeof window !== 'undefined' ? (localStorage.getItem('batch') || '') : ''));
+                : (overrideBatch !== undefined ? overrideBatch : (typeof window !== 'undefined' ? (localStorage.getItem('adminSelectedBatch') || localStorage.getItem('ceoSelectedBatch') || localStorage.getItem('batch') || '') : ''));
             const effectiveRole = role || formatRole(userRole);
 
             const communityApiBase = process.env.NEXT_PUBLIC_COMMUNITY_API_URL || '';
             const queryParams = new URLSearchParams();
-            if (currentLevel) queryParams.append('level', currentLevel);
-            if (currentBatch) queryParams.append('batch', currentBatch);
+            if (!isGlobalLevel(currentLevel)) queryParams.append('level', currentLevel);
+            if (!isGlobalBatch(currentBatch)) queryParams.append('batch', currentBatch);
             queryParams.append('role', formatRole(effectiveRole));
             if (userEmail) queryParams.append('user_id', userEmail);
 
@@ -523,9 +550,25 @@ export default function CommunityChat({ role, overrideBatch }) {
                         <h2 className="text-base sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3] text-transparent bg-clip-text truncate">
                             Community Discussion
                         </h2>
-                        <p className="hidden xs:block text-[10px] sm:text-xs text-on-surface-variant truncate">
-                            Live discussion & collaboration with peers
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <p className="hidden xs:block text-[10px] sm:text-xs text-on-surface-variant truncate">
+                                Live discussion & collaboration
+                            </p>
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                isGlobalBatch(userBatch) && isGlobalLevel(userLevel)
+                                    ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/40'
+                                    : 'bg-primary/10 text-primary border-primary/20'
+                            }`}>
+                                <span className="material-symbols-outlined text-[12px]">
+                                    {isGlobalBatch(userBatch) ? 'public' : 'group'}
+                                </span>
+                                <span>
+                                    {isGlobalBatch(userBatch) ? 'Global (All Batches)' : userBatch}
+                                    {' • '}
+                                    {isGlobalLevel(userLevel) ? 'All Levels' : userLevel}
+                                </span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -557,6 +600,47 @@ export default function CommunityChat({ role, overrideBatch }) {
                     </button>
                 </div>
             </div>
+
+            {/* Level Filter Toolbar for Admin & CEO */}
+            {(['admin', 'ceo'].includes(userRole?.toLowerCase()) || role === 'Admin') && (
+                <div className="px-3 sm:px-5 py-2 border-b border-outline-variant/50 bg-surface-container-low/80 dark:bg-slate-900/80 flex items-center justify-between gap-2 flex-wrap text-xs">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px] text-primary">filter_alt</span>
+                            Level:
+                        </span>
+                        {['All Levels', 'Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'].map((lvl) => {
+                            const isSelected = (isGlobalLevel(lvl) && isGlobalLevel(userLevel)) || userLevel === lvl;
+                            return (
+                                <button
+                                    key={lvl}
+                                    type="button"
+                                    onClick={() => {
+                                        const newLvl = isGlobalLevel(lvl) ? 'All Levels' : lvl;
+                                        setUserLevel(newLvl);
+                                        if (typeof window !== 'undefined') {
+                                            localStorage.setItem('adminSelectedLevel', newLvl);
+                                            localStorage.setItem('ceoSelectedLevel', newLvl);
+                                            localStorage.setItem('level', newLvl);
+                                        }
+                                    }}
+                                    className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-primary text-on-primary shadow-xs'
+                                            : 'bg-surface-container hover:bg-surface-container-high text-on-surface-variant'
+                                    }`}
+                                >
+                                    {lvl}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant ml-auto">
+                        <span className="material-symbols-outlined text-[14px] text-emerald-500">mark_chat_read</span>
+                        <span>{messages.length} message{messages.length === 1 ? '' : 's'}</span>
+                    </div>
+                </div>
+            )}
 
             {/* Chat Scroll Area */}
             <div 
@@ -637,6 +721,11 @@ export default function CommunityChat({ role, overrideBatch }) {
                                         {displayRole}
                                     </span>
                                     <span className="text-[10px] text-outline shrink-0">{time}</span>
+                                    {(msg.batch || msg.level) && (
+                                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-md bg-surface-container border border-outline-variant/40 text-on-surface-variant truncate max-w-[120px]" title={`${msg.batch || 'Global'} • ${msg.level || 'All Levels'}`}>
+                                            {msg.batch || 'Global'}{msg.level ? ` • ${msg.level}` : ''}
+                                        </span>
+                                    )}
                                     {msg.is_edited && (
                                         <span className="text-[10px] italic text-on-surface-variant/70 font-medium">
                                             (edited)
@@ -1184,7 +1273,10 @@ export default function CommunityChat({ role, overrideBatch }) {
                                 <span>Permanent Data & Cloudflare Purge</span>
                             </p>
                             <p className="break-words">
-                                All text messages, voice notes, and <strong>uploaded images/documents in your Cloudflare storage account</strong> for this batch will be permanently deleted.
+                                {isGlobalBatch(userBatch) && isGlobalLevel(userLevel)
+                                    ? "All text messages, voice notes, and uploaded images/documents across ALL batches and levels will be permanently deleted."
+                                    : `All text messages, voice notes, and uploaded images/documents for ${userBatch || 'this batch'} (${userLevel || 'all levels'}) will be permanently deleted.`
+                                }
                             </p>
                         </div>
 

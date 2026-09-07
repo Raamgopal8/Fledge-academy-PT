@@ -1,3 +1,4 @@
+import re
 # pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends
 from typing import Optional
@@ -11,22 +12,44 @@ router = APIRouter()
 
 @router.get("/admin/kpi")
 @router.get("/ceo/kpi")
-async def get_admin_kpi(batch: Optional[str] = None):
-    cache_key = f"dashboard:admin:kpi:{batch or 'all'}"
+async def get_admin_kpi(level: Optional[str] = None, batch: Optional[str] = None):
+    clean_lvl = (level or "").strip().lower()
+    clean_b = (batch or "").strip().lower()
+    cache_key = f"dashboard:admin:kpi:{clean_lvl or 'all'}:{clean_b or 'all'}"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
 
+    conditions = []
+    if level and clean_lvl not in ["all", "all levels", "global"]:
+        escaped_clean = re.escape(level.strip())
+        level_match = re.match(r"^(Level\s*\d+)", level.strip(), re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else level.strip()
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [level.strip(), level_core, "All Levels", "All", "Global"]}},
+            ]
+        })
+    if batch and clean_b not in ["all", "all batches", "all assigned batches", "global", "global access"]:
+        clean_batch = batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+            ]
+        })
+
     # Total Students
-    student_query = {"role": "student"}
-    if batch:
-        student_query["batch"] = batch
+    student_query = {"$and": [{"role": "student"}] + conditions} if conditions else {"role": "student"}
     total_students = await models.User.find(student_query).count()
 
     # Total Sensi / Admin Staff
-    staff_query = {"role": {"$in": ["sensi", "staff", "admin", "ceo"]}}
-    if batch:
-        staff_query["batch"] = batch
+    staff_query = {"$and": [{"role": {"$in": ["sensi", "staff", "admin", "ceo"]}}] + conditions} if conditions else {"role": {"$in": ["sensi", "staff", "admin", "ceo"]}}
     total_staff = await models.User.find(staff_query).count()
 
     # For "Revenue", assuming a fixed value per student
@@ -68,8 +91,10 @@ async def get_admin_kpi(batch: Optional[str] = None):
 
 @router.get("/admin/performance-chart")
 @router.get("/ceo/performance-chart")
-async def get_admin_performance_chart():
-    cache_key = "dashboard:admin:performance-chart"
+async def get_admin_performance_chart(level: Optional[str] = None, batch: Optional[str] = None):
+    clean_lvl = (level or "").strip().lower()
+    clean_b = (batch or "").strip().lower()
+    cache_key = f"dashboard:admin:performance-chart:{clean_lvl or 'all'}:{clean_b or 'all'}"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
@@ -129,27 +154,70 @@ async def delete_all_recent_activity():
 @router.get("/staff/summary")
 async def get_sensi_summary(
     batch: Optional[str] = None,
+    level: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
     user_email = (current_user.email or "").lower()
-    cache_key = f"dashboard:sensi:summary:{user_email}:{batch or 'default'}"
+    cache_key = f"dashboard:sensi:summary:{user_email}:{batch or 'default'}:{level or 'all'}"
     cached = await get_cache(cache_key)
     if cached is not None:
         return cached
 
     user_role = (current_user.role or "").lower()
-    student_query = {"role": "student"}
-    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
-        student_query["batch"] = batch
+    conditions = [{"role": "student"}]
+    
+    if level and level.strip().lower() not in ["all", "all levels", "global"]:
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": {"$regex": "^global$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+
+    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]) else None
+    if target_batch:
+        clean_batch = target_batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{re.escape(clean_batch)}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
     elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
-        if staff_batches and len(staff_batches) > 1:
-            student_query["batch"] = {"$in": staff_batches}
-        elif staff_batches and len(staff_batches) == 1:
-            student_query["batch"] = staff_batches[0]
-        elif staff_batch:
-            student_query["batch"] = staff_batch
+        if staff_batches or staff_batch:
+            allowed_batches = list(staff_batches)
+            if staff_batch and staff_batch not in allowed_batches:
+                allowed_batches.append(staff_batch)
+            allowed_batches.extend(["All Batches", "All", "Global", None, ""])
+            conditions.append({
+                "$or": [
+                    {"batch": {"$in": allowed_batches}},
+                    {"batches": {"$in": allowed_batches}},
+                    {"batch": None},
+                    {"batch": ""}
+                ]
+            })
         elif not staff_batches and not staff_batch:
             return {
                 "name": current_user.name or current_user.email.split('@')[0],
@@ -158,6 +226,7 @@ async def get_sensi_summary(
                 "attendanceRate": "--%"
             }
         
+    student_query = {"$and": conditions} if conditions else {"role": "student"}
     students = await models.User.find(student_query).to_list()
     total_students = len(students)
     
@@ -188,22 +257,66 @@ async def get_sensi_summary(
 @router.get("/staff/classes")
 async def get_sensi_classes(
     batch: Optional[str] = None,
+    level: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
-    query = {}
+    conditions = []
     user_role = (current_user.role or "").lower()
-    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
-        query["batch"] = batch
+
+    if level and level.strip().lower() not in ["all", "all levels", "global"]:
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": {"$regex": "^global$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+
+    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]) else None
+    if target_batch:
+        clean_batch = target_batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{re.escape(clean_batch)}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
     elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
-        if staff_batches and len(staff_batches) > 1:
-            query["batch"] = {"$in": staff_batches}
-        elif staff_batches and len(staff_batches) == 1:
-            query["batch"] = staff_batches[0]
-        elif staff_batch:
-            query["batch"] = staff_batch
-        
+        if staff_batches or staff_batch:
+            allowed_batches = list(staff_batches)
+            if staff_batch and staff_batch not in allowed_batches:
+                allowed_batches.append(staff_batch)
+            allowed_batches.extend(["All Batches", "All", "Global", None, ""])
+            conditions.append({
+                "$or": [
+                    {"batch": {"$in": allowed_batches}},
+                    {"batches": {"$in": allowed_batches}},
+                    {"batch": None},
+                    {"batch": ""}
+                ]
+            })
+
+    query = {"$and": conditions} if conditions else {}
     classes = await models.ClassSchedule.find(query).to_list()
     now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
     valid_classes = []

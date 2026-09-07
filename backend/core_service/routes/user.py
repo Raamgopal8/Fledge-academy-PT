@@ -143,12 +143,32 @@ async def get_students(
     if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    query = {"role": "student"}
+    conditions = [{"role": "student"}]
     if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"]:
-        query["level"] = level.strip()
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
+            ]
+        })
     if batch and batch.strip() and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
-        query["batch"] = batch.strip()
+        clean_batch = batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+            ]
+        })
 
+    query = {"$and": conditions} if conditions else {"role": "student"}
     students = await models.User.find(query).to_list()
     
     return [
@@ -157,7 +177,9 @@ async def get_students(
             "name": s.name,
             "email": s.email,
             "level": s.level,
-            "batch": s.batch
+            "levels": getattr(s, "levels", []) or ([s.level] if s.level else []),
+            "batch": s.batch,
+            "batches": getattr(s, "batches", []) or ([s.batch] if s.batch else [])
         } for s in students
     ]
 
@@ -260,11 +282,41 @@ StaffUpdate = SensiUpdate
 
 @router.get("/sensi")
 @router.get("/staff")
-async def get_sensi(current_user: models.User = Depends(get_current_user)):
+async def get_sensi(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user)
+):
     if (current_user.role or "").lower() not in ["ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    sensi_members = await models.User.find({"role": {"$in": ["sensi", "staff"]}}).to_list()
+    conditions = [{"role": {"$in": ["sensi", "staff"]}}]
+    if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"]:
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
+            ]
+        })
+    if batch and batch.strip() and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+        clean_batch = batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+            ]
+        })
+
+    query = {"$and": conditions} if conditions else {"role": {"$in": ["sensi", "staff"]}}
+    sensi_members = await models.User.find(query).to_list()
     
     return [
         {
@@ -412,7 +464,20 @@ async def get_classroom_members(
     # 1. Student matching
     student_conditions = [{"role": {"$in": ["student", "Student"]}}]
     if level and level.strip().lower() not in ["all", "all levels"]:
-        student_conditions.append({"level": {"$regex": f"^{level.strip()}$", "$options": "i"}})
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        student_conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"^{escaped_clean}$", "$options": "i"}}},
+                {"levels": {"$elemMatch": {"$regex": f"^{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core]}},
+            ]
+        })
     if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
         clean_batch = batch.strip()
         student_conditions.append({
@@ -427,9 +492,17 @@ async def get_classroom_members(
     staff_conditions = [{"role": {"$in": ["sensi", "Sensi", "staff", "Staff", "ceo", "CEO", "admin", "Admin"]}}]
     if level and level.strip().lower() not in ["all", "all levels"]:
         clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
         staff_conditions.append({
             "$or": [
-                {"level": {"$regex": f"^{re.escape(clean_level)}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"^{escaped_clean}$", "$options": "i"}}},
+                {"levels": {"$elemMatch": {"$regex": f"^{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
                 {"level": {"$regex": "^all levels$", "$options": "i"}},
                 {"level": {"$regex": "^all$", "$options": "i"}},
                 {"level": None},
@@ -465,6 +538,7 @@ async def get_classroom_members(
             "role": (m.role or "").lower(),
             "profile_image_url": m.profile_image_url,
             "level": m.level,
+            "levels": getattr(m, "levels", []) or ([m.level] if m.level else []),
             "batch": m.batch,
             "batches": getattr(m, "batches", []) or []
         } for m in members

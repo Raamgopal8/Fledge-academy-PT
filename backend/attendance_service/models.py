@@ -10,6 +10,7 @@ class User(Document):
     name: Optional[str] = None
     profile_image_url: Optional[str] = None
     level: Optional[str] = None
+    levels: Optional[List[str]] = []
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
     total_fee: Optional[float] = None

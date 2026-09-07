@@ -59,25 +59,37 @@ async def get_materials(
 ):
     """Fetch all materials (accessible by all authenticated students, staff, and ceo)"""
     conditions = []
-    if level and level.strip().lower() not in ["all", "all levels"]:
+    if level and level.strip().lower() not in ["all", "all levels", "global"]:
         clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
         conditions.append({
             "$or": [
-                {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_core}", "$options": "i"}},
                 {"level": {"$regex": "^all levels$", "$options": "i"}},
                 {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": {"$regex": "^global$", "$options": "i"}},
                 {"level": None},
                 {"level": ""}
             ]
         })
     if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
         clean_batch = batch.strip()
+        escaped_batch = re.escape(clean_batch)
         conditions.append({
             "$or": [
-                {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                {"batch": {"$regex": f"^{escaped_batch}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
                 {"batch": {"$regex": "^all batches$", "$options": "i"}},
                 {"batch": {"$regex": "^all$", "$options": "i"}},
                 {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
                 {"batch": None},
                 {"batch": ""}
             ]
@@ -86,21 +98,27 @@ async def get_materials(
     query = {"$and": conditions} if conditions else {}
     materials = await models.Material.find(query).sort("-created_at").to_list()
     
-    return [
-        {
+    result_list = []
+    for m in materials:
+        m_level = getattr(m, "level", None)
+        m_levels = getattr(m, "levels", []) or []
+        if not m_level and m_levels:
+            m_level = m_levels[0]
+        result_list.append({
             "id": str(m.id),
             "title": m.title,
             "description": m.description,
             "category": getattr(m, "category", None) or "General",
             "category_color": getattr(m, "category_color", None),
-            "level": m.level,
-            "batch": m.batch,
+            "level": m_level,
+            "levels": m_levels,
+            "batch": getattr(m, "batch", None),
+            "batches": getattr(m, "batches", []) or [],
             "file_url": m.file_url,
             "uploaded_by_id": str(m.uploaded_by_id),
             "created_at": m.created_at.isoformat() if m.created_at else None
-        }
-        for m in materials
-    ]
+        })
+    return result_list
 
 @router.post("", response_model=dict)
 @router.post("/", response_model=dict)

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSensiContext } from '@/app/sensi/SensiContext';
 import CategoryColorPicker, { CategoryBadge } from '@/app/components/CategoryColorPicker';
 
@@ -12,7 +12,14 @@ const LEVELS = [
 ];
 
 export default function StaffMaterials() {
-    const { selectedBatch, staffBatches } = useSensiContext();
+    const { 
+        selectedBatch, 
+        setSelectedBatch, 
+        staffBatches, 
+        selectedLevel, 
+        setSelectedLevel, 
+        sensiLevels 
+    } = useSensiContext();
     const [materials, setMaterials] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -22,9 +29,30 @@ export default function StaffMaterials() {
     const [errorMessage, setErrorMessage] = useState('');
     
     // Filters
-    const [filterLevel, setFilterLevel] = useState('All');
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
     const [filterType, setFilterType] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Sync filterLevel when selectedLevel changes in context / top nav
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global' || selectedLevel === 'All' || !selectedLevel) {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel && lvl !== 'All') {
+            setSelectedLevel(lvl);
+        }
+    };
 
     // Form state
     const [title, setTitle] = useState('');
@@ -46,32 +74,48 @@ export default function StaffMaterials() {
         }
     }, [selectedBatch, staffBatches]);
 
+    // Align modal initial level with currently selected level
     useEffect(() => {
-        fetchMaterials();
-    }, [selectedBatch]);
+        if (filterLevel && filterLevel !== 'All') {
+            setLevel(filterLevel);
+        } else if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global') {
+            setLevel(selectedLevel);
+        }
+    }, [filterLevel, selectedLevel, isUploadModalOpen]);
 
-    const fetchMaterials = async () => {
+    const fetchMaterials = useCallback(async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/${batchParam}`, {
+            const params = new URLSearchParams();
+            if (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels') {
+                params.append('level', filterLevel);
+            } else if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global') {
+                params.append('level', selectedLevel);
+            }
+            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+            const queryParam = params.toString() ? `?${params.toString()}` : '';
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/${queryParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             if (response.ok) {
                 const data = await response.json();
-                setMaterials(data);
+                setMaterials(Array.isArray(data) ? data : []);
             }
         } catch (error) {
             console.error('Failed to fetch materials:', error);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedBatch, selectedLevel, filterLevel]);
+
+    useEffect(() => {
+        fetchMaterials();
+    }, [fetchMaterials]);
 
     const handleUpload = async (e) => {
         e.preventDefault();
@@ -110,7 +154,7 @@ export default function StaffMaterials() {
                 setDescription('');
                 setCategory('Lecture Slides');
                 setCategoryColor('#4F46E5');
-                setLevel('Level 5');
+                setLevel(filterLevel !== 'All' ? filterLevel : 'Level 5');
                 setFile(null);
                 setLink('');
                 setSuccessMessage('Course material uploaded successfully!');
@@ -156,7 +200,13 @@ export default function StaffMaterials() {
     };
 
     const getLevelBadgeClass = (lvl) => {
-        const match = LEVELS.find(l => l.value === lvl);
+        if (!lvl) return 'bg-primary/10 text-primary border-primary/20';
+        const clean = lvl.trim().toLowerCase();
+        const match = LEVELS.find(l => 
+            l.value.toLowerCase() === clean || 
+            clean.startsWith(l.value.toLowerCase()) || 
+            l.value.toLowerCase().startsWith(clean)
+        );
         return match ? match.color : 'bg-primary/10 text-primary border-primary/20';
     };
 
@@ -166,7 +216,32 @@ export default function StaffMaterials() {
     };
 
     const filteredMaterials = materials.filter(m => {
-        if (filterLevel !== 'All' && m.level !== filterLevel) return false;
+        // 1. Level matching
+        if (filterLevel !== 'All') {
+            const mLvl = (m.level || '').trim().toLowerCase();
+            const mLvls = Array.isArray(m.levels) ? m.levels.map(l => (l || '').trim().toLowerCase()) : [];
+            const fLvl = filterLevel.trim().toLowerCase();
+            const isGlobal = !mLvl || mLvl === 'all' || mLvl === 'all levels' || mLvl === 'global';
+
+            const matchSingle = mLvl === fLvl || mLvl.startsWith(fLvl) || fLvl.startsWith(mLvl);
+            const matchArray = mLvls.some(l => l === fLvl || l.startsWith(fLvl) || fLvl.startsWith(l));
+
+            if (!isGlobal && !matchSingle && !matchArray) return false;
+        }
+
+        // 2. Batch matching
+        if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+            const mBatch = (m.batch || '').trim().toLowerCase();
+            const mBatches = Array.isArray(m.batches) ? m.batches.map(b => (b || '').trim().toLowerCase()) : [];
+            const targetBatch = selectedBatch.trim().toLowerCase();
+            const isGlobalBatch = !mBatch || mBatch === 'all batches' || mBatch === 'global' || mBatch === 'all';
+
+            const matchSingle = mBatch === targetBatch || mBatch.includes(targetBatch);
+            const matchArray = mBatches.some(b => b === targetBatch || b.includes(targetBatch));
+
+            if (!isGlobalBatch && !matchSingle && !matchArray) return false;
+        }
+
         const isFile = checkIsFile(m.file_url);
         if (filterType === 'file' && !isFile) return false;
         if (filterType === 'link' && isFile) return false;
@@ -175,7 +250,8 @@ export default function StaffMaterials() {
             const titleMatch = (m.title || '').toLowerCase().includes(q);
             const descMatch = (m.description || '').toLowerCase().includes(q);
             const batchMatch = (m.batch || '').toLowerCase().includes(q);
-            return titleMatch || descMatch || batchMatch;
+            const levelMatch = (m.level || '').toLowerCase().includes(q);
+            return titleMatch || descMatch || batchMatch || levelMatch;
         }
         return true;
     });
@@ -198,13 +274,27 @@ export default function StaffMaterials() {
                     </p>
                 </div>
                 
-                <button 
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
-                >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                    <span>Upload Material</span>
-                </button>
+                <div className="flex items-center gap-3 flex-wrap">
+                    {filterLevel && filterLevel !== 'All' && (
+                        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                            <span className="material-symbols-outlined text-[16px]">school</span>
+                            <span>{filterLevel}</span>
+                        </div>
+                    )}
+                    {selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && (
+                        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                            <span className="material-symbols-outlined text-[16px]">groups</span>
+                            <span>{selectedBatch}</span>
+                        </div>
+                    )}
+                    <button 
+                        onClick={() => setIsUploadModalOpen(true)}
+                        className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">add</span>
+                        <span>Upload Material</span>
+                    </button>
+                </div>
             </section>
 
             {successMessage && (
@@ -222,8 +312,8 @@ export default function StaffMaterials() {
                         <span className="text-xs text-on-surface-variant font-medium">Level:</span>
                         <select
                             value={filterLevel}
-                            onChange={(e) => setFilterLevel(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            onChange={(e) => handleFilterLevelChange(e.target.value)}
+                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                         >
                             <option value="All">All Levels</option>
                             {LEVELS.map(l => (
@@ -238,7 +328,7 @@ export default function StaffMaterials() {
                         <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                         >
                             <option value="All">All Formats</option>
                             <option value="file">Files & Docs</option>
@@ -272,7 +362,9 @@ export default function StaffMaterials() {
                         <span className="material-symbols-outlined text-6xl text-outline/40 mb-3">folder_open</span>
                         <h3 className="font-headline-sm text-on-surface-variant font-bold">No Materials Found</h3>
                         <p className="font-body-md text-outline text-xs mt-1">
-                            Click "Upload Material" to share documents or links with your students.
+                            {filterLevel !== 'All' 
+                                ? `No materials found under ${filterLevel}${selectedBatch ? ` (${selectedBatch})` : ''}. Click "Upload Material" to share documents.` 
+                                : 'Click "Upload Material" to share documents or links with your students.'}
                         </p>
                     </div>
                 ) : (

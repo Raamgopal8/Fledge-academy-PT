@@ -3,17 +3,41 @@ import { useState, useEffect } from 'react';
 import { useAdminContext } from '../AdminContext';
 
 export default function CEOTests() {
-    const { searchQuery: globalSearch, selectedBatch } = useAdminContext();
+    const { searchQuery: globalSearch, selectedBatch, selectedLevel, setSelectedLevel, availableLevels } = useAdminContext();
     const [tests, setTests] = useState([]);
     const [allSubmissionsCount, setAllSubmissionsCount] = useState({});
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     
+    // In-page level filter state, synced with global selectedLevel
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
+
     // Submissions View
     const [activeTest, setActiveTest] = useState(null);
     const [submissions, setSubmissions] = useState([]);
     const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+
+    // Sync in-page filterLevel with AdminContext selectedLevel
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global') {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel) {
+            setSelectedLevel(lvl === 'All' ? 'All Levels' : lvl);
+        }
+    };
 
     const fetchTests = async () => {
         setIsRefreshing(true);
@@ -22,12 +46,24 @@ export default function CEOTests() {
             if (!token) return;
 
             const headers = { 'Authorization': `Bearer ${token}` };
-            const batchParam = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
+            const params = new URLSearchParams();
+
+            const activeLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels') 
+                ? filterLevel 
+                : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
+
+            if (activeLevel) {
+                params.append('level', activeLevel);
+            }
+
+            if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
 
             // Clean endpoint URL without trailing slash before query string
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests${batchParam}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests${queryStr}`, {
                 headers
             });
 
@@ -47,7 +83,7 @@ export default function CEOTests() {
 
     useEffect(() => {
         fetchTests();
-    }, [selectedBatch]);
+    }, [selectedBatch, selectedLevel, filterLevel]);
 
     const fetchSubmissions = async (test) => {
         setIsLoadingSubmissions(true);
@@ -72,7 +108,27 @@ export default function CEOTests() {
     };
 
     const effectiveSearch = (searchQuery || globalSearch || '').toLowerCase();
+    const effectiveLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels')
+        ? filterLevel
+        : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
+
     const filteredTests = tests.filter(test => {
+        // Level filtering
+        if (effectiveLevel) {
+            const tLevel = (test.level || '').trim().toLowerCase();
+            const fLevel = effectiveLevel.trim().toLowerCase();
+            const isGlobal = !tLevel || tLevel === 'all' || tLevel === 'all levels' || tLevel === 'global';
+
+            const inLevelsArray = Array.isArray(test.levels) && test.levels.some(l => {
+                const cleanL = (l || '').trim().toLowerCase();
+                return cleanL === fLevel || cleanL.startsWith(fLevel) || fLevel.startsWith(cleanL) || cleanL === 'all' || cleanL === 'all levels' || cleanL === 'global';
+            });
+
+            const matchesLevel = isGlobal || inLevelsArray || tLevel === fLevel || tLevel.startsWith(fLevel) || fLevel.startsWith(tLevel);
+            if (!matchesLevel) return false;
+        }
+
+        // Search query filtering
         if (!effectiveSearch) return true;
         const matchesTitle = (test.title || '').toLowerCase().includes(effectiveSearch);
         const matchesDesc = (test.description || '').toLowerCase().includes(effectiveSearch);
@@ -80,6 +136,9 @@ export default function CEOTests() {
         const matchesBatch = (test.batch || '').toLowerCase().includes(effectiveSearch);
         return matchesTitle || matchesDesc || matchesLevel || matchesBatch;
     });
+
+    const levelsList = ['All', ...((availableLevels && availableLevels.length > 0) ? availableLevels : ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'])];
+    const uniqueLevels = Array.from(new Set(levelsList));
 
     if (isLoading) return (
         <div className="p-4 md:p-gutter min-h-screen text-center flex flex-col items-center justify-center gap-3">
@@ -195,6 +254,23 @@ export default function CEOTests() {
                 </div>
 
                 <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                    {/* Level Filter Dropdown */}
+                    <div className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 shadow-xs">
+                        <span className="material-symbols-outlined text-outline text-[18px]">tune</span>
+                        <select
+                            value={filterLevel}
+                            onChange={(e) => handleFilterLevelChange(e.target.value)}
+                            className="bg-transparent text-xs sm:text-sm font-semibold text-on-surface outline-none cursor-pointer pr-1"
+                            title="Filter by Level"
+                        >
+                            {uniqueLevels.map((lvl) => (
+                                <option key={lvl} value={lvl} className="bg-surface-container-lowest text-on-surface">
+                                    {lvl === 'All' ? 'All Levels' : lvl}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Search Input */}
                     <div className="relative w-full sm:w-64">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">
@@ -222,6 +298,30 @@ export default function CEOTests() {
                     </button>
                 </div>
             </section>
+
+            {/* Active Filters Display */}
+            {(effectiveLevel || (selectedBatch && selectedBatch !== 'All Batches')) && (
+                <div className="flex items-center gap-2 flex-wrap -mt-2">
+                    <span className="text-xs text-on-surface-variant font-medium">Active Filters:</span>
+                    {effectiveLevel && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                            <span>Level: {effectiveLevel}</span>
+                            <button 
+                                onClick={() => handleFilterLevelChange('All')}
+                                className="hover:text-primary/70 transition-colors ml-0.5 cursor-pointer flex items-center"
+                                title="Clear level filter"
+                            >
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                            </button>
+                        </div>
+                    )}
+                    {selectedBatch && selectedBatch !== 'All Batches' && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+                            <span>Batch: {selectedBatch}</span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-full">
                 {filteredTests.map(test => (
@@ -271,7 +371,11 @@ export default function CEOTests() {
                     <span className="material-symbols-outlined text-[48px] sm:text-[64px] text-on-surface-variant mb-2 opacity-50">assignment</span>
                     <h3 className="text-base sm:text-xl font-bold text-on-surface mb-1">No Tests Found</h3>
                     <p className="text-on-surface-variant text-xs sm:text-sm">
-                        {searchQuery ? 'No tests match your search query.' : 'There are currently no assignments or tests in the database.'}
+                        {searchQuery 
+                            ? 'No tests match your search query.' 
+                            : effectiveLevel 
+                            ? `No tests found for ${effectiveLevel}.` 
+                            : 'There are currently no assignments or tests in the database.'}
                     </p>
                 </div>
             )}

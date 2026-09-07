@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
+import re
 import models
 from routes.auth import get_current_user
 
@@ -83,6 +84,7 @@ async def user_heartbeat(current_user: models.User = Depends(get_current_user)):
 async def get_activity_logs(
     role: Optional[str] = None,
     activity_type: Optional[str] = None,
+    level: Optional[str] = None,
     batch: Optional[str] = None,
     search: Optional[str] = None,
     limit: Optional[int] = Query(None),
@@ -103,6 +105,18 @@ async def get_activity_logs(
 
     if activity_type and activity_type.lower() not in ["all", "all types"]:
         query["activity_type"] = activity_type.lower()
+
+    if level and level.lower() not in ["all", "all levels", "global"]:
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        query["$or"] = [
+            {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+            {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+            {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+        ]
 
     if batch and batch.lower() not in ["all", "all batches", "global", "global access"]:
         query["batch"] = batch

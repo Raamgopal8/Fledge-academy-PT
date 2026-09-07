@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from models import User, Attendance
 from routes.auth import get_current_user
@@ -21,23 +22,58 @@ async def get_students_attendance(
     if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    query = {"role": "student"}
+    conditions = [{"role": "student"}]
     if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"]:
-        query["level"] = level.strip()
-    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
-        query["batch"] = batch
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"levels": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
+            ]
+        })
+
+    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]) else None
+    if target_batch:
+        clean_batch = target_batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{re.escape(clean_batch)}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+                {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
+                {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                {"batch": None},
+                {"batch": ""}
+            ]
+        })
     elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
-        if not staff_batches and not staff_batch:
-            return []
-        if staff_batches and len(staff_batches) > 1:
-            query["batch"] = {"$in": staff_batches}
-        elif staff_batches and len(staff_batches) == 1:
-            query["batch"] = staff_batches[0]
-        elif staff_batch:
-            query["batch"] = staff_batch
+        if staff_batches or staff_batch:
+            allowed_batches = list(staff_batches)
+            if staff_batch and staff_batch not in allowed_batches:
+                allowed_batches.append(staff_batch)
+            allowed_batches.extend(["All Batches", "All", "Global", None, ""])
+            conditions.append({
+                "$or": [
+                    {"batch": {"$in": allowed_batches}},
+                    {"batches": {"$in": allowed_batches}},
+                    {"batch": None},
+                    {"batch": ""}
+                ]
+            })
         
+    query = {"$and": conditions} if conditions else {"role": "student"}
     students = await User.find(query).to_list()
     today = get_today_date_str()
     
@@ -47,14 +83,20 @@ async def get_students_attendance(
     
     result_list = []
     for student in students:
+        resolved_level = getattr(student, "level", None)
+        student_levels = getattr(student, "levels", []) or []
+        if not resolved_level and student_levels:
+            resolved_level = student_levels[0]
         result_list.append({
             "id": str(student.id),
             "name": student.name or student.email.split('@')[0],
             "email": student.email,
             "profile_image_url": student.profile_image_url,
-            "level": getattr(student, "level", None),
+            "level": resolved_level,
+            "levels": student_levels,
             "status": attendance_map.get(student.id, "not_marked"),
-            "batch": getattr(student, "batch", None)
+            "batch": getattr(student, "batch", None),
+            "batches": getattr(student, "batches", []) or []
         })
     return result_list
 
@@ -104,6 +146,8 @@ async def mark_attendance(
 
 @router.get("/today")
 async def get_today_attendance(
+    level: Optional[str] = None,
+    batch: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
     if (current_user.role or "").lower() not in ["ceo", "admin"]:
@@ -114,7 +158,31 @@ async def get_today_attendance(
     
     present_user_ids = [record.user_id for record in present_records]
     if present_user_ids:
-        present_students = await User.find(In(User.id, present_user_ids)).to_list()
+        query_conditions = [In(User.id, present_user_ids)]
+        if level and level.strip().lower() not in ["all", "all levels", "global"]:
+            clean_level = level.strip()
+            escaped_clean = re.escape(clean_level)
+            level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+            level_core = level_match.group(1) if level_match else clean_level
+            escaped_core = re.escape(level_core)
+            query_conditions.append({
+                "$or": [
+                    {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                    {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                    {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                    {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                    {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
+                ]
+            })
+        if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
+            clean_batch = batch.strip()
+            query_conditions.append({
+                "$or": [
+                    {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                    {"batches": {"$in": [clean_batch]}},
+                ]
+            })
+        present_students = await User.find({"$and": query_conditions}).to_list()
     else:
         present_students = []
         
@@ -171,6 +239,7 @@ async def get_my_attendance_stats(
 
 @router.get("/export")
 async def export_attendance_history(
+    level: Optional[str] = None,
     batch: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -181,19 +250,47 @@ async def export_attendance_history(
     if user_role not in ["ceo", "staff", "admin", "sensi"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    query = {"role": "student"}
-    if batch and batch not in ["All Batches", "All Assigned Batches", "Global", "Global Access", "All"]:
-        query["batch"] = batch
+    conditions = [{"role": "student"}]
+    if level and level.strip() and level.strip().lower() not in ["all", "all levels", "global"]:
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
+            ]
+        })
+
+    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]) else None
+    if target_batch:
+        clean_batch = target_batch.strip()
+        conditions.append({
+            "$or": [
+                {"batch": {"$regex": f"^{re.escape(clean_batch)}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
+            ]
+        })
     elif user_role in ["staff", "sensi"]:
         staff_batches = getattr(current_user, "batches", None) or []
         staff_batch = getattr(current_user, "batch", None)
-        if staff_batches and len(staff_batches) > 1:
-            query["batch"] = {"$in": staff_batches}
-        elif staff_batches and len(staff_batches) == 1:
-            query["batch"] = staff_batches[0]
-        elif staff_batch:
-            query["batch"] = staff_batch
+        if staff_batches or staff_batch:
+            allowed_batches = list(staff_batches)
+            if staff_batch and staff_batch not in allowed_batches:
+                allowed_batches.append(staff_batch)
+            conditions.append({
+                "$or": [
+                    {"batch": {"$in": allowed_batches}},
+                    {"batches": {"$in": allowed_batches}},
+                ]
+            })
             
+    query = {"$and": conditions} if conditions else {"role": "student"}
     students = await User.find(query).to_list()
     
     # Build attendance query for dates if specified

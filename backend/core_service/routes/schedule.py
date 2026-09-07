@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from beanie import PydanticObjectId
 from datetime import datetime, timedelta
+import re
 
 import models
 from routes.auth import get_current_user
@@ -35,7 +36,9 @@ class ScheduleSchema(BaseModel):
     day_of_week: str
     class_link: Optional[str] = None
     level: Optional[str] = None
+    levels: Optional[List[str]] = []
     batch: Optional[str] = None
+    batches: Optional[List[str]] = []
 
     class Config:
         from_attributes = True
@@ -58,6 +61,11 @@ class ScheduleResponse(BaseModel):
         from_attributes = True
 
 def format_schedule_response(schedule: models.ClassSchedule) -> dict:
+    level_val = getattr(schedule, "level", None)
+    color_val = getattr(schedule, "color", "primary") or "primary"
+    if not level_val and color_val and "level" in color_val.lower():
+        level_val = color_val
+
     return {
         "id": str(schedule.id),
         "_id": str(schedule.id),
@@ -65,22 +73,58 @@ def format_schedule_response(schedule: models.ClassSchedule) -> dict:
         "time": getattr(schedule, "time", "") or "",
         "location": getattr(schedule, "location", "") or "",
         "students": getattr(schedule, "students", 0) or 0,
-        "color": getattr(schedule, "color", "primary") or "primary",
+        "color": color_val,
         "day_of_week": getattr(schedule, "day_of_week", "") or "",
         "class_link": getattr(schedule, "class_link", None),
-        "level": getattr(schedule, "level", None),
+        "level": level_val,
+        "levels": getattr(schedule, "levels", []) or ([level_val] if level_val else []),
         "batch": getattr(schedule, "batch", None),
+        "batches": getattr(schedule, "batches", []) or ([schedule.batch] if getattr(schedule, "batch", None) else []),
         "created_at": schedule.created_at.isoformat() if getattr(schedule, "created_at", None) else None
     }
 
 @router.get("", response_model=List[dict])
 async def get_schedules(level: Optional[str] = None, batch: Optional[str] = None):
     try:
-        query = {}
-        if level and level.strip().lower() not in ["all", "all levels"]:
-            query["level"] = {"$regex": f"^{level.strip()}$", "$options": "i"}
+        conditions = []
+        if level and level.strip().lower() not in ["all", "all levels", "global"]:
+            clean_level = level.strip()
+            escaped_clean = re.escape(clean_level)
+            level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+            level_core = level_match.group(1) if level_match else clean_level
+            escaped_core = re.escape(level_core)
+            conditions.append({
+                "$or": [
+                    {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                    {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                    {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                    {"color": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                    {"color": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                    {"color": {"$regex": f"{escaped_core}", "$options": "i"}},
+                    {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                    {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
+                    {"level": {"$regex": "^all levels$", "$options": "i"}},
+                    {"level": {"$regex": "^all$", "$options": "i"}},
+                    {"level": {"$regex": "^global$", "$options": "i"}},
+                    {"level": None},
+                    {"level": ""}
+                ]
+            })
         if batch and batch.strip().lower() not in ["all batches", "all assigned batches", "global", "global access", "all"]:
-            query["batch"] = {"$regex": f"^{batch.strip()}$", "$options": "i"}
+            clean_batch = batch.strip()
+            conditions.append({
+                "$or": [
+                    {"batch": {"$regex": f"^{clean_batch}$", "$options": "i"}},
+                    {"batches": {"$in": [clean_batch]}},
+                    {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                    {"batch": {"$regex": "^all$", "$options": "i"}},
+                    {"batch": {"$regex": "^global$", "$options": "i"}},
+                    {"batches": {"$in": ["All Batches", "All", "Global"]}},
+                    {"batch": None},
+                    {"batch": ""}
+                ]
+            })
+        query = {"$and": conditions} if conditions else {}
         schedules = await models.ClassSchedule.find(query).to_list()
         now = (datetime.utcnow() + timedelta(hours=5, minutes=30))
         valid_schedules = []
@@ -120,6 +164,7 @@ async def create_schedule(
     
     expires_at = calculate_expiration(schema.day_of_week)
     
+    lvl = schema.level or schema.color
     new_schedule = models.ClassSchedule(
         name=schema.name,
         time=schema.time,
@@ -128,8 +173,10 @@ async def create_schedule(
         color=schema.color,
         day_of_week=schema.day_of_week,
         class_link=schema.class_link,
-        level=schema.level,
+        level=lvl,
+        levels=schema.levels or ([lvl] if lvl else []),
         batch=schema.batch,
+        batches=schema.batches or ([schema.batch] if schema.batch else []),
         expires_at=expires_at
     )
     await new_schedule.insert()
@@ -157,6 +204,7 @@ async def update_schedule(
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
         
+    lvl = schema.level or schema.color
     schedule.name = schema.name
     schedule.time = schema.time
     schedule.location = schema.location
@@ -164,8 +212,10 @@ async def update_schedule(
     schedule.color = schema.color
     schedule.day_of_week = schema.day_of_week
     schedule.class_link = schema.class_link
-    schedule.level = schema.level
+    schedule.level = lvl
+    schedule.levels = schema.levels or ([lvl] if lvl else [])
     schedule.batch = schema.batch
+    schedule.batches = schema.batches or ([schema.batch] if schema.batch else [])
     schedule.expires_at = calculate_expiration(schema.day_of_week)
     
     await schedule.save()

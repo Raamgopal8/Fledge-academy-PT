@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from beanie import PydanticObjectId
 from beanie.operators import In
+import re
 import models
 from routes.auth import get_current_user
 
@@ -13,6 +14,7 @@ class TestCreate(BaseModel):
     title: str
     description: Optional[str] = None
     level: Optional[str] = None
+    levels: Optional[List[str]] = []
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
     due_date: Optional[datetime] = None
@@ -32,13 +34,22 @@ async def get_tests(
     current_user: models.User = Depends(get_current_user)
 ):
     conditions = []
-    if level and level.strip().lower() not in ["all", "all levels"]:
+    if level and level.strip().lower() not in ["all", "all levels", "global"]:
         clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
         conditions.append({
             "$or": [
-                {"level": {"$regex": f"^{clean_level}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"levels": {"$elemMatch": {"$regex": f"{escaped_core}", "$options": "i"}}},
+                {"levels": {"$in": [clean_level, level_core, "All Levels", "All", "Global"]}},
                 {"level": {"$regex": "^all levels$", "$options": "i"}},
                 {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": {"$regex": "^global$", "$options": "i"}},
                 {"level": None},
                 {"level": ""}
             ]
@@ -68,6 +79,7 @@ async def get_tests(
             "title": test.title,
             "description": test.description,
             "level": test.level,
+            "levels": getattr(test, "levels", []) or ([test.level] if test.level else []),
             "batch": test.batch,
             "batches": getattr(test, "batches", []) or [],
             "created_by_id": str(test.created_by_id),
@@ -112,6 +124,7 @@ async def create_test(
         title=test_data.title,
         description=test_data.description,
         level=test_data.level,
+        levels=test_data.levels or ([test_data.level] if test_data.level else []),
         batch=test_data.batch,
         batches=test_data.batches or ([test_data.batch] if test_data.batch else []),
         created_by_id=PydanticObjectId(current_user.id),
@@ -124,6 +137,7 @@ async def create_test(
         "title": new_test.title,
         "description": new_test.description,
         "level": new_test.level,
+        "levels": new_test.levels or [],
         "batch": new_test.batch,
         "batches": new_test.batches or [],
         "created_by_id": str(new_test.created_by_id),
@@ -321,30 +335,49 @@ async def review_submission(
 @router.get("/submissions/all")
 async def get_all_submissions(
     batch: Optional[str] = None,
+    level: Optional[str] = None,
     current_user: models.User = Depends(get_current_user)
 ):
     user_role = (current_user.role or "").lower()
     if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(status_code=403, detail="Not authorized to view all submissions")
         
-    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global"]) else None
+    conditions = []
+    if level and level.strip().lower() not in ["all", "all levels", "global"]:
+        clean_level = level.strip()
+        escaped_clean = re.escape(clean_level)
+        level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+        level_core = level_match.group(1) if level_match else clean_level
+        escaped_core = re.escape(level_core)
+        conditions.append({
+            "$or": [
+                {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                {"level": {"$regex": "^all levels$", "$options": "i"}},
+                {"level": {"$regex": "^all$", "$options": "i"}},
+                {"level": {"$regex": "^global$", "$options": "i"}},
+                {"level": None},
+                {"level": ""}
+            ]
+        })
+
+    target_batch = batch if (batch and batch.strip().lower() not in ["all", "all batches", "all assigned batches", "global", "global access"]) else None
     
     if target_batch:
-        tests = await models.Test.find({
+        clean_batch = target_batch.strip()
+        conditions.append({
             "$or": [
-                {"batch": {"$regex": f"^{target_batch.strip()}$", "$options": "i"}},
-                {"batches": {"$in": [target_batch.strip()]}},
+                {"batch": {"$regex": f"^{re.escape(clean_batch)}$", "$options": "i"}},
+                {"batches": {"$in": [clean_batch]}},
                 {"batch": {"$regex": "^all batches$", "$options": "i"}},
+                {"batch": {"$regex": "^all$", "$options": "i"}},
+                {"batch": {"$regex": "^global$", "$options": "i"}},
                 {"batches": {"$in": ["All Batches", "All", "Global"]}},
                 {"batch": None},
                 {"batch": ""}
             ]
-        }).to_list()
-        test_ids = [t.id for t in tests]
-        if test_ids:
-            submissions = await models.TestSubmission.find(In(models.TestSubmission.test_id, test_ids)).sort("-submitted_at").to_list()
-        else:
-            submissions = []
+        })
     else:
         staff_batches = getattr(current_user, "batches", []) or []
         staff_batch = getattr(current_user, "batch", None)
@@ -354,21 +387,24 @@ async def get_all_submissions(
                 allowed_batches.append(staff_batch)
             allowed_batches.extend(["All Batches", "All", "Global", None, ""])
             
-            tests = await models.Test.find({
+            conditions.append({
                 "$or": [
                     {"batch": {"$in": allowed_batches}},
                     {"batches": {"$in": allowed_batches}},
                     {"batch": None},
                     {"batch": ""}
                 ]
-            }).to_list()
-            test_ids = [t.id for t in tests]
-            if test_ids:
-                submissions = await models.TestSubmission.find(In(models.TestSubmission.test_id, test_ids)).sort("-submitted_at").to_list()
-            else:
-                submissions = []
+            })
+
+    if conditions:
+        tests = await models.Test.find({"$and": conditions}).to_list()
+        test_ids = [t.id for t in tests]
+        if test_ids:
+            submissions = await models.TestSubmission.find(In(models.TestSubmission.test_id, test_ids)).sort("-submitted_at").to_list()
         else:
-            submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()    
+            submissions = []
+    else:
+        submissions = await models.TestSubmission.find_all().sort("-submitted_at").to_list()    
 
     response = []
     invalid_names = ["unknown", "unkown", "none", "null", "undefined", "student", ""]

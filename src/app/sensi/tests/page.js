@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSensiContext } from '@/app/sensi/SensiContext';
 
 const LEVELS = [
@@ -11,7 +11,14 @@ const LEVELS = [
 ];
 
 export default function StaffTests() {
-    const { selectedBatch, staffBatches } = useSensiContext();
+    const { 
+        selectedBatch, 
+        setSelectedBatch, 
+        selectedLevel, 
+        setSelectedLevel, 
+        staffBatches, 
+        sensiLevels 
+    } = useSensiContext();
     const [tests, setTests] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -21,29 +28,27 @@ export default function StaffTests() {
     const [errorMessage, setErrorMessage] = useState('');
 
     // Filtering
-    const [filterLevel, setFilterLevel] = useState('All');
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
     const [searchQuery, setSearchQuery] = useState('');
     
     // New Test Form
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [level, setLevel] = useState('Level 5');
-    const [batch, setBatch] = useState(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : ''));
+    const [level, setLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            return selectedLevel;
+        }
+        return 'Level 5';
+    });
+    const [batch, setBatch] = useState(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access' ? selectedBatch : (staffBatches && staffBatches.length > 0 ? staffBatches[0] : ''));
     const [dueDate, setDueDate] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') {
-            setBatch(selectedBatch);
-        } else if (staffBatches && staffBatches.length > 0 && !batch) {
-            setBatch(staffBatches[0]);
-        }
-    }, [selectedBatch, staffBatches]);
-
-    useEffect(() => {
-        fetchTests();
-    }, [selectedBatch]);
-    
     // Submissions View
     const [activeTest, setActiveTest] = useState(null);
     const [submissions, setSubmissions] = useState([]);
@@ -53,14 +58,46 @@ export default function StaffTests() {
     const [reviewStatus, setReviewStatus] = useState('Approved');
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-    const fetchTests = async () => {
+    useEffect(() => {
+        if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+            setBatch(selectedBatch);
+        } else if (staffBatches && staffBatches.length > 0 && !batch) {
+            setBatch(staffBatches[0]);
+        }
+    }, [selectedBatch, staffBatches]);
+
+    // Sync formData level and in-page filterLevel with selectedLevel from context/header
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+            setLevel(selectedLevel);
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global' || selectedLevel === 'All' || !selectedLevel) {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel && lvl !== 'All') {
+            setSelectedLevel(lvl);
+        }
+    };
+
+    const fetchTests = useCallback(async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests${batchParam}`, {
+            const params = new URLSearchParams();
+            if (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels') {
+                params.append('level', filterLevel);
+            } else if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+                params.append('level', selectedLevel);
+            }
+            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests${queryStr}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -72,7 +109,11 @@ export default function StaffTests() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedBatch, selectedLevel, filterLevel]);
+
+    useEffect(() => {
+        fetchTests();
+    }, [fetchTests]);
 
     const handleCreateTest = async (e) => {
         e.preventDefault();
@@ -103,7 +144,7 @@ export default function StaffTests() {
                 setIsCreating(false);
                 setTitle('');
                 setDescription('');
-                setLevel('Level 5');
+                setLevel(filterLevel !== 'All' ? filterLevel : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' ? selectedLevel : 'Level 5'));
                 setDueDate('');
                 setSuccessMessage('Test published successfully!');
                 await fetchTests();
@@ -213,17 +254,29 @@ export default function StaffTests() {
     };
 
     const getLevelBadgeClass = (lvl) => {
-        const match = LEVELS.find(l => l.value === lvl);
+        if (!lvl) return 'bg-primary/10 text-primary border-primary/20';
+        const clean = lvl.trim().toLowerCase();
+        const match = LEVELS.find(l => 
+            l.value.toLowerCase() === clean ||
+            clean.startsWith(l.value.toLowerCase()) ||
+            l.value.toLowerCase().startsWith(clean)
+        );
         return match ? match.color : 'bg-primary/10 text-primary border-primary/20';
     };
 
     const filteredTests = tests.filter(t => {
-        if (filterLevel !== 'All' && t.level !== filterLevel) return false;
+        if (filterLevel !== 'All') {
+            const tLvl = (t.level || '').trim().toLowerCase();
+            const fLvl = filterLevel.trim().toLowerCase();
+            const isGlobalLevel = !tLvl || tLvl === 'all' || tLvl === 'all levels' || tLvl === 'global';
+            if (tLvl !== fLvl && !isGlobalLevel && !tLvl.startsWith(fLvl) && !fLvl.startsWith(tLvl)) return false;
+        }
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             const titleMatch = (t.title || '').toLowerCase().includes(q);
             const descMatch = (t.description || '').toLowerCase().includes(q);
-            const batchMatch = (t.batch || '').toLowerCase().includes(q);
+            const batchMatch = (t.batch || '').toLowerCase().includes(q) ||
+                (Array.isArray(t.batches) && t.batches.some(b => (b || '').toLowerCase().includes(q)));
             return titleMatch || descMatch || batchMatch;
         }
         return true;
@@ -431,7 +484,12 @@ export default function StaffTests() {
                 <button 
                     onClick={() => {
                         setIsCreating(true);
-                        if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') {
+                        if (filterLevel !== 'All') {
+                            setLevel(filterLevel);
+                        } else if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All') {
+                            setLevel(selectedLevel);
+                        }
+                        if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
                             setBatch(selectedBatch);
                         } else if (staffBatches && staffBatches.length > 0) {
                             setBatch(staffBatches[0]);
@@ -457,7 +515,7 @@ export default function StaffTests() {
                     <span className="text-xs text-on-surface-variant font-medium">Level:</span>
                     <select
                         value={filterLevel}
-                        onChange={(e) => setFilterLevel(e.target.value)}
+                        onChange={(e) => handleFilterLevelChange(e.target.value)}
                         className="bg-surface-container border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary"
                     >
                         <option value="All">All Levels</option>
@@ -491,7 +549,7 @@ export default function StaffTests() {
                         <span className="material-symbols-outlined text-6xl text-outline/40 mb-3">assignment</span>
                         <h3 className="font-headline-sm text-on-surface-variant font-bold">No Tests Found</h3>
                         <p className="font-body-md text-outline text-xs mt-1">
-                            Click "Create Test" to assign coursework to your students.
+                            Click &quot;Create Test&quot; to assign coursework to your students.
                         </p>
                     </div>
                 ) : (

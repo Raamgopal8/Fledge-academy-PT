@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import StudentPerformanceChart from '@/app/components/StudentPerformanceChart';
 import { useAdminContext } from '@/app/admin/AdminContext';
 export default function AdminDashboard() {
-    const { searchQuery, selectedBatch } = useAdminContext();
+    const { searchQuery, selectedBatch, selectedLevel, setSelectedLevel, availableLevels } = useAdminContext();
     const [kpiData, setKpiData] = useState(null);
     const [chartData, setChartData] = useState(null);
     const [attendanceData, setAttendanceData] = useState(null);
@@ -17,6 +17,37 @@ export default function AdminDashboard() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // In-page level filter state, synced with global selectedLevel
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
+
+    // Sync in-page filterLevel with AdminContext selectedLevel
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global') {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel) {
+            setSelectedLevel(lvl === 'All' ? 'All Levels' : lvl);
+        }
+    };
+
+    const levelsList = ['All', ...((availableLevels && availableLevels.length > 0) ? availableLevels : ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'])];
+    const uniqueLevels = Array.from(new Set(levelsList));
+
+    const effectiveLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels' && filterLevel !== 'Global')
+        ? filterLevel
+        : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
+
     const fetchDashboardData = async (showLoading = false) => {
         if (showLoading) setIsLoading(true);
         try {
@@ -25,17 +56,33 @@ export default function AdminDashboard() {
                 'Authorization': `Bearer ${token}`
             };
 
-            const batchQuery = (selectedBatch && selectedBatch !== 'All Batches') ? `?batch=${encodeURIComponent(selectedBatch)}` : '';
+            const params = new URLSearchParams();
+            if (effectiveLevel) {
+                params.append('level', effectiveLevel);
+            }
+            const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'All Assigned Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+            if (overrideBatch) {
+                params.append('batch', overrideBatch);
+            }
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
+
+            const actParams = new URLSearchParams();
+            if (effectiveLevel) {
+                actParams.append('level', effectiveLevel);
+            }
+            actParams.set('limit', '6');
+            const actQueryStr = `?${actParams.toString()}`;
+
             const [kpiRes, chartRes, attendanceRes, submissionsRes, profileRes, financeRes, staffRes, studentRes, activityRes, summaryRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/admin/kpi${batchQuery}`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/admin/performance-chart`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/today`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/admin/kpi${queryStr}`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/admin/performance-chart${queryStr}`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/today${queryStr}`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${queryStr}`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/finance`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/staff`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/students`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/activity/admin/logs?limit=6`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/staff${queryStr}`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/students${queryStr}`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/activity/admin/logs${actQueryStr}`, { headers }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/activity/admin/summary`, { headers })
             ]);
 
@@ -100,7 +147,7 @@ export default function AdminDashboard() {
         fetchDashboardData(true);
         const interval = setInterval(() => fetchDashboardData(false), 30000); // Auto refresh every 30 seconds
         return () => clearInterval(interval);
-    }, [selectedBatch]);
+    }, [selectedBatch, selectedLevel, filterLevel]);
 
     if (isLoading) {
         return (
@@ -131,11 +178,29 @@ export default function AdminDashboard() {
         name.toLowerCase().includes((searchQuery || '').toLowerCase())
     ) || [];
 
-    const filteredSubmissionsData = submissionsData?.filter(sub =>
-        sub.student_name.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-        sub.test_title.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-        (sub.status || '').toLowerCase().includes((searchQuery || '').toLowerCase())
-    ) || [];
+    const filteredSubmissionsData = submissionsData?.filter(sub => {
+        const matchesSearch = (sub.student_name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+            (sub.test_title || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+            (sub.status || '').toLowerCase().includes((searchQuery || '').toLowerCase());
+
+        let matchesLevel = true;
+        if (effectiveLevel && sub.level) {
+            const subLvl = sub.level.toString().toLowerCase().trim();
+            const targetLvl = effectiveLevel.toLowerCase().trim();
+            const num = targetLvl.replace(/\D/g, '');
+            matchesLevel = subLvl === targetLvl || (num && (subLvl === `level ${num}` || subLvl === num));
+        }
+        return matchesSearch && matchesLevel;
+    }) || [];
+
+    const filteredActivities = recentActivities.filter(act => {
+        if (!effectiveLevel) return true;
+        if (!act.level) return true;
+        const actLvl = act.level.toString().toLowerCase().trim();
+        const targetLvl = effectiveLevel.toLowerCase().trim();
+        const num = targetLvl.replace(/\D/g, '');
+        return actLvl === targetLvl || (num && (actLvl === `level ${num}` || actLvl === num));
+    });
     
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -162,12 +227,41 @@ export default function AdminDashboard() {
                     </p>
                 </div>
 
-                {/* Batch Filter Pill */}
-                <div className="flex items-center gap-2">
+                {/* Filter Controls (Level & Batch) */}
+                <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                    {/* Level Filter Dropdown */}
+                    <div className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant/70 rounded-2xl px-3 py-2 shadow-xs">
+                        <span className="material-symbols-outlined text-primary text-[18px]">tune</span>
+                        <select
+                            value={filterLevel}
+                            onChange={(e) => handleFilterLevelChange(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer pr-1"
+                            title="Filter by Level"
+                        >
+                            {uniqueLevels.map((lvl) => (
+                                <option key={lvl} value={lvl} className="bg-surface-container-lowest text-on-surface">
+                                    {lvl === 'All' ? 'All Levels' : lvl}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Batch Filter Pill */}
                     <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-surface-container-lowest border border-outline-variant/70 text-on-surface text-xs font-bold shadow-xs">
                         <span className="material-symbols-outlined text-primary text-[18px]">domain</span>
                         <span>{selectedBatch || 'Global Access'}</span>
                     </div>
+
+                    {effectiveLevel && (
+                        <button
+                            onClick={() => handleFilterLevelChange('All')}
+                            className="flex items-center gap-1 px-3 py-2 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition-colors cursor-pointer"
+                            title="Clear Level Filter"
+                        >
+                            <span>{effectiveLevel}</span>
+                            <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                    )}
                 </div>
             </section>
 
@@ -203,13 +297,25 @@ export default function AdminDashboard() {
                                 {(() => {
                                     const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
                                     if (staffList && staffList.length > 0) {
+                                        let filteredStaff = staffList;
                                         if (overrideBatch) {
-                                            return staffList.filter(s => {
+                                            filteredStaff = filteredStaff.filter(s => {
                                                 const bList = Array.isArray(s.batches) ? s.batches : (s.batch ? [s.batch] : []);
                                                 return bList.some(b => b && b.trim().toLowerCase() === overrideBatch.trim().toLowerCase()) || (s.batch || '').trim().toLowerCase() === overrideBatch.trim().toLowerCase();
-                                            }).length;
+                                            });
                                         }
-                                        return staffList.length;
+                                        if (effectiveLevel) {
+                                            const targetLvl = effectiveLevel.toLowerCase().trim();
+                                            const num = targetLvl.replace(/\D/g, '');
+                                            filteredStaff = filteredStaff.filter(s => {
+                                                const sLevels = Array.isArray(s.levels) ? s.levels : (s.level ? [s.level] : []);
+                                                return sLevels.some(l => {
+                                                    const lStr = (l || '').toString().toLowerCase().trim();
+                                                    return lStr === targetLvl || (num && (lStr === `level ${num}` || lStr === num));
+                                                });
+                                            });
+                                        }
+                                        return filteredStaff.length;
                                     }
                                     return kpiData?.activeSensi || kpiData?.activeStaff || '0';
                                 })()}
@@ -429,7 +535,14 @@ export default function AdminDashboard() {
                                                       student.email.toLowerCase().includes((searchQuery || '').toLowerCase());
                                 const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
                                 const matchesBatch = overrideBatch ? (student.batch || '').trim() === overrideBatch.trim() : true;
-                                return matchesSearch && matchesBatch;
+                                let matchesLevel = true;
+                                if (effectiveLevel) {
+                                    const sLevel = student.level ? student.level.toString().toLowerCase().trim() : '';
+                                    const targetLvl = effectiveLevel.toLowerCase().trim();
+                                    const num = targetLvl.replace(/\D/g, '');
+                                    matchesLevel = sLevel === targetLvl || (num && (sLevel === `level ${num}` || sLevel === num));
+                                }
+                                return matchesSearch && matchesBatch && matchesLevel;
                             }).slice(0, 8).map((student, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-surface-container-low/60 hover:bg-surface-container-high/60 border border-outline-variant/40 rounded-2xl group transition-colors">
                                     <div className="flex items-center gap-3 min-w-0">
@@ -470,7 +583,17 @@ export default function AdminDashboard() {
                                                       staff.email.toLowerCase().includes((searchQuery || '').toLowerCase());
                                 const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
                                 const matchesBatch = overrideBatch ? (staff.batch || '').trim() === overrideBatch.trim() : true;
-                                return matchesSearch && matchesBatch;
+                                let matchesLevel = true;
+                                if (effectiveLevel) {
+                                    const staffLevels = Array.isArray(staff.levels) ? staff.levels : (staff.level ? [staff.level] : []);
+                                    const targetLvl = effectiveLevel.toLowerCase().trim();
+                                    const num = targetLvl.replace(/\D/g, '');
+                                    matchesLevel = staffLevels.some(lvl => {
+                                        const lStr = (lvl || '').toString().toLowerCase().trim();
+                                        return lStr === targetLvl || (num && (lStr === `level ${num}` || lStr === num));
+                                    });
+                                }
+                                return matchesSearch && matchesBatch && matchesLevel;
                             }).slice(0, 8).map((staff, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-surface-container-low/60 hover:bg-surface-container-high/60 border border-outline-variant/40 rounded-2xl group transition-colors">
                                     <div className="flex items-center gap-3 min-w-0">
@@ -524,8 +647,8 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {recentActivities.length > 0 ? (
-                        recentActivities.map((act) => (
+                    {filteredActivities.length > 0 ? (
+                        filteredActivities.map((act) => (
                             <div
                                 key={act.id}
                                 className="p-3.5 rounded-2xl bg-surface-container-low/60 border border-outline-variant/40 flex items-start gap-3 hover:bg-surface-container-high/60 transition-colors"

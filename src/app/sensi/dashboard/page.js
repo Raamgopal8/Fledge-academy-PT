@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSensiContext } from '@/app/sensi/SensiContext';
 
@@ -43,32 +43,28 @@ export default function SensiDashboard() {
     const [selectedActivities, setSelectedActivities] = useState([]);
     const [actionMessage, setActionMessage] = useState('');
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
             if (!token) throw new Error("No authentication token found");
             const headers = { 'Authorization': `Bearer ${token}` };
 
-            const batchParam = (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
-
-            const notesParams = new URLSearchParams();
-            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') {
-                notesParams.append('batch', selectedBatch);
+            const queryParams = new URLSearchParams();
+            if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                queryParams.append('batch', selectedBatch);
             }
-            if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All') {
-                notesParams.append('level', selectedLevel);
+            if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global') {
+                queryParams.append('level', selectedLevel);
             }
-            const notesQuery = notesParams.toString() ? `?${notesParams.toString()}` : '';
+            const queryStr = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
             const [summaryRes, classesRes, activitiesRes, profileRes, notesRes, membersRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/summary${batchParam}`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/classes${batchParam}`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${batchParam}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/summary${queryStr}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/dashboard/sensi/classes${queryStr}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_TEST_API_URL || ''}/api/tests/submissions/all${queryStr}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile`, { headers }).catch(() => null),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${notesQuery}`, { headers }).catch(() => null),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/student-notes${queryStr}`, { headers }).catch(() => null),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/classroom/members`, { headers }).catch(() => null)
             ]);
 
@@ -98,11 +94,11 @@ export default function SensiDashboard() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [selectedBatch, selectedLevel]);
 
     useEffect(() => {
         fetchDashboardData();
-    }, [selectedBatch, selectedLevel]);
+    }, [fetchDashboardData]);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -202,9 +198,33 @@ export default function SensiDashboard() {
     const isSubApproved = (s) => s === 'Approved' || s === 'Reviewed';
     const isSubNeedWork = (s) => s === 'Need Work' || s === 'Needs Work' || s === 'Failed';
 
-    const pendingSubmissions = activities?.filter(a => !isSubApproved(a.status) && !isSubNeedWork(a.status)) || [];
-    const approvedCount = activities?.filter(a => isSubApproved(a.status))?.length || 0;
-    const totalSubmissions = activities?.length || 0;
+    const filteredActivities = (activities || []).filter(sub => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global') {
+            const subLvl = (sub.test_level || sub.level || '').trim().toLowerCase();
+            const targetLvl = selectedLevel.trim().toLowerCase();
+            if (subLvl && subLvl !== 'all' && subLvl !== 'all levels' && subLvl !== 'global') {
+                const matches = subLvl === targetLvl || subLvl.startsWith(targetLvl) || targetLvl.startsWith(subLvl);
+                if (!matches) return false;
+            }
+        }
+        return true;
+    });
+
+    const filteredClasses = (classes || []).filter(cls => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global') {
+            const clsLvl = (cls.level || '').trim().toLowerCase();
+            const targetLvl = selectedLevel.trim().toLowerCase();
+            if (clsLvl && clsLvl !== 'all' && clsLvl !== 'all levels' && clsLvl !== 'global') {
+                const matches = clsLvl === targetLvl || clsLvl.startsWith(targetLvl) || targetLvl.startsWith(clsLvl);
+                if (!matches) return false;
+            }
+        }
+        return true;
+    });
+
+    const pendingSubmissions = filteredActivities.filter(a => !isSubApproved(a.status) && !isSubNeedWork(a.status));
+    const approvedCount = filteredActivities.filter(a => isSubApproved(a.status)).length;
+    const totalSubmissions = filteredActivities.length;
 
     if (isLoading && !summary && !activities) {
         return (
@@ -232,6 +252,21 @@ export default function SensiDashboard() {
                         <p className="font-body-md text-on-surface-variant">
                             Here is your instructor command center and batch overview for today.
                         </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global' && (
+                            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                                <span className="material-symbols-outlined text-[16px]">school</span>
+                                <span>{selectedLevel}</span>
+                            </div>
+                        )}
+                        {selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && (
+                            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold shadow-2xs">
+                                <span className="material-symbols-outlined text-[16px]">groups</span>
+                                <span>{selectedBatch}</span>
+                            </div>
+                        )}
                     </div>
                 </section>
 
@@ -283,7 +318,7 @@ export default function SensiDashboard() {
                             <div>
                                 <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Today's Sessions</p>
                                 <h2 className="text-3xl font-extrabold text-on-surface mt-1">
-                                    {classes?.length || 0}
+                                    {filteredClasses.length}
                                 </h2>
                             </div>
                             <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -361,8 +396,8 @@ export default function SensiDashboard() {
                         </div>
                         
                         <div className="space-y-3 flex-grow">
-                            {classes && classes.length > 0 ? (
-                                classes.map((c, index) => {
+                            {filteredClasses && filteredClasses.length > 0 ? (
+                                filteredClasses.map((c, index) => {
                                     const timeParts = c.time ? c.time.split(' ') : ['09:00', 'AM'];
                                     const time = timeParts[0] || '09:00';
                                     const period = timeParts[1] || 'AM';
@@ -408,7 +443,11 @@ export default function SensiDashboard() {
                             ) : (
                                 <div className="p-8 text-center text-on-surface-variant flex flex-col items-center justify-center gap-2">
                                     <span className="material-symbols-outlined text-4xl text-outline/40">event_available</span>
-                                    <p className="text-xs font-medium">No upcoming sessions scheduled for today.</p>
+                                    <p className="text-xs font-medium">
+                                        {selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global' 
+                                            ? `No upcoming sessions scheduled for ${selectedLevel} today.` 
+                                            : 'No upcoming sessions scheduled for today.'}
+                                    </p>
                                 </div>
                             )}
                         </div>
@@ -543,10 +582,10 @@ export default function SensiDashboard() {
                                         <input 
                                             type="checkbox" 
                                             className="rounded border-outline text-primary focus:ring-primary h-4 w-4 cursor-pointer"
-                                            checked={activities?.length > 0 && selectedActivities.length === Math.min(6, activities.length)}
+                                            checked={filteredActivities?.length > 0 && selectedActivities.length === Math.min(6, filteredActivities.length)}
                                             onChange={(e) => {
-                                                if (e.target.checked && activities) {
-                                                    setSelectedActivities(activities.slice(0, 6).map(a => a.id));
+                                                if (e.target.checked && filteredActivities) {
+                                                    setSelectedActivities(filteredActivities.slice(0, 6).map(a => a.id));
                                                 } else {
                                                     setSelectedActivities([]);
                                                 }
@@ -561,7 +600,7 @@ export default function SensiDashboard() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-outline-variant/30">
-                                {activities && activities.slice(0, 6).map((sub) => {
+                                {filteredActivities && filteredActivities.slice(0, 6).map((sub) => {
                                     const isSelected = selectedActivities.includes(sub.id);
                                     const isApproved = isSubApproved(sub.status);
                                     const isNeedWork = isSubNeedWork(sub.status);
@@ -597,11 +636,18 @@ export default function SensiDashboard() {
                                             </td>
                                             <td className="py-3 px-4">
                                                 <div className="font-semibold text-xs text-on-surface line-clamp-1">{sub.test_title || 'Assessment'}</div>
-                                                {sub.test_batch && (
-                                                    <span className="text-[10px] font-medium text-on-surface-variant bg-surface-container px-1.5 py-0.2 rounded border border-outline-variant/40 inline-block mt-0.5">
-                                                        {sub.test_batch}
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                    {(sub.test_level || sub.level) && (
+                                                        <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.2 rounded border border-primary/20 inline-block">
+                                                            {sub.test_level || sub.level}
+                                                        </span>
+                                                    )}
+                                                    {sub.test_batch && (
+                                                        <span className="text-[10px] font-medium text-on-surface-variant bg-surface-container px-1.5 py-0.2 rounded border border-outline-variant/40 inline-block">
+                                                            {sub.test_batch}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-3 px-4 text-xs text-on-surface-variant whitespace-nowrap">
                                                 {sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recent'}
@@ -632,10 +678,10 @@ export default function SensiDashboard() {
                                         </tr>
                                     );
                                 })}
-                                {(!activities || activities.length === 0) && (
+                                {(!filteredActivities || filteredActivities.length === 0) && (
                                     <tr>
                                         <td colSpan="6" className="py-8 text-center text-xs text-on-surface-variant">
-                                            No student submissions found for this batch.
+                                            No student submissions found{selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global' ? ` under ${selectedLevel}` : ''}{selectedBatch ? ` (${selectedBatch})` : ''}.
                                         </td>
                                     </tr>
                                 )}

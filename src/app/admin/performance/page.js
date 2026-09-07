@@ -22,6 +22,7 @@ export default function CEOPerformance() {
     const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'student' | 'staff'
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'online' | 'offline'
     const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'login' | 'logout' | 'test_submit' | ...
+    const [sortBy, setSortBy] = useState('default'); // 'default' | 'active_time_desc' | 'active_time_asc' | 'name'
     const [searchQuery, setSearchQuery] = useState('');
 
     const fetchData = useCallback(async (showLoading = false) => {
@@ -89,6 +90,46 @@ export default function CEOPerformance() {
             }));
 
             const workbook = XLSX.utils.book_new();
+
+            // 1. User Sessions & Active Time Sheet
+            if (sessions && sessions.length > 0) {
+                const sessionsRows = sessions.map((u, idx) => {
+                    const activeInfo = calculateActiveTime(u);
+                    return {
+                        'S.No': idx + 1,
+                        'User Name': u.name || 'Unknown',
+                        'User Email': u.email || 'N/A',
+                        'Role': (u.role || 'N/A').toUpperCase(),
+                        'Batch': u.batch || 'Global',
+                        'Level': u.level || 'Level 5',
+                        'Status': u.is_online ? 'ONLINE' : 'OFFLINE',
+                        'Active Time': activeInfo.formatted,
+                        'Active Minutes': activeInfo.rawMinutes,
+                        'Last Seen': u.last_seen_at ? new Date(u.last_seen_at).toLocaleString('en-IN') : 'N/A',
+                        'Login Time': u.last_login_at ? new Date(u.last_login_at).toLocaleString('en-IN') : 'N/A',
+                        'Logout Time': u.last_logout_at ? new Date(u.last_logout_at).toLocaleString('en-IN') : 'N/A',
+                        'Latest Action': u.latest_action || 'N/A'
+                    };
+                });
+                const sessionSheet = XLSX.utils.json_to_sheet(sessionsRows);
+                sessionSheet['!cols'] = [
+                    { wch: 6 },  // S.No
+                    { wch: 22 }, // User Name
+                    { wch: 28 }, // User Email
+                    { wch: 10 }, // Role
+                    { wch: 15 }, // Batch
+                    { wch: 12 }, // Level
+                    { wch: 12 }, // Status
+                    { wch: 16 }, // Active Time
+                    { wch: 16 }, // Active Minutes
+                    { wch: 22 }, // Last Seen
+                    { wch: 22 }, // Login Time
+                    { wch: 22 }, // Logout Time
+                    { wch: 35 }  // Latest Action
+                ];
+                XLSX.utils.book_append_sheet(workbook, sessionSheet, "Sessions & Active Time");
+            }
+
             const worksheet = XLSX.utils.json_to_sheet(formattedLogs);
 
             // Column width formatting
@@ -185,6 +226,91 @@ export default function CEOPerformance() {
         return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timeStr}`;
     };
 
+    // Helper to format duration in milliseconds to clean readable text
+    const formatDuration = (ms) => {
+        if (!ms || ms <= 0) return '< 1m';
+        const totalMinutes = Math.floor(ms / (1000 * 60));
+        if (totalMinutes < 1) return '< 1m';
+        const days = Math.floor(totalMinutes / (60 * 24));
+        const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+        const mins = totalMinutes % 60;
+
+        if (days > 0) {
+            return `${days}d ${hours}h`;
+        }
+        if (hours > 0) {
+            return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+        }
+        return `${mins}m`;
+    };
+
+    // Calculate active time metrics for a given user session
+    const calculateActiveTime = (user) => {
+        if (!user) return { formatted: '—', rawMinutes: 0, status: 'none', details: 'No session data' };
+
+        const parseDate = (dStr) => {
+            if (!dStr) return null;
+            const d = new Date(dStr);
+            return isNaN(d.getTime()) ? null : d;
+        };
+
+        const now = new Date();
+        const loginTime = parseDate(user.last_login_at);
+        const logoutTime = parseDate(user.last_logout_at);
+        const seenTime = parseDate(user.last_seen_at);
+
+        // Case 1: User is currently online
+        if (user.is_online) {
+            const start = loginTime || seenTime || now;
+            const diffMs = Math.max(0, now.getTime() - start.getTime());
+            const totalMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+            return {
+                formatted: formatDuration(diffMs),
+                rawMinutes: totalMinutes,
+                status: 'online',
+                details: `Online now • Active session began ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            };
+        }
+
+        // Case 2: User is offline but has a recorded login
+        if (loginTime) {
+            let end = null;
+            if (logoutTime && logoutTime >= loginTime) {
+                end = logoutTime;
+            } else if (seenTime && seenTime >= loginTime) {
+                end = seenTime;
+            } else {
+                end = loginTime;
+            }
+
+            const diffMs = Math.max(0, end.getTime() - loginTime.getTime());
+            const totalMinutes = Math.floor(diffMs / (1000 * 60));
+            return {
+                formatted: diffMs < 60000 ? '< 1m' : formatDuration(diffMs),
+                rawMinutes: totalMinutes,
+                status: 'offline',
+                details: `Last session: ${loginTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} to ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            };
+        }
+
+        // Case 3: User was seen recently but has no login stamp
+        if (seenTime) {
+            return {
+                formatted: '< 1m',
+                rawMinutes: 1,
+                status: 'offline',
+                details: `Last seen: ${seenTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            };
+        }
+
+        return {
+            formatted: '—',
+            rawMinutes: 0,
+            status: 'inactive',
+            details: 'No activity recorded'
+        };
+    };
+
     // Filter sessions
     const effectiveSearch = (searchQuery || globalSearch || '').toLowerCase();
     
@@ -200,6 +326,29 @@ export default function CEOPerformance() {
         }
         return true;
     });
+
+    // Sorted sessions taking active time into account
+    const sortedSessions = [...filteredSessions].sort((a, b) => {
+        if (sortBy === 'active_time_desc') {
+            const timeA = calculateActiveTime(a).rawMinutes;
+            const timeB = calculateActiveTime(b).rawMinutes;
+            return timeB - timeA;
+        }
+        if (sortBy === 'active_time_asc') {
+            const timeA = calculateActiveTime(a).rawMinutes;
+            const timeB = calculateActiveTime(b).rawMinutes;
+            return timeA - timeB;
+        }
+        if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '');
+        }
+        // Default: Online users first, then by last_seen_at descending
+        if (a.is_online !== b.is_online) return a.is_online ? -1 : 1;
+        return new Date(b.last_seen_at || 0) - new Date(a.last_seen_at || 0);
+    });
+
+    const totalActiveMinutes = filteredSessions.reduce((acc, u) => acc + calculateActiveTime(u).rawMinutes, 0);
+    const avgActiveMinutes = filteredSessions.length > 0 ? Math.round(totalActiveMinutes / filteredSessions.length) : 0;
 
     // Filter activity logs
     const filteredLogs = logs.filter(log => {
@@ -520,6 +669,43 @@ export default function CEOPerformance() {
                             </div>
                         )}
 
+                        {/* Active Time sort filter (for sessions tab) */}
+                        {activeTab === 'sessions' && (
+                            <div className="flex items-center gap-1 bg-surface-container-lowest p-1 rounded-xl border border-outline-variant/60 text-xs">
+                                <span className="text-[11px] font-bold text-on-surface-variant px-2 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px] text-primary">timer</span>
+                                    Sort:
+                                </span>
+                                {[
+                                    { id: 'default', label: 'Default' },
+                                    { id: 'active_time_desc', label: 'Most Active' },
+                                    { id: 'active_time_asc', label: 'Least Active' }
+                                ].map((s) => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => setSortBy(s.id)}
+                                        className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                                            sortBy === s.id
+                                                ? 'bg-primary text-on-primary shadow-xs'
+                                                : 'text-on-surface-variant hover:bg-surface-container'
+                                        }`}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Active Time Aggregate Stats Badge */}
+                        {activeTab === 'sessions' && filteredSessions.length > 0 && (
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-container-lowest border border-outline-variant/60 text-xs font-semibold text-on-surface-variant ml-auto">
+                                <span className="material-symbols-outlined text-[16px] text-primary">schedule</span>
+                                <span>Total Active: <strong className="text-on-surface">{formatDuration(totalActiveMinutes * 60 * 1000)}</strong></span>
+                                <span className="opacity-30">•</span>
+                                <span>Avg Session: <strong className="text-on-surface">{formatDuration(avgActiveMinutes * 60 * 1000)}</strong></span>
+                            </div>
+                        )}
+
                         {/* Activity Type filter (for feed tab) */}
                         {activeTab === 'feed' && (
                             <div className="flex items-center gap-1 bg-surface-container-lowest p-1 rounded-xl border border-outline-variant/60 text-xs overflow-x-auto custom-scrollbar">
@@ -575,6 +761,18 @@ export default function CEOPerformance() {
                                             <th className="py-3 px-4">User</th>
                                             <th className="py-3 px-3">Role / Level</th>
                                             <th className="py-3 px-3">Status</th>
+                                            <th 
+                                                onClick={() => setSortBy(prev => prev === 'active_time_desc' ? 'active_time_asc' : 'active_time_desc')}
+                                                className="py-3 px-3 cursor-pointer hover:text-primary transition-colors select-none group/sort"
+                                                title="Click to sort by Active Time"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    <span>Active Time</span>
+                                                    <span className="material-symbols-outlined text-[15px] text-outline group-hover/sort:text-primary">
+                                                        {sortBy === 'active_time_desc' ? 'arrow_downward' : sortBy === 'active_time_asc' ? 'arrow_upward' : 'swap_vert'}
+                                                    </span>
+                                                </div>
+                                            </th>
                                             <th className="py-3 px-3">Last Seen</th>
                                             <th className="py-3 px-3">Login Time</th>
                                             <th className="py-3 px-3">Logout Time</th>
@@ -582,7 +780,7 @@ export default function CEOPerformance() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-outline-variant/30 font-medium">
-                                        {filteredSessions.map((u) => (
+                                        {sortedSessions.map((u) => (
                                             <tr 
                                                 key={u.id || u.email}
                                                 className="hover:bg-surface-container-low transition-colors"
@@ -641,6 +839,56 @@ export default function CEOPerformance() {
                                                             Offline
                                                         </span>
                                                     )}
+                                                </td>
+
+                                                {/* Active Time */}
+                                                <td className="py-3.5 px-3 whitespace-nowrap">
+                                                    {(() => {
+                                                        const activeInfo = calculateActiveTime(u);
+                                                        if (activeInfo.status === 'online') {
+                                                            return (
+                                                                <div className="flex flex-col" title={activeInfo.details}>
+                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold w-fit shadow-2xs">
+                                                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                                        {activeInfo.formatted}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 flex items-center gap-0.5">
+                                                                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                                                                        Active session
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        } else if (activeInfo.status === 'offline' && activeInfo.rawMinutes > 0) {
+                                                            return (
+                                                                <div className="flex flex-col" title={activeInfo.details}>
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-on-surface border border-outline-variant/60 text-xs font-semibold w-fit">
+                                                                        <span className="material-symbols-outlined text-[14px] text-outline">timer</span>
+                                                                        {activeInfo.formatted}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-on-surface-variant font-medium mt-0.5">
+                                                                        Last session
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        } else if (activeInfo.status === 'offline') {
+                                                            return (
+                                                                <div className="flex flex-col" title={activeInfo.details}>
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant border border-outline-variant/40 text-xs font-medium w-fit">
+                                                                        {activeInfo.formatted}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-outline mt-0.5">
+                                                                        Short session
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        } else {
+                                                            return (
+                                                                <span className="text-on-surface-variant text-xs font-medium" title={activeInfo.details}>
+                                                                    —
+                                                                </span>
+                                                            );
+                                                        }
+                                                    })()}
                                                 </td>
 
                                                 {/* Last Seen */}

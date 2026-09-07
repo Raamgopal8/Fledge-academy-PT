@@ -171,6 +171,16 @@ export default function ClassmatesPage() {
                                             <span className="material-symbols-outlined text-[13px]">school</span>
                                             <span>Sensi Instructor</span>
                                         </span>
+                                        {/* Assigned Levels */}
+                                        {((staff.levels && staff.levels.length > 0) || staff.level) && (
+                                            <div className="flex items-center justify-center gap-1 flex-wrap pt-0.5">
+                                                {(staff.levels && staff.levels.length > 0 ? staff.levels : [staff.level]).map(lvl => (
+                                                    <span key={lvl} className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                                                        {lvl}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                         {staff.email && (
                                             <p className="text-[11px] text-on-surface-variant truncate pt-1 opacity-80" title={staff.email}>
                                                 {staff.email}

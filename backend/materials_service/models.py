@@ -65,6 +65,7 @@ class AnnouncementView(Document):
 
 class Material(Document):
     level: Optional[str] = None
+    levels: Optional[List[str]] = []
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
     title: str

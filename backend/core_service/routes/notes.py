@@ -114,38 +114,66 @@ async def get_student_notes(
         if not assigned_batches:
             return []
 
+        conditions = []
         # Batch filter
         if batch and batch.strip() and batch.strip() not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
             target_batch = batch.strip()
             if target_batch in assigned_batches:
-                query["batch"] = target_batch
+                conditions.append({"batch": target_batch})
             else:
                 # Sensi is requesting a batch they are not assigned to
                 return []
         else:
             if len(assigned_batches) == 1:
-                query["batch"] = assigned_batches[0]
+                conditions.append({"batch": assigned_batches[0]})
             else:
-                query["batch"] = {"$in": assigned_batches}
+                conditions.append({"batch": {"$in": assigned_batches}})
 
         # Level filter for Sensi
-        if level and level.strip() and level.strip() not in ["All Levels", "All", "Global"]:
-            target_level = level.strip()
-            if target_level == "Level 5":
-                query["$or"] = [{"level": "Level 5"}, {"level": None}, {"level": ""}]
-            else:
-                query["level"] = target_level
+        if level and level.strip() and level.strip().lower() not in ["all levels", "all", "global"]:
+            clean_level = level.strip()
+            escaped_clean = re.escape(clean_level)
+            level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+            level_core = level_match.group(1) if level_match else clean_level
+            escaped_core = re.escape(level_core)
+            conditions.append({
+                "$or": [
+                    {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                    {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                    {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                    {"level": {"$regex": "^all levels$", "$options": "i"}},
+                    {"level": {"$regex": "^all$", "$options": "i"}},
+                    {"level": {"$regex": "^global$", "$options": "i"}},
+                    {"level": None},
+                    {"level": ""}
+                ]
+            })
+        query = {"$and": conditions} if conditions else {}
     else:
         # Admin / CEO - Global access with optional filters
+        conditions = []
         if batch and batch.strip() and batch.strip() not in ["All Batches", "All Assigned Batches", "Global", "Global Access"]:
-            query["batch"] = batch.strip()
+            conditions.append({"batch": batch.strip()})
             
-        if level and level.strip() and level.strip() not in ["All Levels", "All", "Global"]:
-            target_level = level.strip()
-            if target_level == "Level 5":
-                query["$or"] = [{"level": "Level 5"}, {"level": None}, {"level": ""}]
-            else:
-                query["level"] = target_level
+        if level and level.strip() and level.strip().lower() not in ["all levels", "all", "global"]:
+            clean_level = level.strip()
+            escaped_clean = re.escape(clean_level)
+            level_match = re.match(r"^(Level\s*\d+)", clean_level, re.IGNORECASE)
+            level_core = level_match.group(1) if level_match else clean_level
+            escaped_core = re.escape(level_core)
+            conditions.append({
+                "$or": [
+                    {"level": {"$regex": f"^{escaped_clean}$", "$options": "i"}},
+                    {"level": {"$regex": f"^{escaped_core}", "$options": "i"}},
+                    {"level": {"$regex": f"{escaped_core}", "$options": "i"}},
+                    {"level": {"$regex": "^all levels$", "$options": "i"}},
+                    {"level": {"$regex": "^all$", "$options": "i"}},
+                    {"level": {"$regex": "^global$", "$options": "i"}},
+                    {"level": None},
+                    {"level": ""}
+                ]
+            })
+        query = {"$and": conditions} if conditions else {}
             
     notes = await models.StudentNote.find(query).sort("-created_at").to_list()
     

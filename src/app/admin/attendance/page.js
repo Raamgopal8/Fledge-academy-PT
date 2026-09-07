@@ -1,12 +1,45 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAdminContext } from '@/app/admin/AdminContext';
 
 export default function CEOAttendance() {
+    const { searchQuery, selectedBatch, selectedLevel, setSelectedLevel, availableLevels } = useAdminContext();
     const [attendanceOverview, setAttendanceOverview] = useState(null);
     const [studentsList, setStudentsList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState('all'); // 'all', 'present', 'absent', 'not_marked'
+
+    // In-page level filter state, synced with global selectedLevel
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
+
+    // Sync in-page filterLevel with AdminContext selectedLevel
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global') {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel) {
+            setSelectedLevel(lvl === 'All' ? 'All Levels' : lvl);
+        }
+    };
+
+    const levelsList = ['All', ...((availableLevels && availableLevels.length > 0) ? availableLevels : ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'])];
+    const uniqueLevels = Array.from(new Set(levelsList));
+
+    const effectiveLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels' && filterLevel !== 'Global')
+        ? filterLevel
+        : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
 
     const fetchAttendanceData = async (showLoading = false) => {
         if (showLoading) setIsLoading(true);
@@ -16,9 +49,19 @@ export default function CEOAttendance() {
                 'Authorization': `Bearer ${token}`
             };
 
+            const params = new URLSearchParams();
+            if (effectiveLevel) {
+                params.append('level', effectiveLevel);
+            }
+            const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'All Assigned Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+            if (overrideBatch) {
+                params.append('batch', overrideBatch);
+            }
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
+
             const [overviewRes, studentsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/today`, { headers }),
-                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students`, { headers })
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/today${queryStr}`, { headers }),
+                fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/students${queryStr}`, { headers })
             ]);
 
             if (!overviewRes.ok || !studentsRes.ok) {
@@ -39,16 +82,36 @@ export default function CEOAttendance() {
         fetchAttendanceData(true);
         const interval = setInterval(() => fetchAttendanceData(false), 30000); // Auto refresh every 30 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedBatch, selectedLevel, filterLevel]);
 
-    const filteredStudents = studentsList.filter(student => {
-        if (filter === 'all') return true;
-        return student.status === filter;
+    const displayStudents = studentsList.filter(student => {
+        let matchesLevel = true;
+        if (effectiveLevel) {
+            const sLevel = student.level ? student.level.toString().toLowerCase().trim() : '';
+            const sLevels = Array.isArray(student.levels) ? student.levels : [];
+            const targetLvl = effectiveLevel.toLowerCase().trim();
+            const num = targetLvl.replace(/\D/g, '');
+            matchesLevel = sLevel === targetLvl || 
+                (num && (sLevel === `level ${num}` || sLevel === num)) ||
+                sLevels.some(l => {
+                    const lStr = (l || '').toString().toLowerCase().trim();
+                    return lStr === targetLvl || (num && (lStr === `level ${num}` || lStr === num));
+                });
+        }
+        return matchesLevel;
     });
 
-    const presentCount = studentsList.filter(s => s.status === 'present').length;
-    const absentCount = studentsList.filter(s => s.status === 'absent').length;
-    const totalCount = studentsList.length;
+    const filteredStudents = displayStudents.filter(student => {
+        const matchesStatus = filter === 'all' || student.status === filter;
+        const matchesSearch = !searchQuery || 
+            (student.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (student.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
+    });
+
+    const presentCount = displayStudents.filter(s => s.status === 'present').length;
+    const absentCount = displayStudents.filter(s => s.status === 'absent').length;
+    const totalCount = displayStudents.length;
 
     const [isExporting, setIsExporting] = useState(false);
 
@@ -58,8 +121,18 @@ export default function CEOAttendance() {
             const token = localStorage.getItem('token');
             const headers = { 'Authorization': `Bearer ${token}` };
 
+            const exportParams = new URLSearchParams();
+            if (effectiveLevel) {
+                exportParams.append('level', effectiveLevel);
+            }
+            const overrideBatch = (selectedBatch === 'All Batches' || selectedBatch === 'All Assigned Batches' || selectedBatch === 'Global' || selectedBatch === 'Global Access') ? '' : (selectedBatch || '');
+            if (overrideBatch) {
+                exportParams.append('batch', overrideBatch);
+            }
+            const exportQueryStr = exportParams.toString() ? `?${exportParams.toString()}` : '';
+
             // Fetch complete historical attendance records
-            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/export`, { headers });
+            const res = await fetch(`${process.env.NEXT_PUBLIC_ATTENDANCE_API_URL || ''}/api/attendance/export${exportQueryStr}`, { headers });
             
             let exportData = null;
             if (res.ok) {
@@ -125,9 +198,11 @@ export default function CEOAttendance() {
                 XLSX.writeFile(workbook, `Fledge_Attendance_Report_${startDateStr}_to_${todayStr}.xlsx`);
             } else {
                 // Fallback to today's list if no history returned
-                const fallbackData = (studentsList || []).map(student => ({
+                const fallbackData = (displayStudents || []).map(student => ({
                     'Name': student.name,
                     'Email': student.email,
+                    'Batch': student.batch || 'Unassigned',
+                    'Level': student.level || 'Level 5',
                     'Status': student.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
                     'Date': todayStr
                 }));
@@ -186,10 +261,44 @@ export default function CEOAttendance() {
                     </p>
                 </div>
                 
-                <div className="flex gap-2 self-start md:self-auto">
+                <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                    {/* Level Filter Dropdown */}
+                    <div className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant/70 rounded-2xl px-3 py-2 shadow-xs">
+                        <span className="material-symbols-outlined text-primary text-[18px]">tune</span>
+                        <select
+                            value={filterLevel}
+                            onChange={(e) => handleFilterLevelChange(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-on-surface outline-none cursor-pointer pr-1"
+                            title="Filter by Level"
+                        >
+                            {uniqueLevels.map((lvl) => (
+                                <option key={lvl} value={lvl} className="bg-surface-container-lowest text-on-surface">
+                                    {lvl === 'All' ? 'All Levels' : lvl}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Batch Filter Pill */}
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-surface-container-lowest border border-outline-variant/70 text-on-surface text-xs font-bold shadow-xs">
+                        <span className="material-symbols-outlined text-primary text-[18px]">domain</span>
+                        <span>{selectedBatch || 'Global Access'}</span>
+                    </div>
+
+                    {effectiveLevel && (
+                        <button
+                            onClick={() => handleFilterLevelChange('All')}
+                            className="flex items-center gap-1 px-3 py-2 rounded-2xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary/20 transition-colors cursor-pointer"
+                            title="Clear Level Filter"
+                        >
+                            <span>{effectiveLevel}</span>
+                            <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                    )}
+
                     <button 
                         onClick={() => fetchAttendanceData(true)}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors active:scale-95 text-xs sm:text-sm font-semibold shadow-xs cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-[18px]">refresh</span>
                         Refresh
@@ -296,7 +405,19 @@ export default function CEOAttendance() {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <p className="font-label-lg text-on-surface">{student.name}</p>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <p className="font-label-lg text-on-surface">{student.name}</p>
+                                                        {student.level && (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">
+                                                                {student.level}
+                                                            </span>
+                                                        )}
+                                                        {student.batch && (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                                                {student.batch}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="font-body-sm text-on-surface-variant">{student.email}</p>
                                                 </div>
                                             </div>

@@ -12,7 +12,7 @@ const LEVELS = [
 ];
 
 export default function CEOMaterials() {
-    const { selectedBatch, availableBatches } = useAdminContext();
+    const { selectedBatch, availableBatches, selectedLevel, setSelectedLevel, availableLevels } = useAdminContext();
     const [materials, setMaterials] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -21,17 +21,27 @@ export default function CEOMaterials() {
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     
-    // Filters
-    const [filterLevel, setFilterLevel] = useState('All');
+    // In-page level filter state, synced with global selectedLevel
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
+
     const [filterType, setFilterType] = useState('All'); // 'All', 'file', 'link'
     const [searchQuery, setSearchQuery] = useState('');
+
+    const effectiveLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels')
+        ? filterLevel
+        : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global' ? selectedLevel : '');
 
     // Form state
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Lecture Slides');
     const [categoryColor, setCategoryColor] = useState('#4F46E5');
-    const [level, setLevel] = useState('Level 5');
+    const [level, setLevel] = useState(effectiveLevel || 'Level 5');
     const [batch, setBatch] = useState((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
         ? selectedBatch 
         : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches'));
@@ -40,31 +50,62 @@ export default function CEOMaterials() {
     const [uploadType, setUploadType] = useState('file');
     const [isUploading, setIsUploading] = useState(false);
 
+    // Sync in-page filterLevel with AdminContext selectedLevel
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global') {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel) {
+            setSelectedLevel(lvl === 'All' ? 'All Levels' : lvl);
+        }
+    };
+
+    // Keep modal level aligned with effective filter level
+    useEffect(() => {
+        if (effectiveLevel) {
+            setLevel(effectiveLevel);
+        }
+    }, [effectiveLevel, isUploadModalOpen]);
+
     useEffect(() => {
         if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
             setBatch(selectedBatch);
         }
     }, [selectedBatch]);
 
-    useEffect(() => {
-        fetchMaterials();
-    }, [selectedBatch]);
-
     const fetchMaterials = async () => {
         setIsLoading(true);
         try {
             const token = localStorage.getItem('token');
-            const batchParam = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
-                ? `?batch=${encodeURIComponent(selectedBatch)}`
-                : '';
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/${batchParam}`, {
+            const params = new URLSearchParams();
+
+            const activeLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels')
+                ? filterLevel
+                : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
+
+            if (activeLevel) {
+                params.append('level', activeLevel);
+            }
+
+            if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+
+            const queryParam = params.toString() ? `?${params.toString()}` : '';
+            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials${queryParam}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             if (response.ok) {
                 const data = await response.json();
-                setMaterials(data);
+                setMaterials(Array.isArray(data) ? data : []);
             }
         } catch (error) {
             console.error('Failed to fetch materials:', error);
@@ -72,6 +113,10 @@ export default function CEOMaterials() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchMaterials();
+    }, [selectedBatch, selectedLevel, filterLevel]);
 
     const handleUpload = async (e) => {
         e.preventDefault();
@@ -110,7 +155,7 @@ export default function CEOMaterials() {
                 setDescription('');
                 setCategory('Lecture Slides');
                 setCategoryColor('#4F46E5');
-                setLevel('Level 5');
+                setLevel(effectiveLevel || 'Level 5');
                 setBatch((selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
                     ? selectedBatch 
                     : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches'));
@@ -159,7 +204,13 @@ export default function CEOMaterials() {
     };
 
     const getLevelBadgeClass = (lvl) => {
-        const match = LEVELS.find(l => l.value === lvl);
+        if (!lvl) return 'bg-primary/10 text-primary border-primary/20';
+        const clean = lvl.trim().toLowerCase();
+        const match = LEVELS.find(l => 
+            l.value.toLowerCase() === clean || 
+            clean.startsWith(l.value.toLowerCase()) || 
+            l.value.toLowerCase().startsWith(clean)
+        );
         return match ? match.color : 'bg-primary/10 text-primary border-primary/20';
     };
 
@@ -169,19 +220,52 @@ export default function CEOMaterials() {
     };
 
     const filteredMaterials = materials.filter(m => {
-        if (filterLevel !== 'All' && m.level !== filterLevel) return false;
+        // 1. Level matching
+        if (effectiveLevel) {
+            const mLvl = (m.level || '').trim().toLowerCase();
+            const mLvls = Array.isArray(m.levels) ? m.levels.map(l => (l || '').trim().toLowerCase()) : [];
+            const fLvl = effectiveLevel.trim().toLowerCase();
+            const isGlobal = !mLvl || mLvl === 'all' || mLvl === 'all levels' || mLvl === 'global';
+
+            const matchSingle = mLvl === fLvl || mLvl.startsWith(fLvl) || fLvl.startsWith(mLvl);
+            const matchArray = mLvls.some(l => l === fLvl || l.startsWith(fLvl) || fLvl.startsWith(l));
+
+            if (!isGlobal && !matchSingle && !matchArray) return false;
+        }
+
+        // 2. Batch matching
+        if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+            const mBatch = (m.batch || '').trim().toLowerCase();
+            const mBatches = Array.isArray(m.batches) ? m.batches.map(b => (b || '').trim().toLowerCase()) : [];
+            const targetBatch = selectedBatch.trim().toLowerCase();
+            const isGlobalBatch = !mBatch || mBatch === 'all batches' || mBatch === 'global' || mBatch === 'all';
+
+            const matchSingle = mBatch === targetBatch || mBatch.includes(targetBatch);
+            const matchArray = mBatches.some(b => b === targetBatch || b.includes(targetBatch));
+
+            if (!isGlobalBatch && !matchSingle && !matchArray) return false;
+        }
+
+        // 3. Format type matching
         const isFile = checkIsFile(m.file_url);
         if (filterType === 'file' && !isFile) return false;
         if (filterType === 'link' && isFile) return false;
+
+        // 4. Search query
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase();
             const titleMatch = (m.title || '').toLowerCase().includes(q);
             const descMatch = (m.description || '').toLowerCase().includes(q);
             const batchMatch = (m.batch || '').toLowerCase().includes(q);
-            return titleMatch || descMatch || batchMatch;
+            const levelMatch = (m.level || '').toLowerCase().includes(q);
+            const catMatch = (m.category || '').toLowerCase().includes(q);
+            return titleMatch || descMatch || batchMatch || levelMatch || catMatch;
         }
         return true;
     });
+
+    const levelsList = ['All', ...((availableLevels && availableLevels.length > 0) ? availableLevels : LEVELS.map(l => l.value))];
+    const uniqueLevels = Array.from(new Set(levelsList));
 
     return (
         <div className="max-w-[1440px] mx-auto p-gutter space-y-lg relative pb-32 animate-fade-in">
@@ -221,31 +305,32 @@ export default function CEOMaterials() {
             <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl p-4 md:p-5 custom-shadow flex flex-wrap items-center justify-between gap-3 w-full max-w-full">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {/* Level Filter */}
-                    <div className="flex items-center gap-1">
-                        <span className="text-xs text-on-surface-variant font-medium">Level:</span>
+                    <div className="flex items-center gap-1.5 bg-surface-container border border-outline-variant rounded-xl px-2.5 py-1 text-xs">
+                        <span className="text-on-surface-variant font-medium">Level:</span>
                         <select
                             value={filterLevel}
-                            onChange={(e) => setFilterLevel(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            onChange={(e) => handleFilterLevelChange(e.target.value)}
+                            className="bg-transparent text-xs font-semibold text-on-surface focus:outline-none cursor-pointer pr-1"
                         >
-                            <option value="All">All Levels</option>
-                            {LEVELS.map(l => (
-                                <option key={l.value} value={l.value}>{l.value}</option>
+                            {uniqueLevels.map(lvl => (
+                                <option key={lvl} value={lvl} className="bg-surface-container-lowest text-on-surface">
+                                    {lvl === 'All' ? 'All Levels' : lvl}
+                                </option>
                             ))}
                         </select>
                     </div>
 
                     {/* Resource Type Filter */}
-                    <div className="flex items-center gap-1">
-                        <span className="text-xs text-on-surface-variant font-medium">Type:</span>
+                    <div className="flex items-center gap-1.5 bg-surface-container border border-outline-variant rounded-xl px-2.5 py-1 text-xs">
+                        <span className="text-on-surface-variant font-medium">Type:</span>
                         <select
                             value={filterType}
                             onChange={(e) => setFilterType(e.target.value)}
-                            className="bg-surface-container border border-outline-variant rounded-lg px-2 py-1 text-xs text-on-surface focus:outline-none focus:border-primary"
+                            className="bg-transparent text-xs font-semibold text-on-surface focus:outline-none cursor-pointer pr-1"
                         >
-                            <option value="All">All Formats</option>
-                            <option value="file">Files & Docs</option>
-                            <option value="link">Web Links</option>
+                            <option value="All" className="bg-surface-container-lowest text-on-surface">All Formats</option>
+                            <option value="file" className="bg-surface-container-lowest text-on-surface">Files & Docs</option>
+                            <option value="link" className="bg-surface-container-lowest text-on-surface">Web Links</option>
                         </select>
                     </div>
                 </div>
@@ -263,6 +348,30 @@ export default function CEOMaterials() {
                 </div>
             </div>
 
+            {/* Active Filters Display */}
+            {(effectiveLevel || (selectedBatch && selectedBatch !== 'All Batches')) && (
+                <div className="flex items-center gap-2 flex-wrap -mt-2">
+                    <span className="text-xs text-on-surface-variant font-medium">Active Filters:</span>
+                    {effectiveLevel && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                            <span>Level: {effectiveLevel}</span>
+                            <button 
+                                onClick={() => handleFilterLevelChange('All')}
+                                className="hover:text-primary/70 transition-colors ml-0.5 cursor-pointer flex items-center"
+                                title="Clear level filter"
+                            >
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                            </button>
+                        </div>
+                    )}
+                    {selectedBatch && selectedBatch !== 'All Batches' && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+                            <span>Batch: {selectedBatch}</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Main Content Grid */}
             <div className="min-h-[300px]">
                 {isLoading ? (
@@ -275,7 +384,9 @@ export default function CEOMaterials() {
                         <span className="material-symbols-outlined text-4xl text-outline/40 mb-2">folder_open</span>
                         <h3 className="text-sm font-bold text-on-surface-variant">No Materials Found</h3>
                         <p className="text-xs text-outline mt-0.5">
-                            Click "Upload Material" to share documents or links with your students.
+                            {effectiveLevel 
+                                ? `No materials found for ${effectiveLevel}. Click "Upload Material" to share documents or links.`
+                                : `Click "Upload Material" to share documents or links with your students.`}
                         </p>
                     </div>
                 ) : (

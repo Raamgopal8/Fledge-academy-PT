@@ -22,12 +22,20 @@ const COLOR_OPTIONS = [
 ];
 
 export default function SchedulePage() {
-    const { selectedBatch, availableBatches } = useAdminContext();
+    const { selectedBatch, availableBatches, selectedLevel, setSelectedLevel, availableLevels } = useAdminContext();
     const [schedules, setSchedules] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('Monday');
     
+    // In-page Level filter state, synced with global selectedLevel
+    const [filterLevel, setFilterLevel] = useState(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            return selectedLevel;
+        }
+        return 'All';
+    });
+
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSchedule, setEditingSchedule] = useState(null); // null means adding new
@@ -49,6 +57,22 @@ export default function SchedulePage() {
     const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Sync in-page filterLevel with AdminContext selectedLevel
+    useEffect(() => {
+        if (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') {
+            setFilterLevel(selectedLevel);
+        } else if (selectedLevel === 'All Levels' || selectedLevel === 'Global') {
+            setFilterLevel('All');
+        }
+    }, [selectedLevel]);
+
+    const handleFilterLevelChange = (lvl) => {
+        setFilterLevel(lvl);
+        if (setSelectedLevel) {
+            setSelectedLevel(lvl === 'All' ? 'All Levels' : lvl);
+        }
+    };
+
     const fetchSchedules = async () => {
         setIsLoading(true);
         try {
@@ -56,15 +80,27 @@ export default function SchedulePage() {
             const headers = {
                 'Authorization': `Bearer ${token}`
             };
-            const batchQuery = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
-                ? `?batch=${encodeURIComponent(selectedBatch)}` 
-                : '';
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule${batchQuery}`, { headers });
+            const params = new URLSearchParams();
+
+            const activeLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels')
+                ? filterLevel
+                : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
+
+            if (activeLevel) {
+                params.append('level', activeLevel);
+            }
+
+            if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
+                params.append('batch', selectedBatch);
+            }
+
+            const queryStr = params.toString() ? `?${params.toString()}` : '';
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/schedule${queryStr}`, { headers });
             if (!res.ok) {
                 throw new Error('Failed to fetch schedule items');
             }
             const data = await res.json();
-            setSchedules(data);
+            setSchedules(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Error fetching schedules:', err);
             setError(err.message);
@@ -75,17 +111,25 @@ export default function SchedulePage() {
 
     useEffect(() => {
         fetchSchedules();
-    }, [selectedBatch]);
+    }, [selectedBatch, selectedLevel, filterLevel]);
+
+    const effectiveLevel = (filterLevel && filterLevel !== 'All' && filterLevel !== 'All Levels')
+        ? filterLevel
+        : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global' && selectedLevel !== 'All' ? selectedLevel : '');
 
     const openAddModal = () => {
         setEditingSchedule(null);
+        const defaultLevel = (effectiveLevel && COLOR_OPTIONS.some(o => o.value.toLowerCase() === effectiveLevel.toLowerCase())) 
+            ? effectiveLevel 
+            : 'Level 5';
+
         setFormData({
             name: '',
             time: '09:00 AM - 10:30 AM',
             location: '',
             students: 15,
             day_of_week: activeTab,
-            color: 'Level 5',
+            color: defaultLevel,
             class_link: '',
             batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') 
                 ? selectedBatch 
@@ -103,7 +147,7 @@ export default function SchedulePage() {
             location: schedule.location,
             students: schedule.students,
             day_of_week: schedule.day_of_week,
-            color: schedule.color,
+            color: schedule.level || schedule.color || 'Level 5',
             class_link: schedule.class_link || '',
             batch: schedule.batch || ''
         });
@@ -131,7 +175,8 @@ export default function SchedulePage() {
 
         const payload = {
             ...formData,
-            level: formData.color
+            level: formData.color,
+            color: formData.color
         };
 
         try {
@@ -199,10 +244,36 @@ export default function SchedulePage() {
 
     // Helper for color configuration
     const getColorConfig = (colorVal) => {
-        return COLOR_OPTIONS.find(opt => opt.value === colorVal) || COLOR_OPTIONS[0];
+        if (!colorVal) return COLOR_OPTIONS[0];
+        const match = COLOR_OPTIONS.find(opt => 
+            opt.value.toLowerCase() === colorVal.toLowerCase() ||
+            colorVal.toLowerCase().includes(opt.value.toLowerCase()) ||
+            opt.value.toLowerCase().includes(colorVal.toLowerCase())
+        );
+        return match || COLOR_OPTIONS[0];
     };
 
-    const filteredSchedules = schedules.filter(s => s.day_of_week === activeTab);
+    // Client-side filtering by active day and effective level
+    const filteredSchedules = schedules.filter(s => {
+        if (s.day_of_week !== activeTab) return false;
+        if (effectiveLevel) {
+            const sLevel = (s.level || s.color || '').trim().toLowerCase();
+            const fLevel = effectiveLevel.trim().toLowerCase();
+            const isGlobal = !sLevel || sLevel === 'all' || sLevel === 'all levels' || sLevel === 'global' || sLevel === 'primary';
+            
+            const inLevelsArray = Array.isArray(s.levels) && s.levels.some(l => {
+                const cleanL = (l || '').trim().toLowerCase();
+                return cleanL === fLevel || cleanL.startsWith(fLevel) || fLevel.startsWith(cleanL) || cleanL === 'all' || cleanL === 'all levels' || cleanL === 'global';
+            });
+
+            const matchesLevel = isGlobal || inLevelsArray || sLevel === fLevel || sLevel.startsWith(fLevel) || fLevel.startsWith(sLevel);
+            if (!matchesLevel) return false;
+        }
+        return true;
+    });
+
+    const levelsList = ['All', ...((availableLevels && availableLevels.length > 0) ? availableLevels : ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'])];
+    const uniqueLevels = Array.from(new Set(levelsList));
 
     if (isLoading && schedules.length === 0) {
         return (
@@ -226,14 +297,58 @@ export default function SchedulePage() {
                     </div>
                     <p className="font-body-md text-on-surface-variant max-w-2xl">Create, update, and manage weekly class sessions and room allocations.</p>
                 </div>
-                <button 
-                    onClick={openAddModal}
-                    className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 self-start md:self-auto shadow-xs cursor-pointer active:scale-95"
-                >
-                    <span className="material-symbols-outlined text-[20px]">add</span>
-                    <span>Add Class</span>
-                </button>
+
+                <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                    {/* Level Filter Dropdown */}
+                    <div className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant rounded-2xl px-3 py-2 shadow-xs">
+                        <span className="material-symbols-outlined text-outline text-[18px]">tune</span>
+                        <select
+                            value={filterLevel}
+                            onChange={(e) => handleFilterLevelChange(e.target.value)}
+                            className="bg-transparent text-xs sm:text-sm font-semibold text-on-surface outline-none cursor-pointer pr-1"
+                            title="Filter by Level"
+                        >
+                            {uniqueLevels.map((lvl) => (
+                                <option key={lvl} value={lvl} className="bg-surface-container-lowest text-on-surface">
+                                    {lvl === 'All' ? 'All Levels' : lvl}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <button 
+                        onClick={openAddModal}
+                        className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">add</span>
+                        <span>Add Class</span>
+                    </button>
+                </div>
             </section>
+
+            {/* Active Filters Display */}
+            {(effectiveLevel || (selectedBatch && selectedBatch !== 'All Batches')) && (
+                <div className="flex items-center gap-2 flex-wrap -mt-2">
+                    <span className="text-xs text-on-surface-variant font-medium">Active Filters:</span>
+                    {effectiveLevel && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                            <span>Level: {effectiveLevel}</span>
+                            <button 
+                                onClick={() => handleFilterLevelChange('All')}
+                                className="hover:text-primary/70 transition-colors ml-0.5 cursor-pointer flex items-center"
+                                title="Clear level filter"
+                            >
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                            </button>
+                        </div>
+                    )}
+                    {selectedBatch && selectedBatch !== 'All Batches' && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+                            <span>Batch: {selectedBatch}</span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Error Callout */}
             {error && (
@@ -252,7 +367,20 @@ export default function SchedulePage() {
                 {/* Left Side: Days Navigation */}
                 <div className="bg-surface-container-lowest p-1.5 sm:p-sm rounded-xl custom-shadow border border-surface-container flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1.5 scrollbar-none w-full max-w-full">
                     {DAYS_OF_WEEK.map((day) => {
-                        const count = schedules.filter(s => s.day_of_week === day).length;
+                        const count = schedules.filter(s => {
+                            if (s.day_of_week !== day) return false;
+                            if (effectiveLevel) {
+                                const sLevel = (s.level || s.color || '').trim().toLowerCase();
+                                const fLevel = effectiveLevel.trim().toLowerCase();
+                                const isGlobal = !sLevel || sLevel === 'all' || sLevel === 'all levels' || sLevel === 'global' || sLevel === 'primary';
+                                const inLevelsArray = Array.isArray(s.levels) && s.levels.some(l => {
+                                    const cleanL = (l || '').trim().toLowerCase();
+                                    return cleanL === fLevel || cleanL.startsWith(fLevel) || fLevel.startsWith(cleanL) || cleanL === 'all' || cleanL === 'all levels' || cleanL === 'global';
+                                });
+                                return isGlobal || inLevelsArray || sLevel === fLevel || sLevel.startsWith(fLevel) || fLevel.startsWith(sLevel);
+                            }
+                            return true;
+                        }).length;
                         const isActive = activeTab === day;
                         return (
                             <button
@@ -290,14 +418,18 @@ export default function SchedulePage() {
                             <div className="py-xl flex flex-col items-center justify-center text-center text-outline">
                                 <span className="material-symbols-outlined text-[64px] mb-sm opacity-50">calendar_today</span>
                                 <h4 className="font-headline-md text-on-surface mb-xs">No Classes Scheduled</h4>
-                                <p className="font-body-md">No class activities have been planned for {activeTab} yet. Click "Add Class" to schedule one.</p>
+                                <p className="font-body-md">
+                                    {effectiveLevel 
+                                        ? `No class activities found for ${activeTab} in ${effectiveLevel}. Click "Add Class" to schedule one.`
+                                        : `No class activities have been planned for ${activeTab} yet. Click "Add Class" to schedule one.`}
+                                </p>
                             </div>
                         ) : (
                             <div className="divide-y divide-outline-variant/30">
                                 {filteredSchedules.map((item) => {
-                                    const col = getColorConfig(item.color);
+                                    const col = getColorConfig(item.color || item.level);
                                     return (
-                                        <div key={item.id} className="py-md first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-md group">
+                                        <div key={item.id || item._id} className="py-md first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-md group">
                                             <div className="flex items-start gap-md">
                                                 {/* Left Icon Panel */}
                                                 <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${col.bg} ${col.text} shrink-0`}>
@@ -315,6 +447,12 @@ export default function SchedulePage() {
                                                             <span className="material-symbols-outlined text-sm">location_on</span>
                                                             {item.location}
                                                         </span>
+                                                        {(item.level || item.color) && (item.level !== 'primary' && item.color !== 'primary') && (
+                                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border flex items-center gap-1 ${col.bg} ${col.text} ${col.border}`}>
+                                                                <span className="material-symbols-outlined text-[13px]">school</span>
+                                                                {item.level || item.color}
+                                                            </span>
+                                                        )}
                                                         {item.batch && (
                                                             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
                                                                 <span className="material-symbols-outlined text-[13px]">groups</span>
