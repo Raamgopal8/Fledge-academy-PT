@@ -1,14 +1,57 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from beanie import PydanticObjectId
 
+import os
+import uuid
 import re
+import mimetypes
 import models
 from routes.auth import get_current_user
 from redis_client import get_user_account, set_user_account, invalidate_user_account, get_cache, set_cache
 
+try:
+    import boto3
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+except ImportError:
+    boto3 = None
+    Config = None
+    ClientError = None
+
 router = APIRouter()
+
+# Cloudflare R2 Configuration for user avatars
+R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
+R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
+R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
+R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "fledgedocuments")
+R2_PUBLIC_URL = os.environ.get("R2_PUBLIC_URL")
+S3_API_URL = os.environ.get("S3API")
+
+if S3_API_URL and not R2_ACCOUNT_ID:
+    match = re.search(r"https://([a-zA-Z0-9_-]+)\.r2\.cloudflarestorage\.com(?:/([a-zA-Z0-9_-]+))?", S3_API_URL)
+    if match:
+        R2_ACCOUNT_ID = match.group(1)
+        if match.group(2) and not R2_BUCKET_NAME:
+            R2_BUCKET_NAME = match.group(2)
+
+def get_s3_client():
+    if not boto3 or not R2_ACCOUNT_ID or not R2_ACCESS_KEY_ID or not R2_SECRET_ACCESS_KEY:
+        return None
+    try:
+        return boto3.client(
+            service_name="s3",
+            endpoint_url=f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            aws_access_key_id=R2_ACCESS_KEY_ID,
+            aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+            region_name="auto",
+            config=Config(signature_version="s3v4")
+        )
+    except Exception as e:
+        print(f"Error initializing Cloudflare R2 client in user service: {e}")
+        return None
 
 def format_google_drive_image_url(url: Optional[str]) -> Optional[str]:
     if not url:
@@ -119,6 +162,72 @@ async def update_profile(
     }
     await set_user_account(current_user.email, user_dict, ttl=600)
     return result
+
+@router.post("/profile/upload-image")
+@router.post("/upload-avatar")
+async def upload_profile_image(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Upload a profile image avatar to Cloudflare R2 or persistent uploads directory"""
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="No image file selected.")
+
+    file_bytes = await file.read()
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    if len(file_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image size exceeds 10MB limit.")
+
+    raw_name = os.path.basename(file.filename)
+    clean_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_name)
+    content_type = file.content_type or ""
+    if not content_type or content_type == "application/octet-stream":
+        guessed_type, _ = mimetypes.guess_type(raw_name)
+        content_type = guessed_type or "image/jpeg"
+
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files (JPG, PNG, GIF, WEBP, SVG) are allowed.")
+
+    s3 = get_s3_client()
+    image_url = ""
+    if s3 and R2_BUCKET_NAME:
+        s3_key = f"avatars/{uuid.uuid4()}-{clean_name}"
+        try:
+            s3.put_object(
+                Bucket=R2_BUCKET_NAME,
+                Key=s3_key,
+                Body=file_bytes,
+                ContentType=content_type,
+                ContentDisposition=f'inline; filename="{clean_name}"'
+            )
+            if R2_PUBLIC_URL and R2_PUBLIC_URL.strip():
+                image_url = f"{R2_PUBLIC_URL.strip().rstrip('/')}/{s3_key}"
+            else:
+                image_url = f"https://{R2_BUCKET_NAME}.r2.cloudflarestorage.com/{s3_key}"
+        except Exception as e:
+            print(f"R2 upload error for profile image: {e}")
+            s3 = None
+
+    if not image_url:
+        upload_dir = "/tmp/uploads/avatars" if os.environ.get("VERCEL") else "uploads/avatars"
+        os.makedirs(upload_dir, exist_ok=True)
+        local_filename = f"{uuid.uuid4()}-{clean_name}"
+        local_path = os.path.join(upload_dir, local_filename)
+        with open(local_path, "wb") as f:
+            f.write(file_bytes)
+        image_url = f"/uploads/avatars/{local_filename}"
+
+    current_user.profile_image_url = image_url
+    await current_user.save()
+    user_email = (current_user.email or "").lower()
+    await invalidate_user_account(user_email)
+
+    return {
+        "message": "Profile image uploaded successfully",
+        "profile_image_url": image_url
+    }
 
 class StudentCreate(BaseModel):
     email: str

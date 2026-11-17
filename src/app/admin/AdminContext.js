@@ -6,6 +6,22 @@ const AdminContext = createContext();
 export function AdminProvider({ children }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsedState] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('adminSidebarCollapsed');
+            if (saved !== null) {
+                return saved === 'true';
+            }
+        }
+        return true; // Default closed (compact icon rail) when logged in
+    });
+
+    const setIsSidebarCollapsed = (collapsed) => {
+        setIsSidebarCollapsedState(collapsed);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminSidebarCollapsed', String(collapsed));
+        }
+    };
     const [selectedBatch, setSelectedBatchState] = useState(() => {
         if (typeof window !== 'undefined') {
             return localStorage.getItem('adminSelectedBatch') || localStorage.getItem('ceoSelectedBatch') || null;
@@ -112,6 +128,7 @@ export function AdminProvider({ children }) {
         <AdminContext.Provider value={{ 
             searchQuery, setSearchQuery, 
             isMobileNavOpen, setIsMobileNavOpen,
+            isSidebarCollapsed, setIsSidebarCollapsed,
             selectedBatch, setSelectedBatch,
             selectedLevel, setSelectedLevel,
             availableBatches,

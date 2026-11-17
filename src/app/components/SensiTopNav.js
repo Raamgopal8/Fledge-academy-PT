@@ -6,12 +6,18 @@ import ProfileSettingsModal from './ProfileSettingsModal';
 import StaffBatchSelectionModal from './StaffBatchSelectionModal';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
+import { useRouter } from 'next/navigation';
+import { performLogout } from '../utils/activityLogger';    
 
 export default function SensiTopNav() {
     const [profile, setProfile] = useState(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const context = useSensiContext();
+    const router = useRouter();
+    const isMobileNavOpen = context?.isMobileNavOpen || false;
     const setIsMobileNavOpen = context?.setIsMobileNavOpen || (() => {});
+    const isSidebarCollapsed = context?.isSidebarCollapsed || false;
+    const setIsSidebarCollapsed = context?.setIsSidebarCollapsed || (() => {});
     const selectedBatch = context?.selectedBatch;
     const setSelectedBatch = context?.setSelectedBatch || (() => {});
     const selectedLevel = context?.selectedLevel;
@@ -61,14 +67,21 @@ export default function SensiTopNav() {
     }, []);
 
     return (
-        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#465AA3] via-[#5D8BCC] to-[#6FB7E4] border-b border-outline-variant/10 shadow-md">
+        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#465AA3] via-[#5D8BCC] to-[#6FB7E4] border-b border-outline-variant/10 shadow-md w-full max-w-full overflow-hidden">
             <div className="flex justify-between items-center w-full px-4 md:px-8 lg:px-12 max-w-[1440px] mx-auto h-12 gap-sm md:gap-lg">
-                <div className="flex items-center gap-sm md:gap-lg flex-grow md:flex-grow-0">
+                <div className="flex items-center gap-sm md:gap-md flex-grow md:flex-grow-0">
                     <button 
-                        onClick={() => setIsMobileNavOpen(true)}
+                        onClick={() => {
+                            if (window.innerWidth < 768) {
+                                setIsMobileNavOpen(!isMobileNavOpen);
+                            } else {
+                                setIsSidebarCollapsed(!isSidebarCollapsed);
+                            }
+                        }}
                         className="material-symbols-outlined text-white hover:bg-white/10 p-2 rounded-full transition-colors shrink-0 cursor-pointer"
+                        title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                     >
-                        menu
+                        {isSidebarCollapsed ? "menu" : "menu_open"}
                     </button>
                     <img src="/fledgeacad.png" alt="Logo" className="h-18 w-auto object-contain shrink-0 hidden md:block brightness-0 invert" />
                 </div>
@@ -99,6 +112,10 @@ export default function SensiTopNav() {
                         ) : (
                             <span className="material-symbols-outlined text-white">person</span>
                         )}
+                    </button>
+                    <button type="button" onClick={()=>performLogout(router)} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-white/20 hover:border-white/40 bg-white/10 hover:bg-red-500/80 transition-all flex items-center justify-center cursor-pointer active:scale-95 shrink-0"
+                        title="Logout">
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px] text-white">logout</span>                      
                     </button>
                 </div>
             </div>

@@ -38,6 +38,7 @@ export default function CEOVideos() {
     const [successMessage, setSuccessMessage] = useState('');
     const [videoToDelete, setVideoToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [editingVideo, setEditingVideo] = useState(null); // Video currently being edited
 
     // Active Player & Layout States (Identical to Student Video Classroom)
     const [activeVideo, setActiveVideo] = useState(null);
@@ -83,6 +84,40 @@ export default function CEOVideos() {
             : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
     });
 
+    const initialBatch = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
+        ? selectedBatch
+        : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches');
+    const [selectedBatches, setSelectedBatches] = useState(initialBatch === 'All Batches' ? ['All Batches'] : [initialBatch]);
+    const [customBatchInput, setCustomBatchInput] = useState('');
+
+    const toggleBatchSelection = (b) => {
+        if (b === 'All Batches' || b === 'Global') {
+            setSelectedBatches(['All Batches']);
+            return;
+        }
+        let updated = selectedBatches.filter(item => item !== 'All Batches' && item !== 'Global');
+        if (updated.includes(b)) {
+            updated = updated.filter(item => item !== b);
+        } else {
+            updated.push(b);
+        }
+        if (updated.length === 0) {
+            updated = ['All Batches'];
+        }
+        setSelectedBatches(updated);
+    };
+
+    const addCustomBatch = () => {
+        const trimmed = customBatchInput.trim();
+        if (!trimmed) return;
+        let updated = selectedBatches.filter(item => item !== 'All Batches' && item !== 'Global');
+        if (!updated.includes(trimmed)) {
+            updated.push(trimmed);
+        }
+        setSelectedBatches(updated);
+        setCustomBatchInput('');
+    };
+
     useEffect(() => {
         const handleFullscreenChange = () => {
             const isFs = Boolean(
@@ -115,10 +150,11 @@ export default function CEOVideos() {
         };
     }, []);
 
-    // Sync formData batch with selectedBatch
+    // Sync formData batch and selectedBatches with selectedBatch
     useEffect(() => {
         if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
             setFormData(prev => ({ ...prev, batch: selectedBatch }));
+            setSelectedBatches([selectedBatch]);
         }
     }, [selectedBatch]);
 
@@ -192,6 +228,42 @@ export default function CEOVideos() {
         }));
     };
 
+    const handleOpenCreateModal = () => {
+        setEditingVideo(null);
+        const curBatch = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
+            ? selectedBatch
+            : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches');
+        setSelectedBatches(curBatch === 'All Batches' ? ['All Batches'] : [curBatch]);
+        setCustomBatchInput('');
+        setFormData({
+            title: '',
+            category: '',
+            category_color: '#4F46E5',
+            video_url: '',
+            level: (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global') ? selectedLevel : 'Level 5',
+            batch: curBatch
+        });
+        setIsUploadOpen(true);
+    };
+
+    const handleOpenEditModal = (video) => {
+        setEditingVideo(video);
+        const vBatches = Array.isArray(video.batches) && video.batches.length > 0
+            ? video.batches
+            : (video.batch ? video.batch.split(',').map(s => s.trim()).filter(Boolean) : ['All Batches']);
+        setSelectedBatches(vBatches.length > 0 ? vBatches : ['All Batches']);
+        setCustomBatchInput('');
+        setFormData({
+            title: video.title || '',
+            category: video.category || '',
+            category_color: video.category_color || '#4F46E5',
+            video_url: video.video_url || '',
+            level: video.level || 'Level 5',
+            batch: video.batch || (Array.isArray(video.batches) && video.batches[0]) || 'All Batches'
+        });
+        setIsUploadOpen(true);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -200,18 +272,27 @@ export default function CEOVideos() {
 
         try {
             const token = localStorage.getItem('token');
+            const finalBatches = selectedBatches.length > 0 ? selectedBatches : ['All Batches'];
+            const primaryBatch = finalBatches.join(', ');
             const payload = {
                 title: formData.title.trim(),
                 category: formData.category.trim() || 'General Japanese',
                 category_color: formData.category_color,
                 video_url: formData.video_url.trim(),
                 level: formData.level,
-                batch: formData.batch.trim() || 'All Batches'
+                batch: primaryBatch,
+                batches: finalBatches
             };
 
             const videoApiBase = process.env.NEXT_PUBLIC_VIDEO_API_URL || '';
-            const res = await fetch(`${videoApiBase}/api/videos/`, {
-                method: 'POST',
+            const isEditing = Boolean(editingVideo);
+            const videoId = isEditing ? (editingVideo.id || editingVideo._id) : '';
+            const url = isEditing
+                ? `${videoApiBase}/api/videos/${videoId}`
+                : `${videoApiBase}/api/videos/`;
+
+            const res = await fetch(url, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -221,21 +302,33 @@ export default function CEOVideos() {
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.detail || 'Failed to add video');
+                throw new Error(data.detail || `Failed to ${isEditing ? 'update' : 'add'} video`);
             }
 
-            setSuccessMessage('Video successfully uploaded!');
+            const updatedOrNewVideo = await res.json().catch(() => null);
+
+            setSuccessMessage(isEditing ? 'Video successfully updated!' : 'Video successfully uploaded!');
             setIsUploadOpen(false);
+            setEditingVideo(null);
+            const curBatch = (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
+                ? selectedBatch
+                : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches');
+            setSelectedBatches(curBatch === 'All Batches' ? ['All Batches'] : [curBatch]);
+            setCustomBatchInput('');
             setFormData({
                 title: '',
                 category: '',
                 category_color: '#4F46E5',
                 video_url: '',
                 level: 'Level 5',
-                batch: (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access')
-                    ? selectedBatch
-                    : (availableBatches && availableBatches.length > 0 ? availableBatches[0] : 'All Batches')
+                batch: curBatch
             });
+
+            // If active video was edited, update its preview state immediately
+            if (isEditing && activeVideo && (activeVideo.id || activeVideo._id) === videoId && updatedOrNewVideo) {
+                setActiveVideo(prev => ({ ...prev, ...updatedOrNewVideo }));
+            }
+
             await fetchVideos();
             setTimeout(() => setSuccessMessage(''), 4000);
         } catch (err) {
@@ -687,16 +780,7 @@ export default function CEOVideos() {
                     <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
                         <button
                             type="button"
-                            onClick={() => {
-                                setIsUploadOpen(true);
-                                if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
-                                    setFormData(prev => ({ ...prev, batch: selectedBatch }));
-                                }
-                                const currentEffectiveLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global')
-                                    ? selectedLevel
-                                    : (filterLevel !== 'All' ? filterLevel : 'Level 5');
-                                setFormData(prev => ({ ...prev, level: currentEffectiveLevel }));
-                            }}
+                            onClick={handleOpenCreateModal}
                             className="bg-primary text-on-primary px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                         >
                             <span className="material-symbols-outlined text-[18px]">add</span>
@@ -799,16 +883,7 @@ export default function CEOVideos() {
                                 </button>
                             )}
                             <button
-                                onClick={() => {
-                                    setIsUploadOpen(true);
-                                    if (selectedBatch && selectedBatch !== 'All Batches' && selectedBatch !== 'Global' && selectedBatch !== 'Global Access') {
-                                        setFormData(prev => ({ ...prev, batch: selectedBatch }));
-                                    }
-                                    const currentEffectiveLevel = (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'Global')
-                                        ? selectedLevel
-                                        : (filterLevel !== 'All' ? filterLevel : 'Level 5');
-                                    setFormData(prev => ({ ...prev, level: currentEffectiveLevel }));
-                                }}
+                                onClick={handleOpenCreateModal}
                                 className="px-4 py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer shadow-xs"
                             >
                                 Upload Lesson
@@ -1126,6 +1201,17 @@ export default function CEOVideos() {
 
                                             {/* Admin Action & Utility Toggles */}
                                             <div className="flex items-center gap-2">
+                                                {/* Edit Active Video Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenEditModal(activeVideo)}
+                                                    className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-primary/30 text-primary bg-primary/10 hover:bg-primary/20 transition-all cursor-pointer shadow-2xs"
+                                                    title="Edit this video"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                    <span className="hidden sm:inline">Edit</span>
+                                                </button>
+
                                                 {/* Delete Active Video Button */}
                                                 <button
                                                     type="button"
@@ -1398,18 +1484,31 @@ export default function CEOVideos() {
                                                                 )}
                                                             </div>
 
-                                                            {/* Delete Icon on Hover */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setVideoToDelete(video);
-                                                                }}
-                                                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-error hover:bg-error/10 transition-opacity cursor-pointer"
-                                                                title="Delete video"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[16px]">delete</span>
-                                                            </button>
+                                                            {/* Action Icons on Hover */}
+                                                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleOpenEditModal(video);
+                                                                    }}
+                                                                    className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                                                    title="Edit video"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setVideoToDelete(video);
+                                                                    }}
+                                                                    className="p-1.5 rounded-lg text-error hover:bg-error/10 transition-colors cursor-pointer"
+                                                                    title="Delete video"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
@@ -1541,6 +1640,17 @@ export default function CEOVideos() {
                                                                 type="button"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    handleOpenEditModal(video);
+                                                                }}
+                                                                className="text-primary hover:bg-primary/10 p-1 rounded-lg transition-colors cursor-pointer"
+                                                                title="Edit video"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     setVideoToDelete(video);
                                                                 }}
                                                                 className="text-error hover:bg-error/10 p-1 rounded-lg transition-colors cursor-pointer"
@@ -1571,17 +1681,24 @@ export default function CEOVideos() {
                     </>
                 )}
 
-                {/* Upload Video Modal */}
+                {/* Upload / Edit Video Modal */}
                 {isUploadOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
                         <div className="bg-surface rounded-3xl p-6 max-w-[520px] w-full shadow-2xl border border-outline-variant/60 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
                             <div className="flex justify-between items-center mb-5 pb-3 border-b border-outline-variant/40">
                                 <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-primary text-[24px]">video_call</span>
-                                    <h2 className="font-headline-sm text-on-surface font-bold text-lg">Upload Video Lesson</h2>
+                                    <span className="material-symbols-outlined text-primary text-[24px]">
+                                        {editingVideo ? "edit" : "video_call"}
+                                    </span>
+                                    <h2 className="font-headline-sm text-on-surface font-bold text-lg">
+                                        {editingVideo ? "Edit Video Lesson" : "Upload Video Lesson"}
+                                    </h2>
                                 </div>
                                 <button
-                                    onClick={() => setIsUploadOpen(false)}
+                                    onClick={() => {
+                                        setIsUploadOpen(false);
+                                        setEditingVideo(null);
+                                    }}
                                     className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer"
                                 >
                                     <span className="material-symbols-outlined text-[18px]">close</span>
@@ -1635,35 +1752,91 @@ export default function CEOVideos() {
                                     </div>
                                 </div>
 
+                                {/* Target Batches (Multi-Select) */}
                                 <div>
-                                    <label className="block font-semibold text-xs text-on-surface mb-1">Target Batch</label>
-                                    <input
-                                        type="text"
-                                        name="batch"
-                                        value={formData.batch}
-                                        onChange={handleInputChange}
-                                        className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors mb-1.5"
-                                        placeholder="e.g. Batch - 1 or All Batches"
-                                    />
-                                    {availableBatches && availableBatches.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 items-center">
-                                            <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick Select:</span>
-                                            {availableBatches.map((b) => (
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block font-semibold text-xs text-on-surface">Target Batches (Multi-Choose) *</label>
+                                        <span className="text-[10px] text-primary font-bold">
+                                            {selectedBatches.includes('All Batches') ? 'All Batches Selected' : `${selectedBatches.length} selected`}
+                                        </span>
+                                    </div>
+
+                                    {/* Multi-select Badges */}
+                                    <div className="flex flex-wrap gap-1.5 items-center mb-2 p-2 bg-surface-container-low border border-outline-variant rounded-xl min-h-[42px]">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleBatchSelection('All Batches')}
+                                            className={`text-xs px-2.5 py-1 rounded-lg border font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                                selectedBatches.includes('All Batches')
+                                                    ? 'bg-primary text-on-primary border-primary shadow-xs'
+                                                    : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                            }`}
+                                        >
+                                            <span className="material-symbols-outlined text-[14px]">
+                                                {selectedBatches.includes('All Batches') ? 'check_circle' : 'circle'}
+                                            </span>
+                                            All Batches (Global)
+                                        </button>
+
+                                        {availableBatches && availableBatches.filter(b => b !== 'All Batches' && b !== 'Global' && b !== 'All Assigned Batches').map((b) => {
+                                            const isChecked = selectedBatches.includes(b);
+                                            return (
                                                 <button
                                                     key={b}
                                                     type="button"
-                                                    onClick={() => setFormData(prev => ({ ...prev, batch: b }))}
-                                                    className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                        formData.batch === b
-                                                            ? 'bg-primary text-on-primary border-primary font-bold'
-                                                            : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                    onClick={() => toggleBatchSelection(b)}
+                                                    className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                                                        isChecked
+                                                            ? 'bg-primary/15 text-primary border-primary/40 font-bold ring-1 ring-primary/30'
+                                                            : 'border-outline-variant/60 hover:bg-surface-container text-on-surface'
                                                     }`}
                                                 >
+                                                    <span className="material-symbols-outlined text-[14px]">
+                                                        {isChecked ? 'check_box' : 'check_box_outline_blank'}
+                                                    </span>
                                                     {b}
                                                 </button>
-                                            ))}
-                                        </div>
-                                    )}
+                                            );
+                                        })}
+
+                                        {/* Any custom selected batch not in availableBatches */}
+                                        {selectedBatches.filter(b => b !== 'All Batches' && (!availableBatches || !availableBatches.includes(b))).map((b) => (
+                                            <button
+                                                key={b}
+                                                type="button"
+                                                onClick={() => toggleBatchSelection(b)}
+                                                className="text-xs px-2.5 py-1 rounded-lg border font-bold transition-all cursor-pointer flex items-center gap-1 bg-secondary/15 text-secondary border-secondary/40 ring-1 ring-secondary/30"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">check_box</span>
+                                                {b}
+                                                <span className="material-symbols-outlined text-[12px] ml-0.5 opacity-70">close</span>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Custom batch tag addition */}
+                                    <div className="flex gap-1.5 items-center">
+                                        <input 
+                                            type="text" 
+                                            value={customBatchInput}
+                                            onChange={(e) => setCustomBatchInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    addCustomBatch();
+                                                }
+                                            }}
+                                            className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                            placeholder="Add custom batch name and click Add (or press Enter)..."
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={addCustomBatch}
+                                            className="px-3 py-1.5 bg-secondary/15 hover:bg-secondary/25 text-secondary border border-secondary/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -1695,7 +1868,10 @@ export default function CEOVideos() {
                                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-outline-variant/40">
                                     <button
                                         type="button"
-                                        onClick={() => setIsUploadOpen(false)}
+                                        onClick={() => {
+                                            setIsUploadOpen(false);
+                                            setEditingVideo(null);
+                                        }}
                                         className="px-4 py-2 rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
                                     >
                                         Cancel
@@ -1708,12 +1884,12 @@ export default function CEOVideos() {
                                         {isSubmitting ? (
                                             <>
                                                 <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                                                <span>Publishing...</span>
+                                                <span>{editingVideo ? "Saving..." : "Publishing..."}</span>
                                             </>
                                         ) : (
                                             <>
-                                                <span className="material-symbols-outlined text-[16px]">upload</span>
-                                                <span>Publish Lesson</span>
+                                                <span className="material-symbols-outlined text-[16px]">{editingVideo ? "save" : "upload"}</span>
+                                                <span>{editingVideo ? "Save Changes" : "Publish Lesson"}</span>
                                             </>
                                         )}
                                     </button>

@@ -25,6 +25,7 @@ export default function StaffMaterials() {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [materialToDelete, setMaterialToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [editingMaterial, setEditingMaterial] = useState(null); // Material currently being edited
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     
@@ -60,7 +61,9 @@ export default function StaffMaterials() {
     const [category, setCategory] = useState('Lecture Slides');
     const [categoryColor, setCategoryColor] = useState('#4F46E5');
     const [level, setLevel] = useState('Level 5');
-    const [batch, setBatch] = useState(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : '');
+    const initialBatch = selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? selectedBatch : '';
+    const [selectedBatches, setSelectedBatches] = useState(initialBatch ? [initialBatch] : ['All Batches']);
+    const [customBatchInput, setCustomBatchInput] = useState('');
     const [file, setFile] = useState(null);
     const [link, setLink] = useState('');
     const [uploadType, setUploadType] = useState('file');
@@ -68,11 +71,39 @@ export default function StaffMaterials() {
 
     useEffect(() => {
         if (selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches') {
-            setBatch(selectedBatch);
-        } else if (staffBatches && staffBatches.length > 0 && !batch) {
-            setBatch(staffBatches[0]);
+            setSelectedBatches([selectedBatch]);
+        } else if (staffBatches && staffBatches.length > 0 && selectedBatches.length === 0) {
+            setSelectedBatches([staffBatches[0]]);
         }
     }, [selectedBatch, staffBatches]);
+
+    const toggleBatchSelection = (b) => {
+        if (b === 'All Batches' || b === 'All Assigned Batches') {
+            setSelectedBatches(['All Batches']);
+            return;
+        }
+        let updated = selectedBatches.filter(item => item !== 'All Batches' && item !== 'All Assigned Batches');
+        if (updated.includes(b)) {
+            updated = updated.filter(item => item !== b);
+        } else {
+            updated.push(b);
+        }
+        if (updated.length === 0) {
+            updated = ['All Batches'];
+        }
+        setSelectedBatches(updated);
+    };
+
+    const addCustomBatch = () => {
+        const trimmed = customBatchInput.trim();
+        if (!trimmed) return;
+        let updated = selectedBatches.filter(item => item !== 'All Batches' && item !== 'All Assigned Batches');
+        if (!updated.includes(trimmed)) {
+            updated.push(trimmed);
+        }
+        setSelectedBatches(updated);
+        setCustomBatchInput('');
+    };
 
     // Align modal initial level with currently selected level
     useEffect(() => {
@@ -117,31 +148,92 @@ export default function StaffMaterials() {
         fetchMaterials();
     }, [fetchMaterials]);
 
+    const handleOpenCreateModal = () => {
+        setEditingMaterial(null);
+        setTitle('');
+        setDescription('');
+        setCategory('Lecture Slides');
+        setCategoryColor('#4F46E5');
+        setLevel(filterLevel !== 'All' ? filterLevel : (selectedLevel && selectedLevel !== 'All Levels' && selectedLevel !== 'All' && selectedLevel !== 'Global' ? selectedLevel : 'Level 5'));
+        setSelectedBatches(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? [selectedBatch] : ['All Batches']);
+        setCustomBatchInput('');
+        setFile(null);
+        setLink('');
+        setUploadType('file');
+        setErrorMessage('');
+        setIsUploadModalOpen(true);
+    };
+
+    const handleOpenEditModal = (material) => {
+        setEditingMaterial(material);
+        setTitle(material.title || '');
+        setDescription(material.description || '');
+        setCategory(material.category || 'Lecture Slides');
+        setCategoryColor(material.category_color || '#4F46E5');
+        setLevel(material.level || 'Level 5');
+        const mBatches = Array.isArray(material.batches) && material.batches.length > 0
+            ? material.batches
+            : (material.batch ? [material.batch] : ['All Batches']);
+        setSelectedBatches(mBatches);
+        setCustomBatchInput('');
+        setFile(null);
+        const isUrlLink = material.file_url && (material.file_url.startsWith('http://') || material.file_url.startsWith('https://')) && !material.file_url.includes('/api/materials/file/');
+        if (isUrlLink) {
+            setUploadType('link');
+            setLink(material.file_url);
+        } else {
+            setUploadType('file');
+            setLink('');
+        }
+        setErrorMessage('');
+        setIsUploadModalOpen(true);
+    };
+
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (uploadType === 'file' && (!file || !title)) return;
-        if (uploadType === 'link' && (!link || !title)) return;
+        const isEditing = Boolean(editingMaterial);
+        if (!isEditing && uploadType === 'file' && !file) {
+            setErrorMessage('Please select a file to upload.');
+            return;
+        }
+        if (!title.trim()) {
+            setErrorMessage('Please provide a title.');
+            return;
+        }
+        if (uploadType === 'link' && !link.trim()) {
+            setErrorMessage('Please provide a valid link.');
+            return;
+        }
 
         setIsUploading(true);
         setErrorMessage('');
         setSuccessMessage('');
         const token = localStorage.getItem('token');
         const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
+        formData.append('title', title.trim());
+        formData.append('description', description.trim());
         formData.append('category', category || 'General');
         if (categoryColor) formData.append('category_color', categoryColor);
         formData.append('level', level);
-        if (batch) formData.append('batch', batch.trim());
+        const finalBatches = selectedBatches.length > 0 ? selectedBatches : ['All Batches'];
+        const primaryBatch = finalBatches.join(', ');
+        formData.append('batch', primaryBatch);
+        formData.append('batches', JSON.stringify(finalBatches));
         if (uploadType === 'file') {
-            formData.append('file', file);
+            if (file) formData.append('file', file);
         } else {
-            formData.append('link', link);
+            formData.append('link', link.trim());
         }
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_MATERIALS_API_URL || ''}/api/materials/`, {
-                method: 'POST',
+            const materialsApiBase = process.env.NEXT_PUBLIC_MATERIALS_API_URL || '';
+            const materialId = isEditing ? (editingMaterial.id || editingMaterial._id) : '';
+            const url = isEditing
+                ? `${materialsApiBase}/api/materials/${materialId}`
+                : `${materialsApiBase}/api/materials/`;
+
+            const response = await fetch(url, {
+                method: isEditing ? 'PUT' : 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -150,23 +242,26 @@ export default function StaffMaterials() {
 
             if (response.ok) {
                 setIsUploadModalOpen(false);
+                setEditingMaterial(null);
                 setTitle('');
                 setDescription('');
                 setCategory('Lecture Slides');
                 setCategoryColor('#4F46E5');
                 setLevel(filterLevel !== 'All' ? filterLevel : 'Level 5');
+                setSelectedBatches(selectedBatch && selectedBatch !== 'All Assigned Batches' && selectedBatch !== 'All Batches' ? [selectedBatch] : ['All Batches']);
+                setCustomBatchInput('');
                 setFile(null);
                 setLink('');
-                setSuccessMessage('Course material uploaded successfully!');
+                setSuccessMessage(isEditing ? 'Course material updated successfully!' : 'Course material uploaded successfully!');
                 await fetchMaterials();
                 setTimeout(() => setSuccessMessage(''), 4000);
             } else {
                 const errData = await response.json().catch(() => ({}));
-                setErrorMessage(errData.detail || `Upload failed (Status: ${response.status}). Please try again.`);
+                setErrorMessage(errData.detail || `${isEditing ? 'Update' : 'Upload'} failed (Status: ${response.status}). Please try again.`);
             }
         } catch (error) {
-            console.error('Error uploading material:', error);
-            setErrorMessage(error.message || 'Network error during upload.');
+            console.error('Error saving material:', error);
+            setErrorMessage(error.message || 'Network error during save.');
         } finally {
             setIsUploading(false);
         }
@@ -288,7 +383,7 @@ export default function StaffMaterials() {
                         </div>
                     )}
                     <button 
-                        onClick={() => setIsUploadModalOpen(true)}
+                        onClick={handleOpenCreateModal}
                         className="bg-primary text-on-primary px-5 py-2.5 rounded-2xl font-label-md text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
                     >
                         <span className="material-symbols-outlined text-[20px]">add</span>
@@ -385,14 +480,24 @@ export default function StaffMaterials() {
                                                     {isLink ? 'link' : 'description'}
                                                 </span>
                                             </div>
-                                            <button 
-                                                type="button"
-                                                onClick={() => setMaterialToDelete(material)}
-                                                className="text-outline hover:text-error hover:bg-error-container/20 p-1.5 rounded-lg transition-colors cursor-pointer"
-                                                title="Delete Material"
-                                            >
-                                                <span className="material-symbols-outlined text-[18px]">delete</span>
-                                            </button>
+                                            <div className="flex items-center gap-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenEditModal(material)}
+                                                    className="text-outline hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors cursor-pointer"
+                                                    title="Edit Material"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setMaterialToDelete(material)}
+                                                    className="text-outline hover:text-error hover:bg-error-container/20 p-1.5 rounded-lg transition-colors cursor-pointer"
+                                                    title="Delete Material"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <h3 className="font-headline-sm text-on-surface font-bold text-base break-words group-hover:text-primary transition-colors mb-1.5 line-clamp-2" title={material.title}>
@@ -416,10 +521,10 @@ export default function StaffMaterials() {
                                                     {material.level}
                                                 </span>
                                             )}
-                                            {material.batch && (
+                                            {((Array.isArray(material.batches) && material.batches.length > 0) || material.batch) && (
                                                 <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
                                                     <span className="material-symbols-outlined text-[12px]">groups</span>
-                                                    {material.batch}
+                                                    {(Array.isArray(material.batches) && material.batches.length > 0) ? material.batches.join(', ') : material.batch}
                                                 </span>
                                             )}
                                         </div>
@@ -456,11 +561,18 @@ export default function StaffMaterials() {
                     <div className="bg-surface rounded-3xl p-6 max-w-[520px] w-full shadow-2xl border border-outline-variant/60 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
                         <div className="flex justify-between items-center mb-5 pb-3 border-b border-outline-variant/40">
                             <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
-                                <h2 className="font-headline-sm text-on-surface font-bold text-lg">Upload Material</h2>
+                                <span className="material-symbols-outlined text-primary text-[24px]">
+                                    {editingMaterial ? "edit" : "upload_file"}
+                                </span>
+                                <h2 className="font-headline-sm text-on-surface font-bold text-lg">
+                                    {editingMaterial ? "Edit Material" : "Upload Material"}
+                                </h2>
                             </div>
                             <button 
-                                onClick={() => setIsUploadModalOpen(false)}
+                                onClick={() => {
+                                    setIsUploadModalOpen(false);
+                                    setEditingMaterial(null);
+                                }}
                                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-colors cursor-pointer"
                             >
                                 <span className="material-symbols-outlined text-[18px]">close</span>
@@ -576,35 +688,77 @@ export default function StaffMaterials() {
                                 </div>
                             </div>
 
-                            {/* Target Batch */}
+                            {/* Target Batches (Multi-Select) */}
                             <div>
-                                <label className="block font-label-md text-on-surface mb-1 font-semibold text-xs">Target Batch</label>
-                                <input 
-                                    type="text" 
-                                    value={batch}
-                                    onChange={(e) => setBatch(e.target.value)}
-                                    className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors mb-1.5"
-                                    placeholder="e.g. Batch - 1, Batch - 2, or All Batches"
-                                />
-                                {staffBatches && staffBatches.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 items-center">
-                                        <span className="text-[10px] text-on-surface-variant font-medium mr-1">Quick select:</span>
-                                        {staffBatches.map((b) => (
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block font-label-md text-on-surface font-semibold text-xs">Target Batches (Multi-Choose) *</label>
+                                    <span className="text-[10px] text-primary font-bold">
+                                        {selectedBatches.includes('All Batches') ? 'All Batches Selected' : `${selectedBatches.length} selected`}
+                                    </span>
+                                </div>
+
+                                {/* Multi-select Badges */}
+                                <div className="flex flex-wrap gap-1.5 items-center mb-2 p-2 bg-surface-container-low border border-outline-variant rounded-xl min-h-[42px]">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleBatchSelection('All Batches')}
+                                        className={`text-xs px-2.5 py-1 rounded-lg border font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                            selectedBatches.includes('All Batches')
+                                                ? 'bg-primary text-on-primary border-primary shadow-xs'
+                                                : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">
+                                            {selectedBatches.includes('All Batches') ? 'check_circle' : 'circle'}
+                                        </span>
+                                        All Batches
+                                    </button>
+
+                                    {staffBatches && staffBatches.filter(b => b !== 'All Batches' && b !== 'All Assigned Batches' && b !== 'Global').map((b) => {
+                                        const isChecked = selectedBatches.includes(b);
+                                        return (
                                             <button
                                                 key={b}
                                                 type="button"
-                                                onClick={() => setBatch(b)}
-                                                className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                                                    batch === b
-                                                        ? 'bg-primary text-on-primary border-primary font-bold'
-                                                        : 'border-outline-variant hover:bg-surface-container text-on-surface'
+                                                onClick={() => toggleBatchSelection(b)}
+                                                className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                                                    isChecked
+                                                        ? 'bg-primary/15 text-primary border-primary/40 font-bold ring-1 ring-primary/30'
+                                                        : 'border-outline-variant/60 hover:bg-surface-container text-on-surface'
                                                 }`}
                                             >
+                                                <span className="material-symbols-outlined text-[14px]">
+                                                    {isChecked ? 'check_box' : 'check_box_outline_blank'}
+                                                </span>
                                                 {b}
                                             </button>
-                                        ))}
-                                    </div>
-                                )}
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Custom batch tag addition */}
+                                <div className="flex gap-1.5 items-center">
+                                    <input 
+                                        type="text" 
+                                        value={customBatchInput}
+                                        onChange={(e) => setCustomBatchInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                addCustomBatch();
+                                            }
+                                        }}
+                                        className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-primary transition-colors"
+                                        placeholder="Add custom batch name and click Add (or press Enter)..."
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addCustomBatch}
+                                        className="px-3 py-1.5 bg-secondary/15 hover:bg-secondary/25 text-secondary border border-secondary/30 rounded-xl text-xs font-bold transition-all"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Description */}
@@ -621,15 +775,22 @@ export default function StaffMaterials() {
                             {/* Upload Input */}
                             {uploadType === 'file' ? (
                                 <div>
-                                    <label className="block font-label-md text-on-surface mb-1 font-semibold text-xs">Document File *</label>
+                                    <label className="block font-label-md text-on-surface mb-1 font-semibold text-xs">
+                                        Document File {editingMaterial ? '(Leave blank to keep existing file)' : '*'}
+                                    </label>
                                     <div className="w-full bg-surface-container-low border border-dashed border-outline-variant hover:border-primary/50 transition-colors rounded-xl p-3 flex items-center justify-center">
                                         <input 
                                             type="file" 
-                                            required={uploadType === 'file'}
+                                            required={!editingMaterial && uploadType === 'file'}
                                             onChange={(e) => setFile(e.target.files[0])}
                                             className="w-full text-xs text-on-surface file:mr-3 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary-container file:text-primary hover:file:bg-primary hover:file:text-on-primary file:transition-colors cursor-pointer"
                                         />
                                     </div>
+                                    {editingMaterial && editingMaterial.file_url && (
+                                        <p className="text-[10px] text-on-surface-variant mt-1 truncate">
+                                            Current: <span className="font-mono text-primary">{editingMaterial.file_url}</span>
+                                        </p>
+                                    )}
                                 </div>
                             ) : (
                                 <div>
@@ -649,7 +810,10 @@ export default function StaffMaterials() {
                             <div className="flex justify-end gap-2.5 pt-4 border-t border-outline-variant/40 mt-4">
                                 <button 
                                     type="button"
-                                    onClick={() => setIsUploadModalOpen(false)}
+                                    onClick={() => {
+                                        setIsUploadModalOpen(false);
+                                        setEditingMaterial(null);
+                                    }}
                                     className="px-4 py-2 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
                                 >
                                     Cancel
@@ -662,12 +826,12 @@ export default function StaffMaterials() {
                                     {isUploading ? (
                                         <>
                                             <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                                            <span>Uploading...</span>
+                                            <span>{editingMaterial ? "Saving..." : "Uploading..."}</span>
                                         </>
                                     ) : (
                                         <>
-                                            <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
-                                            <span>Upload Material</span>
+                                            <span className="material-symbols-outlined text-[16px]">{editingMaterial ? "save" : "cloud_upload"}</span>
+                                            <span>{editingMaterial ? "Save Changes" : "Upload Material"}</span>
                                         </>
                                     )}
                                 </button>

@@ -5,9 +5,7 @@ import uuid
 import mimetypes
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-# pyrefly: ignore [missing-import]
 from fastapi.responses import StreamingResponse, RedirectResponse
-# pyrefly: ignore [missing-import]
 from beanie import PydanticObjectId
 import models
 import boto3
@@ -26,6 +24,7 @@ R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME", "fledgedocuments")
 R2_PUBLIC_URL = os.environ.get("R2_PUBLIC_URL")
 S3_API_URL = os.environ.get("S3API")
 
+# Parse S3API if provided (e.g. https://c5e1833ebfd0ca8c98304ed378c68648.r2.cloudflarestorage.com/fledgedocuments)
 if S3_API_URL and not R2_ACCOUNT_ID:
     match = re.search(r"https://([a-zA-Z0-9_-]+)\.r2\.cloudflarestorage\.com(?:/([a-zA-Z0-9_-]+))?", S3_API_URL)
     if match:
@@ -46,7 +45,7 @@ def get_s3_client():
             config=Config(signature_version="s3v4")
         )
     except Exception as e:
-        print(f"Error initializing Cloudflare R2 client in core: {e}")
+        print(f"Error initializing Cloudflare R2 client: {e}")
         return None
 
 router = APIRouter()
@@ -58,7 +57,7 @@ async def get_materials(
     batch: Optional[str] = None, 
     current_user: models.User = Depends(get_current_user)
 ):
-    """Fetch all materials"""
+    """Fetch all materials (accessible by all authenticated students, staff, and ceo)"""
     conditions = []
     if level and level.strip().lower() not in ["all", "all levels", "global"]:
         clean_level = level.strip()
@@ -126,13 +125,16 @@ async def get_materials(
 async def upload_material(
     title: str = Form(...),
     description: Optional[str] = Form(None),
+    category: Optional[str] = Form("General"),
+    category_color: Optional[str] = Form(None),
     level: Optional[str] = Form(None),
     batch: Optional[str] = Form(None),
+    batches: Optional[str] = Form(None), # Comma-separated or JSON list of batches
     file: Optional[UploadFile] = File(None),
     link: Optional[str] = Form(None),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Upload material directly to Cloudflare R2 bucket"""
+    """Upload material directly to Cloudflare R2 bucket (no local disk storage)"""
     user_role = (current_user.role or "").lower()
     if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
@@ -152,19 +154,22 @@ async def upload_material(
         if not s3 or not R2_BUCKET_NAME:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Cloudflare R2 storage credentials (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID) are not configured."
+                detail="Cloudflare R2 storage credentials (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ACCOUNT_ID) are not configured in environment."
             )
         
+        # Clean filename and generate unique S3 key
         raw_name = os.path.basename(file.filename)
         clean_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_name)
         s3_key = f"materials/{uuid.uuid4()}-{clean_name}"
         
+        # Determine content type
         content_type = file.content_type
         if not content_type or content_type == "application/octet-stream":
             content_type, _ = mimetypes.guess_type(raw_name)
             content_type = content_type or "application/octet-stream"
 
         try:
+            # Upload file directly to Cloudflare R2 bucket
             file_bytes = await file.read()
             s3.put_object(
                 Bucket=R2_BUCKET_NAME,
@@ -174,9 +179,11 @@ async def upload_material(
                 ContentDisposition=f'inline; filename="{clean_name}"'
             )
             
+            # Construct public access URL
             if R2_PUBLIC_URL and R2_PUBLIC_URL.strip():
                 file_url = f"{R2_PUBLIC_URL.strip().rstrip('/')}/{s3_key}"
             else:
+                # Use materials service proxy download endpoint
                 file_url = f"/api/materials/file/{s3_key}"
         except ClientError as ce:
             print(f"Cloudflare R2 Upload Error: {ce}")
@@ -198,11 +205,24 @@ async def upload_material(
             detail="Must provide either a file or a valid link"
         )
     
+    parsed_batches = []
+    if batches:
+        try:
+            import json
+            parsed_batches = json.loads(batches) if batches.startswith('[') else [b.strip() for b in batches.split(',') if b.strip()]
+        except Exception:
+            parsed_batches = [b.strip() for b in batches.split(',') if b.strip()]
+    elif batch:
+        parsed_batches = [b.strip() for b in batch.split(',') if b.strip()]
+
     new_material = models.Material(
         title=title.strip(),
         description=description.strip() if description else None,
+        category=category.strip() if category else "General",
+        category_color=category_color.strip() if category_color else None,
         level=level,
-        batch=batch,
+        batch=batch or (parsed_batches[0] if parsed_batches else None),
+        batches=parsed_batches,
         file_url=file_url,
         uploaded_by_id=current_user.id
     )
@@ -213,8 +233,11 @@ async def upload_material(
         "id": str(new_material.id),
         "title": new_material.title,
         "description": new_material.description,
+        "category": new_material.category,
+        "category_color": new_material.category_color,
         "level": new_material.level,
         "batch": new_material.batch,
+        "batches": new_material.batches or [],
         "file_url": new_material.file_url,
         "uploaded_by_id": str(new_material.uploaded_by_id),
         "created_at": new_material.created_at.isoformat() if new_material.created_at else None
@@ -222,13 +245,14 @@ async def upload_material(
 
 @router.get("/file/{file_path:path}")
 async def serve_r2_file(file_path: str):
-    """Directly stream or redirect material file from Cloudflare R2"""
+    """Directly stream or redirect material file from Cloudflare R2 for students and staff"""
     s3 = get_s3_client()
     if not s3 or not R2_BUCKET_NAME:
         raise HTTPException(status_code=500, detail="Cloudflare R2 is not configured")
     
     clean_key = file_path.lstrip("/")
     
+    # If public URL is configured, redirect directly to Cloudflare CDN
     if R2_PUBLIC_URL and R2_PUBLIC_URL.strip():
         return RedirectResponse(url=f"{R2_PUBLIC_URL.strip().rstrip('/')}/{clean_key}")
     
@@ -251,12 +275,126 @@ async def serve_r2_file(file_path: str):
             raise HTTPException(status_code=404, detail="Material file not found on Cloudflare R2")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.put("/{material_id}")
+@router.patch("/{material_id}")
+async def update_material(
+    material_id: str,
+    title: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    category_color: Optional[str] = Form(None),
+    level: Optional[str] = Form(None),
+    batch: Optional[str] = Form(None),
+    batches: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    link: Optional[str] = Form(None),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Update material details and optionally replace file or link (restricted to staff, sensi, ceo, admin)"""
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to edit materials"
+        )
+
+    try:
+        obj_id = PydanticObjectId(material_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid material ID")
+
+    material = await models.Material.get(obj_id)
+    if not material:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Material not found"
+        )
+
+    if title is not None and title.strip():
+        material.title = title.strip()
+    if description is not None:
+        material.description = description.strip() if description.strip() else None
+    if category is not None and category.strip():
+        material.category = category.strip()
+    if category_color is not None:
+        material.category_color = category_color.strip() if category_color.strip() else None
+    if level is not None:
+        material.level = level
+
+    if batches is not None or batch is not None:
+        parsed_batches = []
+        if batches:
+            try:
+                import json
+                parsed_batches = json.loads(batches) if batches.startswith('[') else [b.strip() for b in batches.split(',') if b.strip()]
+            except Exception:
+                parsed_batches = [b.strip() for b in batches.split(',') if b.strip()]
+        elif batch:
+            parsed_batches = [b.strip() for b in batch.split(',') if b.strip()]
+        material.batches = parsed_batches
+        material.batch = batch or (parsed_batches[0] if parsed_batches else None)
+
+    # Optional file or link update
+    if file and file.filename:
+        s3 = get_s3_client()
+        if not s3 or not R2_BUCKET_NAME:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Cloudflare R2 storage credentials are not configured in environment."
+            )
+
+        raw_name = os.path.basename(file.filename)
+        clean_name = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_name)
+        s3_key = f"materials/{uuid.uuid4()}-{clean_name}"
+
+        content_type = file.content_type
+        if not content_type or content_type == "application/octet-stream":
+            content_type, _ = mimetypes.guess_type(raw_name)
+            content_type = content_type or "application/octet-stream"
+
+        try:
+            file_bytes = await file.read()
+            s3.put_object(
+                Bucket=R2_BUCKET_NAME,
+                Key=s3_key,
+                Body=file_bytes,
+                ContentType=content_type,
+                ContentDisposition=f'inline; filename="{clean_name}"'
+            )
+            if R2_PUBLIC_URL and R2_PUBLIC_URL.strip():
+                material.file_url = f"{R2_PUBLIC_URL.strip().rstrip('/')}/{s3_key}"
+            else:
+                material.file_url = f"/api/materials/file/{s3_key}"
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error uploading new document file: {e}"
+            )
+    elif link is not None and link.strip():
+        material.file_url = link.strip()
+
+    await material.save()
+
+    return {
+        "id": str(material.id),
+        "title": material.title,
+        "description": material.description,
+        "category": material.category,
+        "category_color": material.category_color,
+        "level": material.level,
+        "batch": material.batch,
+        "batches": material.batches or [],
+        "file_url": material.file_url,
+        "uploaded_by_id": str(material.uploaded_by_id),
+        "created_at": material.created_at.isoformat() if material.created_at else None
+    }
+
 @router.delete("/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_material(
     material_id: str,
     current_user: models.User = Depends(get_current_user)
 ):
-    """Delete a material from database and Cloudflare R2"""
+    """Delete a material from database and Cloudflare R2 bucket"""
     user_role = (current_user.role or "").lower()
     if user_role not in ["staff", "sensi", "ceo", "admin"]:
         raise HTTPException(
@@ -276,6 +414,7 @@ async def delete_material(
             detail="Material not found"
         )
         
+    # Delete object from Cloudflare R2
     s3 = get_s3_client()
     if s3 and R2_BUCKET_NAME and material.file_url:
         s3_key = None

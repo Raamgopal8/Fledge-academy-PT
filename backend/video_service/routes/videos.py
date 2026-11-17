@@ -16,6 +16,15 @@ class VideoCreate(BaseModel):
     batch: Optional[str] = None
     batches: Optional[List[str]] = []
 
+class VideoUpdate(BaseModel):
+    title: Optional[str] = None
+    category: Optional[str] = None
+    category_color: Optional[str] = None
+    video_url: Optional[str] = None
+    level: Optional[str] = None
+    batch: Optional[str] = None
+    batches: Optional[List[str]] = None
+
 class VideoResponse(BaseModel):
     id: str
     title: str
@@ -126,6 +135,62 @@ async def upload_video(video: VideoCreate, current_user: models.User = Depends(g
         level=new_video.level,
         batch=new_video.batch,
         batches=new_video.batches or []
+    )
+
+@router.put("/{video_id}", response_model=VideoResponse)
+@router.patch("/{video_id}", response_model=VideoResponse)
+async def update_video(video_id: str, video_data: VideoUpdate, current_user: models.User = Depends(get_current_user)):
+    """Update an existing video (restricted to staff, ceo, and admin)"""
+    user_role = (current_user.role or "").lower()
+    if user_role not in ["staff", "sensi", "ceo", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to edit videos"
+        )
+
+    try:
+        obj_id = PydanticObjectId(video_id)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid video ID format"
+        )
+
+    video = await models.Video.get(obj_id)
+    if not video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Video not found"
+        )
+
+    if video_data.title is not None:
+        video.title = video_data.title.strip()
+    if video_data.category is not None:
+        video.category = video_data.category.strip()
+    if video_data.category_color is not None:
+        video.category_color = video_data.category_color.strip() if video_data.category_color else None
+    if video_data.video_url is not None:
+        video.video_url = video_data.video_url.strip()
+    if video_data.level is not None:
+        video.level = video_data.level
+    if video_data.batch is not None:
+        video.batch = video_data.batch.strip()
+    if video_data.batches is not None:
+        video.batches = video_data.batches
+
+    await video.save()
+
+    return VideoResponse(
+        id=str(video.id),
+        title=video.title,
+        category=video.category,
+        category_color=video.category_color,
+        video_url=video.video_url,
+        uploaded_by_id=str(video.uploaded_by_id),
+        created_at=video.created_at.isoformat() if video.created_at else None,
+        level=video.level,
+        batch=video.batch,
+        batches=video.batches or []
     )
 
 @router.delete("/{video_id}")

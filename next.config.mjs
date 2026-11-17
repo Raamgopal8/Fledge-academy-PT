@@ -16,6 +16,12 @@ const nextConfig = {
   turbopack: {},
   reactCompiler: true,
   output: process.env.NEXT_EXPORT === "true" ? "export" : "standalone",
+  experimental: {
+    proxyClientMaxBodySize: "800mb",
+    serverActions:{
+      bodySizeLimit: "800mb",
+    },
+  },
   images: {
     unoptimized: process.env.NEXT_EXPORT === "true",
     remotePatterns: [
@@ -107,6 +113,10 @@ const nextConfig = {
       {
         source: '/api/:path*',
         destination: `${coreApi}/api/:path*`
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${coreApi}/uploads/:path*`
       }
     ];
   }

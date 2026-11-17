@@ -5,11 +5,14 @@ import { useStudentContext } from '@/app/student/StudentContext';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
+import { useRouter } from 'next/navigation';
+import { performLogout } from '../utils/activityLogger';
 
 export default function TopNav() {
   const [profile, setProfile] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { setIsMobileNavOpen } = useStudentContext();
+  const router = useRouter();
 
   useEffect(() => {
       const fetchProfile = async () => {
@@ -67,6 +70,10 @@ export default function TopNav() {
                         ) : (
                             <span className="material-symbols-outlined text-white">person</span>
                         )}
+                    </button>
+                    <button type="button" onClick={()=>performLogout(router)} className="w-10 h-10 rounded-full border border-white/20 hover:border-white/40 bg-white/10 hover:bg-red-500/80 transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                        title="Logout">
+                            <span className="material-symbols-outlined text-[18px] sm:text-[20px] text-white">logout</span>                      
                     </button>
                 </div>
       </div>

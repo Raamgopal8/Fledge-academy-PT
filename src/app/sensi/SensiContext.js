@@ -6,6 +6,24 @@ const SensiContext = createContext();
 export function SensiProvider({ children }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsedState] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('sensiSidebarCollapsed') ?? localStorage.getItem('adminSidebarCollapsed');
+            if (saved !== null) {
+                return saved === 'true';
+            }
+        }
+        return true; // Default closed (compact icon rail) when logged in
+    });
+
+    const setIsSidebarCollapsed = (collapsed) => {
+        setIsSidebarCollapsedState(collapsed);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('sensiSidebarCollapsed', String(collapsed));
+            localStorage.setItem('adminSidebarCollapsed', String(collapsed));
+        }
+    };
+    
     const [selectedBatch, setSelectedBatchState] = useState(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('sensiSelectedBatch') || localStorage.getItem('staffSelectedBatch') || localStorage.getItem('batch') || '';
@@ -52,6 +70,30 @@ export function SensiProvider({ children }) {
         return [];
     });
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+
+    const updateStaffBatches = (batches) => {
+        const batchList = Array.isArray(batches) ? batches.filter(b => b && b !== 'All Batches' && b !== 'All Assigned Batches') : (batches ? [batches] : []);
+        setStaffBatches(batchList);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('sensiBatches', JSON.stringify(batchList));
+            localStorage.setItem('staffBatches', JSON.stringify(batchList));
+        }
+    };
+
+    const updateSensiLevels = (levels) => {
+        const levelList = Array.isArray(levels) ? levels.filter(l => l && l !== 'All Levels') : (levels ? [levels] : []);
+        setSensiLevels(levelList);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('sensiLevels', JSON.stringify(levelList));
+            const currentSaved = localStorage.getItem('sensiSelectedLevel') || localStorage.getItem('level') || '';
+            if ((!currentSaved || currentSaved === 'All Levels') && levelList.length > 0) {
+                setSelectedLevelState(levelList[0]);
+                localStorage.setItem('sensiSelectedLevel', levelList[0]);
+                localStorage.setItem('staffSelectedLevel', levelList[0]);
+                localStorage.setItem('level', levelList[0]);
+            }
+        }
+    };
 
     // Fetch profile to guarantee assigned levels & batches on mount
     useEffect(() => {
@@ -150,33 +192,14 @@ export function SensiProvider({ children }) {
         }
     };
 
-    const updateStaffBatches = (batches) => {
-        const batchList = Array.isArray(batches) ? batches.filter(b => b && b !== 'All Batches' && b !== 'All Assigned Batches') : (batches ? [batches] : []);
-        setStaffBatches(batchList);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('sensiBatches', JSON.stringify(batchList));
-            localStorage.setItem('staffBatches', JSON.stringify(batchList));
-        }
-    };
-
-    const updateSensiLevels = (levels) => {
-        const levelList = Array.isArray(levels) ? levels.filter(l => l && l !== 'All Levels') : (levels ? [levels] : []);
-        setSensiLevels(levelList);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('sensiLevels', JSON.stringify(levelList));
-            const currentSaved = localStorage.getItem('sensiSelectedLevel') || localStorage.getItem('level') || '';
-            if ((!currentSaved || currentSaved === 'All Levels') && levelList.length > 0) {
-                setSelectedLevel(levelList[0]);
-            }
-        }
-    };
-
     return (
         <SensiContext.Provider value={{ 
             searchQuery, 
             setSearchQuery, 
             isMobileNavOpen, 
             setIsMobileNavOpen,
+            isSidebarCollapsed,
+            setIsSidebarCollapsed,
             selectedBatch, 
             setSelectedBatch,
             selectedLevel,

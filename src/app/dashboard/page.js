@@ -391,13 +391,49 @@ export default function DashboardOverview() {
     return { type: 'File', icon: 'draft', size: '1.0 MB' };
   };
 
-  const getGreeting = () => {
-      const hour = new Date().getHours();
-      if (hour < 12) return 'Good morning';
-      if (hour < 18) return 'Good afternoon';
-      return 'Good evening';
+  // Daily changing greetings & quotes for Student Dashboard
+  const getGreetingAndQuote = () => {
+    const rawName = profile?.name || profile?.username || 'Student';
+    const firstName = rawName.trim().split(' ')[0] || 'Student';
+
+    // Seed using day of year + full year for daily consistent rotation
+    const now = new Date();
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+    const seed = dayOfYear + now.getFullYear() * 365;
+
+    const greetingTemplates = [
+      `Hello ${firstName}!`,
+      `Hi ${firstName}!`,
+      `Today's Agenda, ${firstName}?`,
+      `What's the Next Goal, ${firstName}?`,
+      `Welcome back, ${firstName}!`,
+      `Ready to learn today, ${firstName}?`,
+      `Gambatte, ${firstName}! 🎌`
+    ];
+
+    const quotes = [
+      "Every master was once a beginner. Keep moving forward!",
+      "A journey of a thousand miles begins with a single kanji.",
+      "Consistency beats talent when talent doesn’t work consistently.",
+      "Focus on progress, not perfection. You are doing great!",
+      "Small daily efforts compound into extraordinary fluency.",
+      "Mistakes are proof that you are trying and learning.",
+      "Your future self will thank you for the hard work you put in today.",
+      "Success is the sum of small efforts repeated day in and day out.",
+      "Nana korobi ya oki — Fall seven times, stand up eight.",
+      "Learn something new today, even if it's just one word."
+    ];
+
+    const greetingIndex = Math.abs(seed) % greetingTemplates.length;
+    const quoteIndex = Math.abs(seed * 7 + 13) % quotes.length;
+
+    return {
+      title: greetingTemplates[greetingIndex],
+      quote: quotes[quoteIndex]
+    };
   };
-  const greeting = `${getGreeting()}, ${profile?.name?.split(' ')[0] || profile?.username || 'Student'}`;
+
+  const { title: greetingTitle, quote: dailyQuote } = getGreetingAndQuote();
    
   return (
     <div className="max-w-[1440px] mx-auto p-4 md:px-8 lg:px-12 md:py-8 space-y-6 md:space-y-8 relative animate-fade-in">
@@ -405,11 +441,12 @@ export default function DashboardOverview() {
       <section className="mb-lg">
         <div className="flex flex-col md:flex-row md:items-end justify-start gap-xs mb-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-sm text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
-              {greeting}
+            <h1 className="text-3xl md:text-4xl font-bold mb-1.5 text-transparent bg-clip-text bg-gradient-to-r from-[#6FB7E4] via-[#5D8BCC] to-[#465AA3]">
+              {greetingTitle}
             </h1>
-            <p className="font-body-lg text-body-lg text-on-surface-variant">
-              Here is your overview for today. Keep up the good work!
+            <p className="text-xs md:text-sm text-on-surface-variant italic font-medium flex items-center gap-1.5">
+              
+              <span>“{dailyQuote}”</span>
             </p>
           </div>
         </div>

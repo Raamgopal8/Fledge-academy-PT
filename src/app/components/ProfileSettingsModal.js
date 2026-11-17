@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { subscribeToPushNotifications } from '../utils/pushNotifications';
 
 // Helper to convert Google Drive shareable URLs to direct embed image URLs
@@ -37,11 +37,33 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
     const [message, setMessage] = useState('');
 
+    // Image Upload States
+    const [selectedImageFile, setSelectedImageFile] = useState(null);
+    const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+    const [photoInputMode, setPhotoInputMode] = useState('file'); // 'file' | 'url'
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const fileInputRef = useRef(null);
+
+    // Clean up local blob object URL on unmount or file reset
+    useEffect(() => {
+        return () => {
+            if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(imagePreviewUrl);
+            }
+        };
+    }, [imagePreviewUrl]);
+
     // Fetch fresh profile from database/Redis on modal open
     useEffect(() => {
         if (!isOpen) return;
 
+        /* eslint-disable react-hooks/set-state-in-effect */
+        // Reset local selection states when opened
+        setSelectedImageFile(null);
+        setImagePreviewUrl('');
         setMessage('');
+        /* eslint-enable react-hooks/set-state-in-effect */
+
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         const localEmail = typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || localStorage.getItem('email') || '') : '';
         const localName = typeof window !== 'undefined' ? (localStorage.getItem('userName') || '') : '';
@@ -84,6 +106,41 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
 
     const isStudent = (profile.role || currentProfile?.role || (typeof window !== 'undefined' ? localStorage.getItem('role') : '') || '').toLowerCase() === 'student';
     const previewUrl = formatGoogleDriveUrl(profile.profile_image_url);
+    const displayAvatar = imagePreviewUrl || previewUrl;
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setMessage('Please select a valid image file (PNG, JPG, JPEG, WEBP, GIF).');
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            setMessage('Selected image exceeds the 10MB size limit.');
+            return;
+        }
+
+        setMessage('');
+        setSelectedImageFile(file);
+        if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(imagePreviewUrl);
+        }
+        const localUrl = URL.createObjectURL(file);
+        setImagePreviewUrl(localUrl);
+    };
+
+    const handleRemoveSelectedFile = () => {
+        if (imagePreviewUrl && imagePreviewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(imagePreviewUrl);
+        }
+        setImagePreviewUrl('');
+        setSelectedImageFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -91,7 +148,36 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
         setMessage('');
         try {
             const token = localStorage.getItem('token');
-            const formattedImageUrl = formatGoogleDriveUrl(profile.profile_image_url);
+            let formattedImageUrl = formatGoogleDriveUrl(profile.profile_image_url);
+
+            // If a local image file was chosen, upload it first to obtain its persistent URL
+            if (selectedImageFile) {
+                setIsUploadingImage(true);
+                try {
+                    const formData = new FormData();
+                    formData.append('file', selectedImageFile);
+
+                    const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/user/profile/upload-image`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+
+                    if (!uploadRes.ok) {
+                        const uploadErr = await uploadRes.json().catch(() => ({}));
+                        throw new Error(uploadErr.detail || 'Failed to upload profile image.');
+                    }
+
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.profile_image_url) {
+                        formattedImageUrl = uploadData.profile_image_url;
+                    }
+                } finally {
+                    setIsUploadingImage(false);
+                }
+            }
 
             const payload = {
                 name: profile.name.trim(),
@@ -197,36 +283,128 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                     )}
 
                     <form onSubmit={handleSave} className="space-y-4">
+                        {/* Hidden File Input */}
+                        <input 
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                            className="hidden"
+                            onChange={handleFileChange}
+                        />
+
                         {/* Avatar & Photo Input */}
-                        <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start p-4 bg-surface-container-low dark:bg-slate-800/50 rounded-2xl border border-outline-variant/40">
-                            <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-primary/40 shrink-0 bg-surface-container flex items-center justify-center shadow-sm relative group">
-                                {previewUrl ? (
-                                    <img 
-                                        src={previewUrl} 
-                                        alt="Profile Avatar" 
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.style.display = 'none';
-                                        }}
-                                    />
-                                ) : (
-                                    <span className="material-symbols-outlined text-[36px] text-on-surface-variant">person</span>
-                                )}
+                        <div className="p-4 bg-surface-container-low dark:bg-slate-800/50 rounded-2xl border border-outline-variant/40 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[16px] text-primary">account_circle</span>
+                                    <span>Profile Photo</span>
+                                </label>
+                                {/* Input Mode Switcher */}
+                                <div className="inline-flex rounded-lg bg-surface-container p-0.5 border border-outline-variant/60 text-[11px] font-semibold">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPhotoInputMode('file')}
+                                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                                            photoInputMode === 'file' 
+                                                ? 'bg-primary text-on-primary shadow-xs' 
+                                                : 'text-on-surface-variant hover:text-on-surface'
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">upload_file</span>
+                                        <span>Upload File</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPhotoInputMode('url')}
+                                        className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                                            photoInputMode === 'url' 
+                                                ? 'bg-primary text-on-primary shadow-xs' 
+                                                : 'text-on-surface-variant hover:text-on-surface'
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">link</span>
+                                        <span>Image Link</span>
+                                    </button>
+                                </div>
                             </div>
-                            
-                            <div className="flex-1 space-y-1.5 w-full">
-                                <label className="block text-xs font-bold text-on-surface">Profile Image URL</label>
-                                <input 
-                                    type="url" 
-                                    value={profile.profile_image_url}
-                                    onChange={(e) => setProfile({ ...profile, profile_image_url: e.target.value })}
-                                    className="w-full bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant rounded-xl p-2.5 text-xs font-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                                    placeholder="Google Drive link or https://... image URL"
-                                />
-                                <p className="text-[10px] text-on-surface-variant flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-[13px] text-primary">add_link</span>
-                                    <span>Supports Google Drive share links and direct image URLs.</span>
-                                </p>
+
+                            <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start pt-1">
+                                {/* Clickable Avatar Preview */}
+                                <div 
+                                    onClick={() => fileInputRef.current?.click()}
+                                    title="Click to upload profile photo"
+                                    className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-primary/40 shrink-0 bg-surface-container flex items-center justify-center shadow-sm relative group cursor-pointer hover:border-primary transition-all"
+                                >
+                                    {displayAvatar ? (
+                                        <img 
+                                            src={displayAvatar} 
+                                            alt="Profile Avatar" 
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
+                                    ) : (
+                                        <span className="material-symbols-outlined text-[36px] text-on-surface-variant">person</span>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white text-[10px] font-semibold transition-opacity backdrop-blur-[1px]">
+                                        <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+                                        <span>Change</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex-1 space-y-2 w-full">
+                                    {photoInputMode === 'file' ? (
+                                        <div className="space-y-2">
+                                            {selectedImageFile ? (
+                                                <div className="flex items-center justify-between p-2.5 bg-surface-container rounded-xl border border-primary/30">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <span className="material-symbols-outlined text-primary text-[20px] shrink-0">image</span>
+                                                        <div className="truncate">
+                                                            <p className="text-xs font-semibold text-on-surface truncate">{selectedImageFile.name}</p>
+                                                            <p className="text-[10px] text-on-surface-variant">{(selectedImageFile.size / 1024).toFixed(1)} KB • Ready to save</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveSelectedFile}
+                                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors shrink-0"
+                                                        title="Remove selected image"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="w-full py-2.5 px-3 rounded-xl border border-dashed border-outline-variant hover:border-primary bg-surface-container-lowest/60 hover:bg-surface-container transition-all flex items-center justify-center gap-2 text-xs font-semibold text-on-surface-variant hover:text-primary cursor-pointer group"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px] text-primary group-hover:scale-110 transition-transform">add_photo_alternate</span>
+                                                    <span>Choose image</span>
+                                                </button>
+                                            )}
+                                            <p className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[13px] text-primary">info</span>
+                                                <span>Supports PNG, JPG, WEBP, or GIF up to 10MB.</span>
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1.5">
+                                            <input 
+                                                type="url" 
+                                                value={profile.profile_image_url}
+                                                onChange={(e) => setProfile({ ...profile, profile_image_url: e.target.value })}
+                                                className="w-full bg-surface-container-lowest dark:bg-slate-900 border border-outline-variant rounded-xl p-2.5 text-xs font-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                                                placeholder="Google Drive link or https://... image URL"
+                                            />
+                                            <p className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[13px] text-primary">add_link</span>
+                                                <span>Supports Google Drive share links and direct image URLs.</span>
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -350,17 +528,22 @@ export default function ProfileSettingsModal({ isOpen, onClose, currentProfile, 
                             <button
                                 type="button"
                                 onClick={onClose}
-                                disabled={isSaving}
+                                disabled={isSaving || isUploadingImage}
                                 className="px-4 py-2.5 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
                             <button 
                                 type="submit" 
-                                disabled={isSaving}
+                                disabled={isSaving || isUploadingImage}
                                 className="bg-primary text-on-primary px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-primary/90 shadow-md hover:scale-102 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 cursor-pointer"
                             >
-                                {isSaving ? (
+                                {isUploadingImage ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin text-[16px]">cloud_upload</span>
+                                        <span>Uploading photo...</span>
+                                    </>
+                                ) : isSaving ? (
                                     <>
                                         <span className="material-symbols-outlined animate-spin text-[16px]">sync</span>
                                         <span>Saving...</span>

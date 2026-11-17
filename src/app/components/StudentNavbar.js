@@ -11,16 +11,31 @@ export default function StudentNavbar() {
   const router = useRouter();
   const { isMobileNavOpen, setIsMobileNavOpen } = useStudentContext();
 
-    const navItems = [
-      { name: "Dashboard", icon: "dashboard", href: "/dashboard" },
-      { name: "Pathway", icon: "route", href: "/dashboard/pathway" },
-      { name: "Announcements", icon: "campaign", href: "/dashboard/announcements" },
-      { name: "Community", icon: "forum", href: "/community" },
-      { name: "Classmates", icon: "group", href: "/dashboard/classmates" },
-      { name: "Tasks", icon: "assignment", href: "/dashboard/tasks" },
-      { name: "Schedule", icon: "calendar_today", href: "/dashboard/schedule" },
-      { name: "Materials", icon: "library_books", href: "/dashboard/materials" },
-      { name: "Videos", icon: "smart_display", href: "/dashboard/videos" }
+    const navGroups = [
+      {
+        category: "Learning",
+        items: [
+          { name: "Dashboard", icon: "dashboard", href: "/dashboard" },
+          { name: "Pathway", icon: "route", href: "/dashboard/pathway" },
+          { name: "Tasks", icon: "assignment", href: "/dashboard/tasks" },
+          { name: "Schedule", icon: "calendar_today", href: "/dashboard/schedule" },
+        ]
+      },
+      {
+        category: "Study Resources",
+        items: [
+          { name: "Materials", icon: "library_books", href: "/dashboard/materials" },
+          { name: "Videos", icon: "smart_display", href: "/dashboard/videos" },
+        ]
+      },
+      {
+        category: "Community & Social",
+        items: [
+          { name: "Announcements", icon: "campaign", href: "/dashboard/announcements" },
+          { name: "Community", icon: "forum", href: "/community" },
+          { name: "Classmates", icon: "group", href: "/dashboard/classmates" },
+        ]
+      }
     ];
 
   return (
@@ -47,30 +62,37 @@ export default function StudentNavbar() {
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <nav className="flex-1 flex flex-col gap-xs">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsMobileNavOpen(false)}
-                className={`flex items-center gap-md px-md py-sm rounded-lg mx-2 transition-transform active:scale-[0.98] ${
-                  isActive
-                    ? "bg-secondary-container text-on-secondary-container"
-                    : "text-on-surface-variant hover:bg-surface-container-high"
-                }`}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
-                >
-                  {item.icon}
-                </span>
-                <span className="font-label-md text-label-md">{item.name}</span>
-              </Link>
-            );
-          })}
+        <nav className="flex-1 flex flex-col space-y-4 overflow-y-auto custom-scrollbar px-2">
+          {navGroups.map((group) => (
+            <div key={group.category} className="space-y-1">
+              <div className="px-3 pb-1 pt-1 text-[11px] font-bold tracking-wider uppercase text-on-surface-variant/60">
+                {group.category}
+              </div>
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className={`flex items-center gap-md px-md py-sm rounded-lg transition-transform active:scale-[0.98] ${
+                      isActive
+                        ? "bg-secondary-container text-on-secondary-container font-semibold"
+                        : "text-on-surface-variant hover:bg-surface-container-high"
+                    }`}
+                  >
+                    <span
+                      className="material-symbols-outlined text-[20px]"
+                      style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
+                    >
+                      {item.icon}
+                    </span>
+                    <span className="font-label-md text-label-md">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="px-md mt-auto pt-md border-t border-outline-variant flex flex-col gap-xs">
           <button

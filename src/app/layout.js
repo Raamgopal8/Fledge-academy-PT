@@ -5,6 +5,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import NotificationPopup from "./components/NotificationPopup";
 import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 import SecurityShield from "./components/SecurityShield";
+import NetworkStatus from "./components/networkstatus";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -75,6 +76,7 @@ export default function RootLayout({ children }) {
           <NotificationProvider>
             <ServiceWorkerRegister />
             <SecurityShield />
+            <NetworkStatus />
             {children}
             <NotificationPopup />
           </NotificationProvider>
